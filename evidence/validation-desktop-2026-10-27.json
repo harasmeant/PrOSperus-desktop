@@ -1,0 +1,102 @@
+{
+  "checks": [
+    {
+      "name": "Explorador muestra las carpetas de la bóveda",
+      "pass": true
+    },
+    {
+      "name": "Búsqueda recursiva sin acentos",
+      "pass": true
+    },
+    {
+      "name": "Selección activa acciones visibles",
+      "pass": true
+    },
+    {
+      "name": "Intro abre una carpeta",
+      "pass": true
+    },
+    {
+      "name": "Subir conserva jerarquía",
+      "pass": true
+    },
+    {
+      "name": "Raíz sin acciones destructivas ni subida",
+      "pass": true
+    },
+    {
+      "name": "Mover excluye la propia carpeta y sus descendientes",
+      "pass": true
+    },
+    {
+      "name": "Selector de destino encuentra la carpeta",
+      "pass": true
+    },
+    {
+      "name": "Un destino ocupado no sobrescribe archivos",
+      "pass": true
+    },
+    {
+      "name": "Selector de destino encuentra la carpeta",
+      "pass": true
+    },
+    {
+      "name": "Mover usa Obsidian y conserva descendientes",
+      "pass": true
+    },
+    {
+      "name": "Mover limpia una selección que sale de la carpeta visible",
+      "pass": true
+    },
+    {
+      "name": "Renombrar conserva la nota en su nueva ruta",
+      "pass": true
+    },
+    {
+      "name": "Enlaces actualizados al mover y renombrar",
+      "pass": true
+    },
+    {
+      "name": "Nueva carpeta rechaza rutas externas",
+      "pass": true
+    },
+    {
+      "name": "Nueva carpeta se crea en el destino elegido",
+      "pass": true
+    },
+    {
+      "name": "Catálogo de aplicaciones cargado",
+      "pass": true
+    },
+    {
+      "name": "Buscador encuentra una aplicación instalada",
+      "pass": true
+    },
+    {
+      "name": "Favoritos guardados y visibles en barra",
+      "pass": true
+    },
+    {
+      "name": "Favorito aparece en escritorio",
+      "pass": true
+    },
+    {
+      "name": "Lanzador entrega el ID exacto al sistema",
+      "pass": true
+    },
+    {
+      "name": "Lanzador rechaza aplicaciones desconocidas",
+      "pass": true
+    },
+    {
+      "name": "Fallo de lanzamiento visible y permite reintentar",
+      "pass": true
+    }
+  ],
+  "actualApplicationLaunch": {
+    "application": "KCalc",
+    "launched": true,
+    "durationMs": 185,
+    "flatpakPermission": "Autorizado por el usuario y aplicado"
+  }
+}

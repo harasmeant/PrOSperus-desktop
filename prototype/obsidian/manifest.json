@@ -1,0 +1,9 @@
+{
+  "id": "project-desktop",
+  "name": "Escritorio de proyectos",
+  "version": "0.1.0",
+  "minAppVersion": "1.10.6",
+  "description": "Escritorio por carpeta, notas flotantes, fondos wallpaper y navegación lateral con previews.",
+  "author": "Nicolás",
+  "isDesktopOnly": true
+}
