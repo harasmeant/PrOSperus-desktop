@@ -41,7 +41,17 @@ El prototipo depende de Obsidian y Hover Editor. El mapa representa la estructur
 
 ## Licencia
 
-La licencia del código propio está pendiente de elección. La publicación del repositorio no concede por sí sola una licencia de reutilización. Obsidian, Hover Editor y las aplicaciones del sistema son dependencias externas y no se redistribuyen aquí.
+Copyright (C) 2026 Nicolás (harasmeant).
+
+PrOSperus desktop se distribuye bajo la **GNU General Public License, versión 3 exclusivamente** (`GPL-3.0-only`). Consulta el texto completo en [LICENSE](LICENSE). Esta licencia cubre el código y el material original de este repositorio, incluido el prototipo propio publicado en `v0.0`, salvo indicación expresa en un archivo.
+
+Puedes usar, estudiar, modificar y redistribuir el proyecto. Si distribuyes una versión derivada cubierta por esta licencia, debes mantener GPLv3 y facilitar el código fuente correspondiente conforme a sus condiciones. El software se ofrece sin garantía, según la licencia.
+
+Las modificaciones privadas no obligan a publicar un fork ni a enviar cambios a este repositorio. Nicolás decide qué contribuciones incorpora al proyecto oficial; consulta [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Los componentes de terceros conservan sus propias licencias. Obsidian, Hover Editor y las aplicaciones del sistema son dependencias externas y no se redistribuyen aquí. Esta elección no cambia la licencia de los componentes de una futura imagen Linux.
+
+Referencia: [GPLv3, condiciones de distribución](https://www.gnu.org/licenses/gpl-3.0.en.html).
 
 ---
 
