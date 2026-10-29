@@ -151,6 +151,24 @@ class DesktopExperienceTests(unittest.TestCase):
         self.assertIn(self.root / 'Laboratorio/Apuntes/Hipótesis.md', self.window.panels)
         explorer.deleteLater()
 
+    def test_body_search_in_map_explorer_and_project_drawer(self):
+        project = self.root / 'Cursos 3D'
+        note = project / '02 - Recursos y taller/Conceptos/Preparación.md'
+        note.parent.mkdir(parents=True)
+        note.write_text('# Preparación\n\nComprueba la calibración de la impresora.')
+        self.window.refresh_projects(); self.window.navigate(project)
+        self.window.search.setText('impresora')
+        self.assertEqual([node.path for node in self.window.surface.nodes], [note])
+        explorer = Explorer(self.window)
+        explorer.search.setText('CALIBRACION')
+        self.assertEqual(explorer.items.count(), 1)
+        self.assertEqual(explorer.items.item(0).data(Qt.ItemDataRole.UserRole), note)
+        explorer.reject(); explorer.deleteLater()
+        self.window.drawer.reveal(); self.window.drawer.search.setText('impresora')
+        self.assertEqual(self.window.drawer.filtered, [project])
+        self.window.drawer.open_current()
+        self.assertEqual(self.window.folder, project)
+
     def test_favorite_application_storage_and_accent_insensitive_filter(self):
         settings = QSettings(str(Path(self.temp.name) / 'settings.ini'), QSettings.Format.IniFormat)
         service = ApplicationService(settings=settings)

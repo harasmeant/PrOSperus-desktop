@@ -2,6 +2,7 @@
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from prosperus.model import Vault
 
@@ -18,7 +19,45 @@ class VaultTests(unittest.TestCase):
         self.vault = Vault(self.root)
 
     def test_recursive_accent_insensitive_search(self):
-        self.assertEqual([p.name for p in self.vault.search('arbol')], ['Árbol.md'])
+        # The linked note matches by name; Inicio matches the wikilink in its text.
+        self.assertEqual([p.name for p in self.vault.search('ARBOL')], ['Árbol.md', 'Inicio.md'])
+
+    def test_search_combines_path_and_body_terms_and_respects_folder_scope(self):
+        note = self.root / 'Proyecto/Apuntes/Árbol.md'
+        note.write_text('# Investigación\n\nLa fotosíntesis transforma energía.')
+        (self.root / 'Otro').mkdir()
+        (self.root / 'Otro/Documento.md').write_text('Fotosíntesis')
+        self.assertEqual(self.vault.search('APUNTES fotosintesis energia'), [note])
+        self.assertEqual(self.vault.search('fotosintesis', self.root / 'Proyecto'), [note])
+        self.assertEqual(self.vault.search('fotosintesis inexistente'), [])
+        self.assertEqual(self.vault.search_projects('energia'), [self.root / 'Proyecto'])
+        self.assertEqual(self.vault.search_projects('otro'), [self.root / 'Otro'])
+
+    def test_search_reads_current_saved_content_and_skips_unreadable_notes(self):
+        note = self.root / 'Proyecto/Apuntes/Árbol.md'
+        note.write_text('Constelación')
+        self.assertEqual(self.vault.search('constelacion'), [note])
+        note.write_text('Nebulosa')
+        self.assertEqual(self.vault.search('constelacion'), [])
+        broken = self.root / 'Broken.md'; broken.write_bytes(b'\xff\xfe')
+        huge = self.root / 'Huge.md'; huge.write_bytes(b'x' * (Vault.MAX_NOTE_BYTES + 1))
+        self.assertEqual(self.vault.search('nebulosa'), [note])
+        self.assertEqual(self.vault.search('broken'), [broken])
+        self.assertEqual(self.vault.search('huge'), [huge])
+        original = self.vault.read
+        def limited(path):
+            if path.name == 'Inicio.md':
+                raise PermissionError('Unreadable')
+            return original(path)
+        with patch.object(self.vault, 'read', side_effect=limited):
+            self.assertEqual(self.vault.search('nebulosa'), [note])
+
+    def test_content_search_does_not_read_hidden_or_external_files(self):
+        outside = Path(self.temp.name) / 'outside.md'; outside.write_text('confidencial')
+        (self.root / 'Enlace.md').symlink_to(outside)
+        (self.root / '.oculta.md').write_text('confidencial')
+        (self.root / 'Documento.txt').write_text('confidencial')
+        self.assertEqual(self.vault.search('confidencial'), [])
 
     def test_links_and_read_only(self):
         source = self.root / 'Proyecto/Inicio.md'

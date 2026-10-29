@@ -5,7 +5,6 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
 from .appearance import draw_symbol, paint_wallpaper, palette_for, wallpaper_for
-from .model import searchable
 
 
 class Cover(QPushButton):
@@ -130,7 +129,8 @@ class ProjectDrawer(QFrame):
         close = QPushButton('×'); close.setAccessibleName('Cerrar tarjetero')
         close.clicked.connect(self.hide); row.addWidget(close)
         layout.addLayout(row)
-        self.search = QLineEdit(); self.search.setPlaceholderText('Buscar una carpeta…')
+        self.search = QLineEdit(); self.search.setPlaceholderText('Proyecto o contenido de sus notas…')
+        self.search.setToolTip('Busca en nombres y en el texto guardado de las notas Markdown de cada proyecto.')
         self.search.setAccessibleName('Buscar proyectos')
         self.search.textChanged.connect(self.filter_projects)
         layout.addWidget(self.search)
@@ -146,6 +146,11 @@ class ProjectDrawer(QFrame):
         hint.setObjectName('muted'); hint.setWordWrap(True); hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(hint)
         root = QPushButton('Todos los proyectos'); root.clicked.connect(self.open_root); layout.addWidget(root)
+        actions = QHBoxLayout()
+        create = QPushButton('Nuevo proyecto'); create.clicked.connect(shell.new_project); actions.addWidget(create)
+        import_project = QPushButton('Importar proyecto…')
+        import_project.clicked.connect(lambda: shell.files.import_folder(shell.vault.root)); actions.addWidget(import_project)
+        layout.addLayout(actions)
         self.hide()
 
     def set_pinned(self, value):
@@ -165,8 +170,11 @@ class ProjectDrawer(QFrame):
         self.show(); self.raise_(); self.stack.setFocus()
 
     def filter_projects(self):
-        terms = searchable(self.search.text()).split()
-        self.filtered = [p for p in self.shell.project_paths if all(t in searchable(p.name) for t in terms)]
+        try:
+            self.filtered = self.shell.vault.search_projects(self.search.text())
+        except (OSError, ValueError) as error:
+            self.filtered = []
+            self.shell.status.setText(str(error))
         self.index = 0
         self.refresh()
 

@@ -2,17 +2,24 @@
 
 **PrOSperus desktop · Prototipo de escritorio orientado a proyectos**
 
-## Escritorio independiente en desarrollo · 0.2.0-dev
+## Escritorio independiente en desarrollo · 0.3.2-dev
 
 La carpeta `desktop/` contiene una aplicación Python/Qt independiente de Obsidian.
 Esta iteración recupera el aspecto del prototipo aceptado: wallpapers heredados,
 paletas por proyecto, tarjetero vertical, mapa radial, notas flotantes y barra
 contextual. Incluye edición Markdown y guardado, creación de notas/carpetas,
 explorador y buscador de aplicaciones Linux con favoritos globales.
+Ahora también permite crear e importar proyectos, seleccionar y copiar notas o
+carpetas, pegar desde el gestor de archivos, duplicar y usar atajos de escritorio.
+F1 muestra la ayuda; Ctrl+Espacio abre Aplicaciones en la demo de Fedora.
+Los buscadores del mapa, el explorador y el tarjetero consultan tanto los
+nombres como el contenido guardado de los Markdown, incluidas las subcarpetas.
 
 ![PrOSperus independiente: tarjetero de proyectos y mapa sobre el fondo de la demo](docs/images/desktop-preview.png)
 
-[Descargar la demo para Fedora · v0.2.0-dev](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.2.0-dev)
+[Descargar la demo v0.3.2-dev](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.3.2-dev).
+Descarga `prosperus-demo-v3.2.tar.gz`; la publicación conserva también los paquetes
+v3 y v3.1 como histórico. Todavía no incluye una ISO arrancable.
 
 Para probarla dentro de Fedora, consulta [la guía de la demo](docs/FEDORA-DEMO.md).
 El [diario de trabajo](docs/WORKLOG.md) registra la referencia acordada, los cambios

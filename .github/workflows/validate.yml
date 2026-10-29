@@ -38,6 +38,6 @@ jobs:
         with:
           name: prosperus-fedora-demo
           path: |
-            out/prosperus-demo-v2.tar.gz
-            out/prosperus-demo-v2.tar.gz.sha256
+            out/prosperus-demo-v3.2.tar.gz
+            out/prosperus-demo-v3.2.tar.gz.sha256
             out/preview.png

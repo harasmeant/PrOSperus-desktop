@@ -8,7 +8,7 @@ ukify build --linux=/output/boot/vmlinuz --initrd=/output/boot/initramfs.img \
     --cmdline='root=LABEL=prosperus-root rootfstype=ext4 rw console=tty0 console=ttyS0,115200 selinux=0 systemd.show_status=1' \
     --os-release='ID=prosperus
 NAME="PrOSperus desktop"
-VERSION_ID=0.2.0-dev
+VERSION_ID=0.3.2-dev
 PRETTY_NAME="PrOSperus desktop development"' \
     --output=/output/boot/BOOTX64.EFI
 truncate -s 256M /output/esp.img

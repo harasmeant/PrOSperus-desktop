@@ -1,5 +1,56 @@
 # Validación
 
+## Escritorio independiente 0.3.2-dev — 29 de octubre de 2026
+
+55 pruebas satisfactorias. El lanzador se prueba con intérpretes de sistema
+y temporales disponibles, ausentes o sin Qt, respetando argumentos y selección
+explícita. Además, una ejecución real con Python `-S` reproduce la ausencia de
+PySide6 y verifica la selección automática de Essentials y el arranque gráfico
+sin pantalla. La reparación propuesta para la copia v3.1 se aplica al script
+exacto de su archivo y también arranca. Evidencia: `out/verification-v3.2.json`.
+El usuario confirmó después el arranque de su copia v3.1 reparada y que la
+búsqueda ya funciona sobre su carpeta importada. Esto no equivale a una prueba
+manual de la detección automática del paquete v3.2.
+
+## Escritorio independiente 0.3.1-dev — 29 de octubre de 2026
+
+51 pruebas pasan con Qt del sistema y con PySide6 Essentials 6.12.0. Incluyen
+búsqueda en nombres/rutas y cuerpos Markdown, tildes, varios términos, alcance
+de carpeta, cambios guardados, notas ilegibles/grandes y límites de acceso.
+La prueba de interfaz reproduce **impresora → Cursos 3D**: devuelve la portada
+del proyecto aunque la coincidencia exista solo en una nota de una subcarpeta.
+
+Diagnóstico de dependencias probado simulando importaciones fallidas y un
+Fedora Live con 183 MiB disponibles. Los mensajes conservan el error concreto.
+Paquete extraído: fuentes idénticas, sintaxis de los lanzadores válida, arranque
+desde otro directorio con Essentials y `--root` externo, renderizado y búsqueda
+por contenido correctos. Evidencia en `out/verification-v3.1.json`.
+
+El usuario confirmó arranque de v0.3 e importación de una carpeta en su VM
+con el entorno de Essentials en `/tmp`. La instalación RPM había fallado por
+falta de espacio en el Live. No se ha confirmado manualmente el paquete v3.1,
+ni reconstruido la imagen ni generado una ISO. La vía Essentials requiere
+la sesión gráfica y bibliotecas del sistema; no es un paquete autocontenido.
+
+## Escritorio independiente 0.3.0-dev — 29 de octubre de 2026
+
+45 pruebas locales satisfactorias, incluidas las 27 anteriores. Las nuevas
+comprueban copias sin sobrescritura, estructura/adjuntos, nombres repetidos,
+permisos, rechazo de enlaces y archivos especiales, recuperación ante errores,
+selección, portapapeles de archivos frente a texto, arrastre, creación de
+proyectos, historial, Super solo frente a combinaciones y controles simulados.
+Las pruebas no cambian volumen/brillo ni lanzan aplicaciones del anfitrión.
+
+Capturas sin pantalla a 1360×850 y 900×650; tarjetero, explorador y panel de
+controles revisados. El paquete v3 se mantiene separado de la descarga v2.
+La comprobación del contenido y del lanzador se registra en
+`out/verification-v3.json`.
+
+El usuario confirmó que v0.2 funciona en su Fedora. No equivale a validar v0.3:
+queda pendiente comprobarla allí, especialmente portapapeles con Archivos,
+drag-and-drop, Wayland, Super y funciones multimedia. GNOME conserva sus atajos
+globales. No se ha reconstruido ni validado la imagen de sistema con v0.3.
+
 ## Escritorio independiente 0.2.0-dev — 28 de octubre de 2026
 
 ```sh

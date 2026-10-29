@@ -54,15 +54,45 @@ class Vault:
             if current in seen:
                 continue
             seen.add(current)
-            for path in self.entries(current):
+            try:
+                entries = self.entries(current)
+            except (OSError, ValueError):
+                # A missing/unreadable branch must not hide other search results.
+                continue
+            for path in entries:
                 if path.is_dir():
                     pending.append(path)
                 else:
                     yield path
 
     def search(self, query, folder=None):
+        """Match every term across a note's relative path and saved Markdown.
+
+        Name matches come first. Unreadable/oversized notes can still match by
+        name, and never prevent searching the remaining files. Read one note
+        at a time without keeping a second copy of the vault in memory.
+        """
         terms = searchable(query).split()
-        return [p for p in self.notes(folder) if all(t in searchable(p.relative_to(self.root)) for t in terms)]
+        by_name, by_content = [], []
+        for path in self.notes(folder):
+            name = searchable(path.relative_to(self.root))
+            missing = [term for term in terms if term not in name]
+            if not missing:
+                by_name.append(path)
+                continue
+            try:
+                content = searchable(self.read(path))
+            except (OSError, ValueError, UnicodeError):
+                continue
+            if all(term in content for term in missing):
+                by_content.append(path)
+        return by_name + by_content
+
+    def search_projects(self, query):
+        """Find project covers by name or by matching notes inside them."""
+        terms = searchable(query).split()
+        return [path for path in self.entries(self.root) if path.is_dir() and
+                (all(term in searchable(path.name) for term in terms) or self.search(query, path))]
 
     def read(self, path):
         path = self.checked(path)

@@ -1,7 +1,7 @@
 # Receta experimental de imagen
 
 Estos archivos describen una imagen de desarrollo con Fedora, Cage y la sesión
-PrOSperus. La entrega `0.2.0-dev` que se ha comprobado es la aplicación y su
+PrOSperus. La entrega `0.3.2-dev` que se ha comprobado es la aplicación y su
 paquete para Fedora Live; **esta imagen no se ha reconstruido ni validado con
 esa versión**. No es una distribución preparada para uso diario.
 

@@ -49,8 +49,7 @@ class ShellTests(unittest.TestCase):
         self.window.navigate(self.root / 'Laboratorio')
         self.assertTrue(panel.isVisible())
         self.window.search.setText('hipotesis')
-        self.assertEqual(len(self.window.surface.nodes), 1)
-        self.assertIn('Hipótesis', self.window.surface.nodes[0].text())
+        self.assertEqual([node.path.name for node in self.window.surface.nodes], ['Hipótesis.md', 'Plan de trabajo.md'])
 
     def test_kiosk_and_host_power_controls(self):
         self.window.kiosk = True
