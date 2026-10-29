@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=PrOSperus
+export QT_QPA_PLATFORM=wayland
+export WLR_RENDERER=pixman
+export XKB_DEFAULT_LAYOUT=es
+exec dbus-run-session -- cage -s -- /usr/libexec/prosperus-client

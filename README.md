@@ -1,10 +1,29 @@
 # PrOSperus desktop
 
-**Versión 0.0 · Prototipo de escritorio orientado a proyectos · 27 de octubre de 2026**
+**PrOSperus desktop · Prototipo de escritorio orientado a proyectos**
+
+## Escritorio independiente en desarrollo · 0.2.0-dev
+
+La carpeta `desktop/` contiene una aplicación Python/Qt independiente de Obsidian.
+Esta iteración recupera el aspecto del prototipo aceptado: wallpapers heredados,
+paletas por proyecto, tarjetero vertical, mapa radial, notas flotantes y barra
+contextual. Incluye edición Markdown y guardado, creación de notas/carpetas,
+explorador y buscador de aplicaciones Linux con favoritos globales.
+
+![PrOSperus independiente: tarjetero de proyectos y mapa sobre el fondo de la demo](docs/images/desktop-preview.png)
+
+[Descargar la demo para Fedora · v0.2.0-dev](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.2.0-dev)
+
+Para probarla dentro de Fedora, consulta [la guía de la demo](docs/FEDORA-DEMO.md).
+El [diario de trabajo](docs/WORKLOG.md) registra la referencia acordada, los cambios
+y sus límites. No se ha alcanzado la paridad completa con el complemento de
+Obsidian; tampoco se ha validado una distribución para uso diario.
+
+## Referencia original · versión 0.0
 
 Un proyecto para organizar el trabajo en Linux alrededor de carpetas, notas y aplicaciones. Cada carpeta se convierte en un escritorio visual con un mapa navegable, notas flotantes y una barra de tareas contextual.
 
-La versión **0.0** conserva el prototipo funcional desarrollado como complemento de Obsidian y establece el punto de partida para una futura distribución Linux. **Todavía no incluye una ISO, una imagen de sistema ni un escritorio independiente.**
+La versión **0.0** conserva el prototipo funcional desarrollado como complemento de Obsidian y establece el punto de partida para una futura distribución Linux. Esa versión publicada no incluye una ISO, una imagen de sistema ni un escritorio independiente; el desarrollo local posterior se describe arriba.
 
 ## Lo que ya funciona
 

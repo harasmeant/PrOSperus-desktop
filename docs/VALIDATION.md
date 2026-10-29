@@ -1,5 +1,25 @@
 # Validación
 
+## Escritorio independiente 0.2.0-dev — 28 de octubre de 2026
+
+```sh
+PYTHONPATH=desktop QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -v
+```
+
+27 pruebas satisfactorias en el entorno local. Cubren modelo de archivos,
+guardado y colisiones, fronteras de rutas, enlaces, interfaz de proyectos y
+notas, fondos, navegación por teclado, barra desplazable y aplicaciones.
+Las escrituras se prueban con carpetas temporales; los lanzamientos se simulan.
+
+Se ha consultado además el catálogo GIO real sin abrir aplicaciones y se ha
+verificado un paquete recién extraído ejecutando su lanzador desde otra carpeta.
+Se han inspeccionado capturas Qt a 1360×850 y 900×650. La comprobación detallada,
+los archivos de evidencia y el hash de la entrega están en `WORKLOG.md`.
+
+Esta validación no incluye una prueba manual de la versión nueva dentro de
+Fedora/Boxes ni una reconstrucción de la imagen Linux. La evidencia siguiente
+corresponde al prototipo de Obsidian y se conserva como referencia histórica.
+
 ## Pruebas del lanzador
 
 Con Python 3 y PyGObject/GIO disponibles:

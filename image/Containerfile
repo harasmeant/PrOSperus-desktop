@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: GPL-3.0-only
+FROM localhost/prosperus-base:dev
+COPY desktop/prosperus /usr/lib/prosperus/prosperus
+COPY demo-system /usr/share/prosperus/demo
+COPY LICENSE /usr/share/licenses/prosperus/LICENSE
+COPY image/rootfs/ /
+RUN chmod 0755 /usr/bin/prosperus /usr/libexec/prosperus-session /usr/libexec/prosperus-client \
+    && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
+    && passwd --lock root \
+    && systemctl enable greetd.service \
+    && systemctl set-default graphical.target \
+    && systemctl mask getty@tty1.service \
+    && mkdir -p /boot /usr/share/prosperus /var/log/journal \
+    && rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort > /usr/share/prosperus/packages.txt \
+    && python3 -m compileall -q /usr/lib/prosperus/prosperus \
+    && kernel_version="$(ls /usr/lib/modules | sort -V | tail -1)" \
+    && cp "/usr/lib/modules/$kernel_version/vmlinuz" /boot/vmlinuz-prosperus \
+    && dracut --force --no-hostonly --no-hostonly-cmdline \
+       --add-drivers 'virtio_pci virtio_blk virtio_gpu ext4' \
+       /boot/initramfs-prosperus.img "$kernel_version" > /usr/share/prosperus/dracut-build.log 2>&1 \
+    && truncate -s 0 /etc/machine-id
+LABEL org.opencontainers.image.title="PrOSperus desktop development VM"
+LABEL org.opencontainers.image.licenses="GPL-3.0-only"
+LABEL org.opencontainers.image.version="0.2.0-dev"
+CMD ["/sbin/init"]

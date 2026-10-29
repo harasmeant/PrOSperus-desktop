@@ -1,4 +1,4 @@
-name: Validate prototype
+name: Validate PrOSperus
 on:
   push:
   pull_request:
@@ -18,3 +18,26 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-glib-2.0
       - name: Launcher unit tests
         run: /usr/bin/python3 -m unittest discover -s prototype/obsidian -p 'test_*.py' -v
+  desktop:
+    runs-on: ubuntu-latest
+    container: registry.fedoraproject.org/fedora:44
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONPATH: desktop
+    steps:
+      - name: Install desktop test dependencies
+        run: dnf -y --setopt=install_weak_deps=False install git python3-pyside6 python3-gobject qt6-qtwayland dejavu-sans-fonts tar gzip
+      - uses: actions/checkout@v4
+      - name: Desktop and file model tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Package Fedora demo and render preview
+        run: |
+          python3 scripts/package-fedora-demo.py
+          python3 -m prosperus --root demo-system --screenshot out/preview.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prosperus-fedora-demo
+          path: |
+            out/prosperus-demo-v2.tar.gz
+            out/prosperus-demo-v2.tar.gz.sha256
+            out/preview.png

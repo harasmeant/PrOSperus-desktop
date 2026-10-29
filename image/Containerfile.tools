@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-3.0-only
+ARG FEDORA_BASE=registry.fedoraproject.org/fedora@sha256:de3396aa9d2452c5affd4a0b6eff9d3d0a7f3af58e243827790963c30e2d5e2c
+FROM ${FEDORA_BASE}
+RUN dnf -y --setopt=install_weak_deps=False install \
+    qemu-system-x86-core qemu-img e2fsprogs tar zstd python3 \
+    && dnf clean all
+RUN dnf -y --setopt=install_weak_deps=False install \
+    systemd-ukify systemd-boot-unsigned dosfstools mtools gdisk \
+    && dnf clean all
+WORKDIR /work

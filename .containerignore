@@ -1,0 +1,7 @@
+.git
+out
+evidence/local
+__pycache__
+*.pyc
+.venv
+prototype

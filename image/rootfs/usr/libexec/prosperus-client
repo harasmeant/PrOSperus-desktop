@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Keep the desktop available after a reader failure; no conventional desktop beneath it.
+while true; do
+    /usr/bin/prosperus --kiosk --system-session
+    echo 'PrOSperus stopped; restarting in three seconds.' >&2
+    sleep 3
+done

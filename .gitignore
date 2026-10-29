@@ -12,3 +12,9 @@ handoff/
 *.tar.gz
 *.zip
 .DS_Store
+out/
+evidence/local/
+*.qcow2
+*.raw
+*.img
+*.iso
