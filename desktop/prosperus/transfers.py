@@ -82,6 +82,8 @@ def copy_into(vault, sources, folder):
     # Selecting a parent and its child means one copy of the parent, not two.
     sources = [p for p in sources if not any(p != other and p.is_relative_to(other) for other in sources)]
     created = []
+    # Registrar solo destinos que hemos creado: si falla el lote, la limpieza
+    # puede retirarlos sin borrar archivos previos ni modificar los originales.
     try:
         for source in sources:
             is_directory = source.is_dir()

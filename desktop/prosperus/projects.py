@@ -71,6 +71,8 @@ class CoverStack(QWidget):
         self.setAccessibleName('Tarjetero de proyectos; usa las flechas arriba y abajo')
 
     def rebuild(self):
+        # Crear primero las portadas del fondo y la activa al final conserva
+        # el orden de apilado visual cuando arrange() las eleva con raise_().
         for card in self.cards:
             card.hide(); card.deleteLater()
         self.cards = []

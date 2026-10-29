@@ -467,6 +467,7 @@ class Explorer(QDialog):
 
 
 class Desktop(QMainWindow):
+    """Coordina mapa, notas y diálogos; Vault concentra el acceso a los archivos."""
     PAGE_SIZE = 8
 
     def __init__(self, root, kiosk=False, system_session=False):
@@ -474,6 +475,8 @@ class Desktop(QMainWindow):
         self.vault = Vault(root)
         self.folder = self.vault.root
         self.kiosk = kiosk
+        # Pantalla completa no equivale a controlar el sistema. Los controles
+        # de sesión se habilitan únicamente en la imagen preparada para la VM.
         self.system_session = system_session and Path('/etc/prosperus-vm').is_file()
         self.panels = {}
         self.app_browser = None
@@ -877,6 +880,8 @@ class Desktop(QMainWindow):
 
 
 def main():
+    # Mantener el punto de entrada pequeño permite usar la misma interfaz
+    # como aplicación Fedora, sesión Live y captura de pruebas sin pantalla.
     parser = argparse.ArgumentParser(description='PrOSperus desktop — escritorio de proyectos')
     parser.add_argument('--root', type=Path, default=Path('/usr/share/prosperus/demo'))
     parser.add_argument('--kiosk', action='store_true')

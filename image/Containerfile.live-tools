@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Keep ISO-only tooling outside the system shipped to the user.
+FROM localhost/prosperus-tools:dev
+RUN dnf -y --setopt=install_weak_deps=False install \
+    xorriso squashfs-tools edk2-ovmf qemu-device-display-virtio-vga \
+    && dnf clean all

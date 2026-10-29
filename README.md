@@ -21,6 +21,9 @@ nombres como el contenido guardado de los Markdown, incluidas las subcarpetas.
 Descarga `prosperus-demo-v3.2.tar.gz`; la publicación conserva también los paquetes
 v3 y v3.1 como histórico. Todavía no incluye una ISO arrancable.
 
+La [receta de ISO Live](docs/ISO-LIVE.md) ya genera una imagen local con
+dependencias incluidas; su arranque sigue pendiente de validación.
+
 Para probarla dentro de Fedora, consulta [la guía de la demo](docs/FEDORA-DEMO.md).
 El [diario de trabajo](docs/WORKLOG.md) registra la referencia acordada, los cambios
 y sus límites. No se ha alcanzado la paridad completa con el complemento de

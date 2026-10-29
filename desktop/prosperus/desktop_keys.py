@@ -70,6 +70,8 @@ class DesktopKeys(QObject):
         if event.type() == QEvent.Type.ShortcutOverride:
             return False
         if key == Qt.Key.Key_Meta:
+            # Abrir al soltar Super, solo si no formó una combinación: Super+E
+            # debe abrir el explorador sin abrir además el panel de aplicaciones.
             if event.isAutoRepeat():
                 return True
             if event.type() == QEvent.Type.KeyPress:

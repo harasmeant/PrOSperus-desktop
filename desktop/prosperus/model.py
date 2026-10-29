@@ -10,6 +10,8 @@ from urllib.parse import unquote, urlsplit
 
 
 def searchable(value):
+    # Normalizar consulta y texto del mismo modo permite buscar sin tildes ni
+    # distinguir mayúsculas, conservando intacto el contenido de los archivos.
     return ''.join(c for c in unicodedata.normalize('NFD', str(value).casefold())
                    if unicodedata.category(c) != 'Mn')
 
@@ -90,6 +92,8 @@ class Vault:
 
     def search_projects(self, query):
         """Find project covers by name or by matching notes inside them."""
+        # El resultado es la portada del proyecto, aunque la coincidencia esté
+        # en una nota de varios niveles más abajo (p. ej. «impresora» en Cursos 3D).
         terms = searchable(query).split()
         return [path for path in self.entries(self.root) if path.is_dir() and
                 (all(term in searchable(path.name) for term in terms) or self.search(query, path))]

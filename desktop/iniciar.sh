@@ -6,6 +6,8 @@ cd -- "$(dirname -- "$0")"
 if [ -n "${PROSPERUS_PYTHON:-}" ]; then
     prosperus_python=$PROSPERUS_PYTHON
 else
+    # Fedora Live puede tener Qt en un entorno temporal para evitar llenar /.
+    # Se prefiere el Python del sistema y solo se reutiliza un entorno propio.
     prosperus_python=/usr/bin/python3
     if ! "$prosperus_python" -c 'from PySide6.QtWidgets import QApplication' >/dev/null 2>&1; then
         prosperus_runtime=/tmp/prosperus-runtime

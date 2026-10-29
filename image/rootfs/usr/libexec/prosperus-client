@@ -1,8 +1,13 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# Keep the desktop available after a reader failure; no conventional desktop beneath it.
+# Los ejemplos del sistema son de solo lectura. Cada sesión trabaja sobre una
+# copia del usuario; en la ISO Live esta copia desaparece al apagar la máquina.
+if [ ! -d "$HOME/Proyectos" ]; then
+    cp -R /usr/share/prosperus/demo "$HOME/Proyectos" || exit 1
+fi
+# Reiniciar la interfaz no debe volver a copiar ni sustituir las notas editadas.
 while true; do
-    /usr/bin/prosperus --kiosk --system-session
+    /usr/bin/prosperus --root "$HOME/Proyectos" --kiosk --system-session
     echo 'PrOSperus stopped; restarting in three seconds.' >&2
     sleep 3
 done

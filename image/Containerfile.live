@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-3.0-only
+FROM localhost/prosperus:dev
+# dracut-live supplies the SquashFS/overlay boot logic missing from plain dracut.
+RUN dnf -y --setopt=install_weak_deps=False install dracut-live && dnf clean all
+RUN printf '# Live root is mounted by the initramfs.\n' > /etc/fstab \
+    && kernel_version="$(ls /usr/lib/modules | sort -V | tail -1)" \
+    && dracut --force --no-hostonly --no-hostonly-cmdline \
+       --add 'dmsquash-live' \
+       --add-drivers 'virtio_pci virtio_blk virtio_scsi virtio_gpu sr_mod isofs squashfs overlay loop' \
+       /boot/initramfs-prosperus.img "$kernel_version" \
+       > /usr/share/prosperus/dracut-live-build.log 2>&1 \
+    && rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort > /usr/share/prosperus/packages.txt

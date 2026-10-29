@@ -50,6 +50,8 @@ def dependency_diagnostic(error):
 
 
 def main():
+    # Importar Qt aquí, y no al cargar este módulo, permite explicar un fallo
+    # de dependencias incluso cuando todavía no se puede mostrar una ventana.
     try:
         importlib.import_module('PySide6.QtWidgets')
     except (ImportError, OSError) as error:

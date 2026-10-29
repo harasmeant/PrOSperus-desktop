@@ -263,3 +263,23 @@ funciones del escritorio se consulta antes de iniciar una construcción pesada.
 - Corregido LEEME para no asumir que existe una carpeta anterior de proyectos.
 - Paquete v3.2 regenerado: SHA-256 `1cad6a1f9869fcf423f72114382afff3211dc84fb335363b618f4db5df031b60`. Sustituye el hash anterior tras el ajuste de documentación.
 - La ISO Live con dependencias incluidas sigue pendiente de construcción y prueba.
+
+### ISO Live y legibilidad · 2026-10-29
+
+- Añadidas recetas separadas de ISO: SquashFS con overlay temporal, dracut-live, UKI UEFI y El Torito/GPT; sin instalador ni persistencia.
+- Construcción con límites de CPU/memoria; herramientas fuera de la imagen del usuario.
+- La sesión copia los ejemplos al directorio del usuario para poder crear y guardar notas sin permisos de administrador.
+- Comentarios añadidos a búsquedas, copias, trabajadores Qt, teclado Super, tarjetero, sesión y lanzadores.
+- 55 pruebas locales correctas tras los primeros cambios; arranque de ISO pendiente de verificación.
+- Se pidió cerrar la VM Fedora después de guardar las notas por presión de memoria del anfitrión (2,3 GiB disponibles y swap casi llena).
+- CI de la publicación 0.3.2: las dos ejecuciones de GitHub Actions finalizaron correctamente.
+
+#### Resultado de construcción y siguiente comprobación
+
+- ISO corregida: 757.366.784 bytes (722,28 MiB), SHA-256 `b4d9dd8ade84fa810a8236fbb52626c6ed1d245d259249e8dd86599f84a10e0e`.
+- Los 13 archivos Python de la ISO coinciden con el código actual, incluidos los comentarios. Qt/GIO y creación de proyecto/nota con búsqueda comprobados como usuario 1000 en el contenedor del sistema.
+- Añadido módulo qemu-device-display-virtio-vga a las herramientas tras detectar su ausencia.
+- OVMF no encontró el cargador con el FAT anexado fuera del volumen ISO. Se movió el FAT dentro del volumen (EFI/efiboot.img) y se regeneró el catálogo El Torito/GPT conservando el mismo SquashFS.
+- La repetición del arranque fue detenida por la comprobación de RAM: 1,9 GiB disponibles y swap casi llena. No quedó ninguna VM de prueba activa.
+- Pendiente: arrancar la ISO corregida, capturar la interfaz, crear/guardar/buscar una nota desde la VM y apagar. No se ha publicado la ISO como funcional.
+- Comando de prueba reducida cuando haya margen: `PROSPERUS_VM_MEMORY_MB=1024 bash scripts/run-iso.sh`; la prueba normal usa 2048 MiB.

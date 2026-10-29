@@ -76,6 +76,8 @@ class FileActions(QObject):
         if self.busy:
             self.report('Espera a que termine la copia actual.'); return
         self.report(f'Copiando {len(paths)} elementos a {folder.name}…')
+        # El trabajador solo copia archivos. Las señales devuelven los cambios
+        # al hilo principal: los widgets no se modifican desde el trabajador.
         self.thread = QThread(self)
         self.worker = CopyWorker(self.shell.vault, list(paths), folder)
         self.worker.moveToThread(self.thread)
