@@ -19,10 +19,12 @@ nombres como el contenido guardado de los Markdown, incluidas las subcarpetas.
 
 [Descargar la demo v0.3.2-dev](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.3.2-dev).
 Descarga `prosperus-demo-v3.2.tar.gz`; la publicación conserva también los paquetes
-v3 y v3.1 como histórico. Todavía no incluye una ISO arrancable.
+v3 y v3.1 como histórico.
 
-La [receta de ISO Live](docs/ISO-LIVE.md) ya genera una imagen local con
-dependencias incluidas; su arranque sigue pendiente de validación.
+La [ISO Live de prueba](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.3.2-live.1)
+incluye las dependencias y arranca directamente en PrOSperus. Comprobada con
+UEFI, dos CPU y 2 GiB en QEMU; sin instalador ni persistencia. Consulta la
+[guía de la ISO](docs/ISO-LIVE.md).
 
 Para probarla dentro de Fedora, consulta [la guía de la demo](docs/FEDORA-DEMO.md).
 El [diario de trabajo](docs/WORKLOG.md) registra la referencia acordada, los cambios

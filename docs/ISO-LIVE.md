@@ -1,8 +1,11 @@
 # ISO Live de prueba
 
-**Estado al 29-10-2026:** primera imagen construida y catálogo UEFI corregido.
-El arranque de la imagen corregida aún no se ha validado: la comprobación de RAM
-impidió repetir la prueba en el anfitrión. No se ha publicado como ISO funcional.
+**Estado al 29-10-2026:** arranque UEFI y sesión gráfica comprobados en QEMU/KVM
+con dos CPU y 2 GiB de RAM, sin red. Se verificó crear un proyecto, crear y
+guardar una nota y encontrarla por una palabra presente solo en su contenido.
+Apagado ACPI comprobado. No se ha probado todavía en hardware físico ni en Boxes.
+
+![Escritorio arrancado desde la ISO](images/iso-live-preview.png)
 
 La receta incluye Fedora, el compositor Cage, PrOSperus y sus dependencias Qt/GIO.
 Está orientada a máquinas virtuales x86_64 con UEFI y Secure Boot desactivado.
@@ -29,7 +32,7 @@ repositorios disponibles al construir; no se promete reproducibilidad binaria.
 
 1. Crea una máquina nueva desde el archivo ISO, con firmware UEFI.
 2. Asigna dos CPU y 2 GiB de RAM. Cierra otras VM si falta memoria en el anfitrión.
-3. El comportamiento previsto es entrar directamente en PrOSperus sin instalar dependencias.
+3. La sesión entra directamente en PrOSperus sin instalar dependencias.
 4. Crea un proyecto, una nota y comprueba búsqueda, guardado y copia de archivos.
 
 La ISO no instala nada en el disco virtual. Su sistema comprimido permanece en

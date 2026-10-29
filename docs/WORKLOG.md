@@ -283,3 +283,18 @@ funciones del escritorio se consulta antes de iniciar una construcción pesada.
 - La repetición del arranque fue detenida por la comprobación de RAM: 1,9 GiB disponibles y swap casi llena. No quedó ninguna VM de prueba activa.
 - Pendiente: arrancar la ISO corregida, capturar la interfaz, crear/guardar/buscar una nota desde la VM y apagar. No se ha publicado la ISO como funcional.
 - Comando de prueba reducida cuando haya margen: `PROSPERUS_VM_MEMORY_MB=1024 bash scripts/run-iso.sh`; la prueba normal usa 2048 MiB.
+
+### Continuación remota autorizada · 2026-10-29
+
+- A petición del usuario, detenida su VM Fedora de Boxes mediante managed-save de libvirt: estado inactivo y sesión guardada confirmados. Se conserva la RAM de la sesión Live en disco; no se ordenó apagar el sistema invitado ni se borraron sus datos.
+- RAM disponible tras guardar la VM: 5,2 GiB.
+- Arranque UEFI real de la ISO corregida confirmado: kernel, raíz Live y graphical.target en unos 7,5 s. La sesión gráfica falló por ausencia de pam_systemd.so; se incorpora systemd-pam y se repite la construcción.
+
+#### Primera ISO funcional · v0.3.2-live.1
+
+- Dependencia adicional de sesión: systemd-pam. Arranque desde CD UEFI con OVMF, dos CPU y 2048 MiB; sin red ni disco invitado.
+- Interfaz verificada visualmente: proyecto prueba iso, nota validacion, texto impresora dentro de la nota guardado, cierre del editor y búsqueda por impresora mostrando validacion.
+- Capturas en out/iso/screenshots y vista inicial en docs/images/iso-live-preview.png.
+- ISO: 757.944.320 bytes; SHA-256 `ab729c0a2bb13a6e7b9121eedf0c6ab80eb8223d7566ee134a4f7377edbf2aa2`. Sustituye las imágenes de prueba anteriores.
+- La VM Fedora del usuario permanece detenida con estado gestionado guardado por libvirt; no se descartó la sesión Live.
+- No se afirma validación en hardware físico ni en Boxes. No incluye instalador ni persistencia.

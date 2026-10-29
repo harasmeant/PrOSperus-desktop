@@ -3,8 +3,8 @@
 Estos archivos describen una imagen de desarrollo con Fedora, Cage y la sesión
 PrOSperus. La aplicación `0.3.2-dev` y su paquete Fedora están comprobados.
 La nueva receta [ISO Live](../docs/ISO-LIVE.md) ya genera una imagen con sus
-dependencias incluidas; el arranque de la ISO corregida sigue pendiente por
-falta de RAM disponible para repetir la prueba. No es una distribución para uso diario.
+dependencias incluidas y se ha comprobado su arranque UEFI, sesión gráfica,
+creación de proyecto, guardado y búsqueda de notas en QEMU con 2 GiB. No es una distribución para uso diario.
 
 La receta de arranque actual incluye `selinux=0`; no proporciona una política
 SELinux adaptada al nuevo escritorio. La cuenta `prosperus` y su sesión local

@@ -102,3 +102,11 @@ Es evidencia de una sesión local anterior a la publicación, no una garantía d
 ## Pendiente
 
 Pruebas reproducibles de interfaz sobre una bóveda de demostración, compatibilidad entre versiones de Obsidian/Hover Editor, aislamiento por proyecto, persistencia entre reinicios y pruebas de la futura imagen Linux.
+
+## ISO Live 0.3.2 · 2026-10-29
+
+Arranque óptico UEFI real en QEMU/KVM (OVMF, 2 vCPU, 2048 MiB, sin red ni disco),
+sesión Cage/PrOSperus, creación de proyecto y nota, guardado y búsqueda por
+contenido verificados. Se conserva la captura en docs/images/iso-live-preview.png.
+El usuario de sesión dispone de una copia editable de los ejemplos. La imagen
+incluye Qt/GIO y systemd-pam. No se ha validado aún en Boxes ni hardware físico.
