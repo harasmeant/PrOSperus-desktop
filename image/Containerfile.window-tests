@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Laboratorio aislado: no cambia Cage en la ISO ni el compositor del anfitrión.
+FROM localhost/prosperus-live:dev
+RUN dnf -y --setopt=install_weak_deps=False install sway foot grim && dnf clean all
+# El backend headless no necesita prioridad de tiempo real. Quitar la capacidad
+# del binario permite ejecutarlo como usuario sin ampliar permisos del contenedor.
+RUN setcap -r /usr/bin/sway

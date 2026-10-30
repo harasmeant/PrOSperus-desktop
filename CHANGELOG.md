@@ -1,5 +1,12 @@
 # Historial
 
+## 0.4.0-dev — 2026-10-30 · Desarrollo, sin nueva ISO
+
+- Fibonacci, columnas y principal centrada, perfiles ultrawide y vista previa.
+- Organización reversible de notas sin alterar contenido.
+- Adaptador experimental Sway para aplicaciones reales, con validación de tamaños.
+- 69 pruebas locales y laboratorio Wayland con dos pantallas. Detalles en `docs/WINDOW-LAYOUTS.md`.
+
 ## 0.3.2-dev — 2026-10-29 · Arranque único en Fedora Live
 
 - `iniciar.sh` comprueba el Python del sistema y, si no puede importar Qt,

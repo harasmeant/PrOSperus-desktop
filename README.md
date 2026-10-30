@@ -2,7 +2,9 @@
 
 **PrOSperus desktop · Prototipo de escritorio orientado a proyectos**
 
-## Escritorio independiente en desarrollo · 0.3.2-dev
+## Escritorio independiente en desarrollo · 0.4.0-dev
+
+La rama de desarrollo incorpora [distribución Fibonacci y perfiles ultrawide](docs/WINDOW-LAYOUTS.md), con integración experimental Sway. Estos cambios aún no están en la ISO publicada.
 
 La carpeta `desktop/` contiene una aplicación Python/Qt independiente de Obsidian.
 Esta iteración recupera el aspecto del prototipo aceptado: wallpapers heredados,
@@ -68,7 +70,7 @@ Consulta la [guía de instalación](docs/INSTALL.md). El complemento no necesita
 
 ## Límites actuales
 
-El prototipo depende de Obsidian y Hover Editor. El mapa representa la estructura de archivos, no un grafo semántico. La disposición de las ventanas no se recupera automáticamente tras reiniciar. Los favoritos de aplicaciones son globales y no existe aislamiento por proyecto. La base Linux y el toolkit del escritorio futuro siguen pendientes de elección.
+El prototipo depende de Obsidian y Hover Editor. El mapa representa la estructura de archivos, no un grafo semántico. La disposición de las ventanas no se recupera automáticamente tras reiniciar. Los favoritos de aplicaciones son globales y no existe aislamiento por proyecto. El escritorio independiente usa Python/Qt sobre Fedora; la integración experimental Sway aún no sustituye Cage en la ISO.
 
 ## Licencia
 
@@ -86,4 +88,4 @@ Referencia: [GPLv3, condiciones de distribución](https://www.gnu.org/licenses/g
 
 ---
 
-**English:** PrOSperus desktop is a project-oriented Linux desktop experiment. Version 0.0 contains a working Obsidian prototype with folder maps, floating notes, a vault explorer and a Linux application launcher. A standalone desktop and a bootable Linux image are planned, not yet implemented.
+**English:** PrOSperus desktop is a project-oriented Linux desktop experiment. Version 0.0 contains a working Obsidian prototype with folder maps, floating notes, a vault explorer and a Linux application launcher. A standalone Python/Qt desktop and a Fedora Live ISO are available. Development includes experimental Fibonacci layouts and ultrawide profiles; the published ISO still uses Cage and has no installer or persistence.

@@ -298,3 +298,13 @@ funciones del escritorio se consulta antes de iniciar una construcción pesada.
 - ISO: 757.944.320 bytes; SHA-256 `ab729c0a2bb13a6e7b9121eedf0c6ab80eb8223d7566ee134a4f7377edbf2aa2`. Sustituye las imágenes de prueba anteriores.
 - La VM Fedora del usuario permanece detenida con estado gestionado guardado por libvirt; no se descartó la sesión Live.
 - No se afirma validación en hardware físico ni en Boxes. No incluye instalador ni persistencia.
+
+## 30 de octubre de 2026 · Fibonacci y ultrawide · 0.4.0-dev
+
+Usuario confirma espiral Fibonacci. Añadidos motor geométrico compartido, perfiles estándar/21:9/32:9, vista previa, anchura centrada y organización reversible de notas. Adaptador Sway experimental limitado al espacio visible del monitor seleccionado, excluyendo PrOSperus. Comentarios explican coordenadas lógicas, protección de otras pantallas y confirmación asíncrona de tamaños.
+
+69 pruebas locales correctas. Sway aislado: cuatro aplicaciones, tres distribuciones, dos pantallas; geometrías verificadas y segunda pantalla sin cambios. La prueba detectó redondeo de tamaños de terminales: ahora se comprueba el resultado y se comunica el ajuste dentro de la zona. Cliente restringido probado. Evidencia en out/window-layouts.
+
+Captura Qt real inspeccionada. El guion posterior espera el mapeado de la ventana antes de abrir el diálogo modal; su repetición quedó bloqueada por agotamiento de cuota de revisión automática de permisos, no por un rechazo de seguridad. La ISO publicada no se cambia. Integración completa de sesión y nueva ISO pendientes. Detalles: WINDOW-LAYOUTS.md.
+
+Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, SHA-256 ce947ca7e2fe548c8a08d2794981a71555abd051340ea7481b01331cbcd3f4a3. Extraído y comparado: 16 fuentes idénticas; arranque desde /tmp y captura correctos. No se ha publicado esta revisión ni reconstruido la ISO. Obsidian actualizado en notas 21, 22 e índice.

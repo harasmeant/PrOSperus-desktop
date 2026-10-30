@@ -22,6 +22,7 @@ from .launcher import ApplicationBrowser, ApplicationService
 from .file_actions import FileActions, local_paths
 from .desktop_keys import DesktopKeys, SHORTCUT_HELP
 from .controls import ControlsDialog, SessionControls
+from .layout_settings import LayoutDialog
 
 STYLE = Palette().css()
 
@@ -629,6 +630,9 @@ class Desktop(QMainWindow):
     def open_controls(self):
         dialog = ControlsDialog(self); dialog.exec(); dialog.deleteLater()
 
+    def open_layout_settings(self):
+        dialog = LayoutDialog(self); dialog.exec(); dialog.deleteLater()
+
     def show_help(self):
         dialog = QDialog(self); dialog.setWindowTitle('Atajos y manejo del escritorio'); dialog.resize(640, 570)
         layout = QVBoxLayout(dialog)
@@ -889,6 +893,7 @@ def main():
     parser.add_argument('--screenshot', type=Path)
     args = parser.parse_args()
     app = QApplication(sys.argv[:1]); app.setApplicationName('PrOSperus desktop')
+    app.setDesktopFileName('org.prosperus.Desktop')
     app.setStyleSheet(STYLE)
     try:
         desktop = Desktop(args.root, args.kiosk, args.system_session)

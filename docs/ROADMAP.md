@@ -1,33 +1,25 @@
-# Hacia una distribución orientada a proyectos
+# Hacia un sistema orientado a proyectos
 
-Esta hoja de ruta describe trabajo pendiente. No constituye una lista de funciones disponibles en 0.0.
+Actualizado el 30 de octubre de 2026. El producto es un sistema distribuido como ISO que gestione archivos, ventanas y aplicaciones. La VM es una herramienta de validación.
 
-## 0.0 — Referencia inicial
+## Entregado
 
-Prototipo de Obsidian, documentación pública, ejemplos y evidencia histórica de validación. La experiencia visual sirve de referencia para el escritorio independiente.
+Referencia Obsidian 0.0; escritorio Python/Qt con proyectos, notas, copias y búsqueda Markdown; demo Fedora v0.3.2-dev y primera ISO Live v0.3.2-live.1 publicadas. Arranque UEFI, creación, guardado y búsqueda comprobados en la ISO con Cage.
 
-## Próximo hito — Decisiones y primera imagen de desarrollo
+## Preparado en desarrollo · 0.4.0-dev
 
-Elegir base Linux, arquitectura, soporte gráfico, toolkit y mecanismo de actualización. Fedora/KDE y una base atómica son candidatos; la elección no está cerrada. Versionar una receta reproducible y arrancarla en una máquina virtual, comprobando actualización y recuperación. Una imagen del sistema y una ISO instalable son entregables distintos.
+Fibonacci, columnas y principal centrada, perfiles estándar, 21:9 y 32:9. Notas con deshacer y adaptador Sway para ventanas reales, probado en dos pantallas virtuales. [Alcance y pruebas](WINDOW-LAYOUTS.md). Sin nueva ISO todavía.
 
-## Escritorio independiente mínimo
+## Siguiente hito · Sesión completa
 
-Separar cinco responsabilidades:
+1. Mapa como fondo permanente; foco y aplicaciones por encima.
+2. Super, Alt+Tab, atajos de distribución, maximizar, minimizar, cerrar y recuperar; distinguir diálogos.
+3. Asociar espacios y accesos a aplicaciones con proyectos.
+4. Multipantalla, desconexiones y recuperación; resolución/escala con confirmación y reversión.
+5. Integrar la sesión en una nueva ISO y comprobar el flujo completo.
 
-1. Motor de archivos y proyectos: abrir carpetas, vigilar cambios, buscar y gestionar operaciones con colisiones y permisos.
-2. Motor de conocimiento: Markdown, enlaces relativos, wikilinks, backlinks e índice reconstruible.
-3. Interfaz: mapa, selector de proyectos, notas, fondos, explorador y estado por proyecto.
-4. Integración con Linux: aplicaciones, ventanas y peticiones estructuradas a servicios locales.
-5. Imagen: paquetes, sesión, primer arranque, actualizaciones y recuperación.
+## Datos y uso diario
 
-Sustituir las dependencias de Obsidian y Hover Editor. Conservar los documentos como fuente de verdad y tratar el índice como información reconstruible.
+Completar renombrado, movido y eliminación con tratamiento de enlaces. Documentos como fuente de verdad e índices reconstruibles. Diseñar persistencia, instalación, actualizaciones y recuperación; validar después hardware secundario, incluidos ultrawide.
 
-## Aplicaciones por proyecto
-
-Añadir aplicaciones como nodos o accesos del árbol. Distinguir un acceso normal del sistema de un modo restringido. Los favoritos globales actuales no cumplen esta función.
-
-Diseñar y comprobar el acceso efectivo de una aplicación Flatpak a los archivos de su proyecto, considerando enlaces simbólicos, portales, D-Bus, red y procesos ya abiertos. Una preferencia guardada en un proyecto no debe conceder permisos ni ejecutar aplicaciones automáticamente.
-
-## Integración y uso real
-
-Persistencia de ventanas, coordinación con aplicaciones externas, multipantalla, controles del sistema y primer arranque. Validar en VM y después en hardware secundario antes de considerar una instalación de uso diario.
+El aislamiento por proyecto es posterior y opcional: comprobar permisos efectivos, portales, D-Bus y procesos ya abiertos. Una preferencia en una carpeta no debe ejecutar programas ni conceder permisos automáticamente.

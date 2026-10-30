@@ -110,3 +110,11 @@ sesión Cage/PrOSperus, creación de proyecto y nota, guardado y búsqueda por
 contenido verificados. Se conserva la captura en docs/images/iso-live-preview.png.
 El usuario de sesión dispone de una copia editable de los ejemplos. La imagen
 incluye Qt/GIO y systemd-pam. No se ha validado aún en Boxes ni hardware físico.
+
+## 30 de octubre de 2026 · Fibonacci y ultrawide · 0.4.0-dev
+
+Usuario confirma espiral Fibonacci. Añadidos motor geométrico compartido, perfiles estándar/21:9/32:9, vista previa, anchura centrada y organización reversible de notas. Adaptador Sway experimental limitado al espacio visible del monitor seleccionado, excluyendo PrOSperus. Comentarios explican coordenadas lógicas, protección de otras pantallas y confirmación asíncrona de tamaños.
+
+69 pruebas locales correctas. Sway aislado: cuatro aplicaciones, tres distribuciones, dos pantallas; geometrías verificadas y segunda pantalla sin cambios. La prueba detectó redondeo de tamaños de terminales: ahora se comprueba el resultado y se comunica el ajuste dentro de la zona. Cliente restringido probado. Evidencia en out/window-layouts.
+
+Captura Qt real inspeccionada. El guion posterior espera el mapeado de la ventana antes de abrir el diálogo modal; su repetición quedó bloqueada por agotamiento de cuota de revisión automática de permisos, no por un rechazo de seguridad. La ISO publicada no se cambia. Integración completa de sesión y nueva ISO pendientes. Detalles: WINDOW-LAYOUTS.md.

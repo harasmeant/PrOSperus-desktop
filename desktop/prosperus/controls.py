@@ -69,6 +69,9 @@ class ControlsDialog(QDialog):
         super().__init__(shell)
         self.setWindowTitle('Controles del escritorio'); self.resize(520, 300)
         layout = QVBoxLayout(self)
+        distribution = QPushButton('Pantallas y distribución…')
+        distribution.clicked.connect(shell.open_layout_settings)
+        layout.addWidget(distribution)
         for title, actions in [
             ('Volumen', [('−', 'volume-down'), ('Silenciar', 'mute'), ('+', 'volume-up')]),
             ('Reproducción', [('Anterior', 'previous'), ('Reproducir / pausa', 'play-pause'), ('Siguiente', 'next')]),

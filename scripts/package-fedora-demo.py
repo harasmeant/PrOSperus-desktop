@@ -9,7 +9,7 @@ import tempfile
 
 REPO = Path(__file__).resolve().parents[1]
 OUTPUT = REPO / 'out'
-NAME = 'prosperus-demo-v3.2'
+NAME = 'prosperus-demo-v4'
 
 LAUNCHER = (REPO / 'desktop/iniciar.sh').read_text()
 
@@ -24,10 +24,10 @@ export PROSPERUS_PYTHON=/tmp/prosperus-runtime/bin/python
 exec sh ./iniciar.sh "$@"
 '''
 
-README = '''PrOSperus desktop 0.3.2-dev — demo para Fedora
+README = '''PrOSperus desktop 0.4.0-dev — demo para Fedora
 
-1. Extrae prosperus-demo-v3.2.tar.gz dentro de Fedora.
-2. Entra en la carpeta prosperus-demo-v3.2 donde está iniciar.sh.
+1. Extrae prosperus-demo-v4.tar.gz dentro de Fedora.
+2. Entra en la carpeta prosperus-demo-v4 donde está iniciar.sh.
 3. Abre una terminal en esa carpeta y ejecuta:
 
    sh iniciar.sh
@@ -107,6 +107,13 @@ QUÉ PROBAR
 - Controles ofrece volumen, reproducción y brillo según la sesión y hardware.
   Herramientas opcionales en Fedora: sudo dnf install wireplumber playerctl brightnessctl
   No suele haber control de brillo dentro de una VM.
+- Controles > Pantallas y distribución ofrece espiral Fibonacci, columnas y
+  principal centrada, con vista previa, separación y anchura máxima centrada.
+  Guarda perfiles estándar, 21:9 y 32:9. Organizar notas permite deshacer.
+  No cambia resolución ni escala. Organizar aplicaciones requiere Sway y es
+  experimental; GNOME y la ISO actual con Cage no ofrecen esa integración.
+  Se aplica al pulsar el botón, sin reorganización automática ni deshacer
+  para aplicaciones. Más información en DISTRIBUCION.md.
 
 Estas notas son ejemplos: edítalas libremente. El paquete no contiene notas
 personales, ajustes de Obsidian ni catálogos de aplicaciones del anfitrión.
@@ -139,6 +146,7 @@ def main():
         shutil.copytree(REPO / 'demo-system', bundle / 'proyectos')
         shutil.copy2(REPO / 'LICENSE', bundle / 'LICENSE')
         shutil.copy2(REPO / 'docs/DEMO-ASSETS.md', bundle / 'FONDOS.md')
+        shutil.copy2(REPO / 'docs/WINDOW-LAYOUTS.md', bundle / 'DISTRIBUCION.md')
         (bundle / 'iniciar.sh').write_text(LAUNCHER)
         (bundle / 'iniciar.sh').chmod(0o755)
         (bundle / 'iniciar-live.sh').write_text(LIVE_LAUNCHER)
