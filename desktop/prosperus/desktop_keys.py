@@ -18,19 +18,31 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 - **Alt+↑ / Retroceso:** subir una carpeta (Retroceso con el mapa o la lista enfocados).
 - **Alt+← / Alt+→:** historial del mapa. **Ctrl+Inicio:** todos los proyectos.
 - **Ctrl+B:** tarjetero. **Ctrl+1…9:** abrir un proyecto por su posición.
-- **Ctrl+L:** buscar notas. **Ctrl+O:** abrir la primera nota del proyecto.
+- **Ctrl+F / Ctrl+L:** buscar notas (en el explorador, buscar en su carpeta).
+- **Ctrl+O:** abrir la primera nota del proyecto.
 - **Ctrl+S:** guardar la nota enfocada. **Ctrl+W:** cerrar la nota enfocada.
 - **Esc:** recoger el tarjetero o cerrar la nota enfocada; en un diálogo, cerrarlo.
-- **F1:** esta ayuda. **F5:** actualizar. **F11:** pantalla completa.
+- **Ctrl+Tab / Ctrl+Mayús+Tab:** siguiente/anterior nota abierta del proyecto.
+- **Tab / Mayús+Tab:** siguiente/anterior control; **Espacio** activa el botón enfocado.
+- **Mayús+F10 / Menú:** menú contextual del mapa o de la lista de archivos.
+- **F1:** esta ayuda. **F5 / Ctrl+R:** actualizar. **F11:** pantalla completa.
 - **Alt+F4:** cerrar la ventana, con confirmación si hay notas sin guardar.
 
 ## Aplicaciones y controles
 - **Windows / Super:** abrir o cerrar Aplicaciones, cuando el sistema entrega esa tecla a PrOSperus.
-- **Ctrl+Espacio:** alternativa para Aplicaciones dentro de la demo.
+- **Ctrl+Espacio / Alt+F2:** Aplicaciones (Alt+F2 puede estar reservado por el sistema).
 - **Super+E:** explorador. **Super+D:** ocultar/restaurar las notas. **Super+I:** controles.
 - Las teclas de volumen, brillo y reproducción se atienden en la sesión propia PrOSperus cuando están disponibles.
 
-En esta demo dentro de GNOME, Windows/Super, Alt+Tab y otros atajos globales los gestiona Fedora. F11 no cambia esto. Los controles de brillo requieren hardware compatible; una VM normalmente no lo ofrece. La tecla Fn depende del teclado.
+## Texto y accesibilidad
+- **Ctrl+X / Ctrl+C / Ctrl+V / Ctrl+A:** cortar, copiar, pegar y seleccionar texto.
+- **Ctrl+Z / Ctrl+Mayús+Z / Ctrl+Y:** deshacer / rehacer en el editor.
+- **Ctrl+← / Ctrl+→:** palabra anterior/siguiente; **Mayús** amplía la selección.
+- **Inicio / Fin / Ctrl+Inicio / Ctrl+Fin:** principio/final de línea o documento en el editor.
+- **Controles → Accesibilidad y botones:** texto al 100/125/150 %, botones grandes, alto contraste y clic simple opcional. Por defecto, un clic selecciona y doble clic abre; con clic simple, Ctrl+clic selecciona sin abrir.
+- **Controles → Hardware y drivers:** consultar los dispositivos PCI y su controlador asociado.
+
+En esta demo dentro de GNOME, Windows/Super, Alt+Tab, Super+L (bloqueo), Impr Pant y otros atajos globales los gestiona Fedora. F11 no cambia esto. No hay todavía implementación propia de bloqueo, captura, terminal global ni cambio de aplicaciones en la ISO. F2, Supr y Ctrl+X sobre archivos quedan pendientes de renombrado, papelera y movimiento con protección de enlaces. Los controles de brillo requieren hardware compatible; una VM normalmente no lo ofrece. La tecla Fn depende del teclado.
 
 Dentro de un editor, Ctrl+C, Ctrl+V y Ctrl+A actúan sobre el texto. Copiar una nota copia su última versión guardada. La copia conserva los enlaces tal como están escritos: no los reescribe al cambiar de carpeta.
 '''
@@ -91,6 +103,15 @@ class DesktopKeys(QObject):
             return False
         folder, paths, select_all, go_up = context
         modifiers = event.modifiers()
+        if ((modifiers == Qt.KeyboardModifier.ShiftModifier and key == Qt.Key.Key_F10)
+                or (modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Menu)):
+            from PySide6.QtWidgets import QListWidget
+            if isinstance(target, QListWidget):
+                rect = target.visualItemRect(target.currentItem()) if target.currentItem() else target.viewport().rect()
+                target.window().context_menu(rect.center())
+            else:
+                self.shell.surface.show_menu(target.mapToGlobal(target.rect().center()))
+            return True
         if modifiers == Qt.KeyboardModifier.ControlModifier:
             if key == Qt.Key.Key_C:
                 self.shell.files.copy(paths); return True

@@ -72,14 +72,20 @@ class ControlsDialog(QDialog):
         distribution = QPushButton('Pantallas y distribución…')
         distribution.clicked.connect(shell.open_layout_settings)
         layout.addWidget(distribution)
+        for title, action in [('Accesibilidad y botones…', shell.open_accessibility),
+                              ('Hardware y drivers…', shell.open_hardware)]:
+            option = QPushButton(title); option.clicked.connect(action); layout.addWidget(option)
         for title, actions in [
-            ('Volumen', [('−', 'volume-down'), ('Silenciar', 'mute'), ('+', 'volume-up')]),
-            ('Reproducción', [('Anterior', 'previous'), ('Reproducir / pausa', 'play-pause'), ('Siguiente', 'next')]),
-            ('Brillo', [('−', 'brightness-down'), ('+', 'brightness-up')]),
+            ('Volumen', [('− Bajar volumen', 'volume-down'), ('Silenciar / activar sonido', 'mute'), ('+ Subir volumen', 'volume-up')]),
+            ('Reproducción', [('⏮ Anterior', 'previous'), ('▶ Reproducir / pausa', 'play-pause'), ('⏭ Siguiente', 'next')]),
+            ('Brillo', [('− Bajar brillo', 'brightness-down'), ('+ Subir brillo', 'brightness-up')]),
         ]:
             row = QHBoxLayout(); row.addWidget(QLabel(title), 1)
             for text, action in actions:
                 control = QPushButton(text); control.setEnabled(shell.controls.available(action))
+                control.setAccessibleName(text.lstrip('−+⏮▶⏭ '))
+                control.setToolTip(control.accessibleName() if control.isEnabled() else
+                                   'No disponible: falta la herramienta de sesión o un dispositivo compatible.')
                 control.clicked.connect(lambda checked=False, a=action: shell.controls.execute(a)); row.addWidget(control)
             layout.addLayout(row)
         status = QLabel('Los controles actúan en el sistema donde se ejecuta PrOSperus. El brillo requiere una pantalla compatible; normalmente no está disponible en una VM.')

@@ -12,8 +12,8 @@ class Cover(QPushButton):
         super().__init__(stack)
         self.stack, self.path, self.offset = stack, path, offset
         shell = stack.drawer.shell
-        self.colors = palette_for(shell.vault, path)
-        self.wallpaper = wallpaper_for(shell.vault, path)
+        self.colors = shell.accessibility.palette(palette_for(shell.vault, path))
+        self.wallpaper = None if shell.accessibility.high_contrast else wallpaper_for(shell.vault, path)
         self.active = shell.folder.is_relative_to(path)
         self.notes = len(list(shell.vault.notes(path)))
         self.folders = sum(p.is_dir() for p in shell.vault.entries(path))
@@ -32,29 +32,30 @@ class Cover(QPushButton):
 
     def paintEvent(self, event):
         p = QPainter(self)
+        font_size = self.stack.drawer.shell.accessibility.font_size
         p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
         rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         clip = QPainterPath(); clip.addRoundedRect(rect, 12, 12)
         p.setClipPath(clip)
         paint_wallpaper(p, rect, self.wallpaper, self.colors.base, 35 if self.offset == 0 else 125)
-        p.setPen(QPen(QColor(self.colors.accent if self.offset == 0 else self.colors.border), 1.5))
+        p.setPen(QPen(QColor(self.colors.accent if self.offset == 0 or self.hasFocus() else self.colors.border), 3 if self.hasFocus() else 1.5))
         p.drawRoundedRect(rect, 12, 12)
         p.setPen(QColor(self.colors.text))
         if self.offset:
-            p.setFont(QFont('DejaVu Sans', 10, QFont.Weight.Bold))
+            p.setFont(QFont('DejaVu Sans', font_size(10), QFont.Weight.Bold))
             y = 10 if self.offset < 0 else self.height() - 35
             p.drawText(QRectF(16, y, self.width() - 32, 25), Qt.AlignmentFlag.AlignVCenter, self.path.name)
             return
         draw_symbol(p, QRectF(20, 20, 24, 24), 'folder', self.colors.accent)
-        p.setFont(QFont('DejaVu Sans', 8, QFont.Weight.Bold))
+        p.setFont(QFont('DejaVu Sans', font_size(8), QFont.Weight.Bold))
         p.drawText(QRectF(54, 20, 130, 24), Qt.AlignmentFlag.AlignVCenter, 'P R O Y E C T O')
         if self.active:
             p.setPen(QColor(self.colors.accent))
             p.drawText(QRectF(self.width() - 84, 20, 65, 24), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, 'En uso')
         p.setPen(QColor(self.colors.text))
-        p.setFont(QFont('DejaVu Sans', 21, QFont.Weight.Bold))
+        p.setFont(QFont('DejaVu Sans', font_size(21), QFont.Weight.Bold))
         p.drawText(QRectF(20, self.height() - 125, self.width() - 40, 85), Qt.AlignmentFlag.AlignBottom | Qt.TextFlag.TextWordWrap, self.path.name)
-        p.setFont(QFont('DejaVu Sans', 9))
+        p.setFont(QFont('DejaVu Sans', font_size(9)))
         p.setPen(QColor(self.colors.muted))
         p.drawText(QRectF(20, self.height() - 34, self.width() - 105, 22), Qt.AlignmentFlag.AlignVCenter, f'{self.notes} notas · {self.folders} carpetas')
         p.setPen(QColor(self.colors.accent))
@@ -124,7 +125,7 @@ class ProjectDrawer(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 24, 18, 16)
         row = QHBoxLayout()
-        title = QLabel('Tus proyectos'); title.setStyleSheet('font-size: 19px; font-weight: bold;')
+        title = QLabel('Tus proyectos'); title.setObjectName('noteTitle')
         row.addWidget(title, 1)
         self.pin = QPushButton('Fijar'); self.pin.setCheckable(True)
         self.pin.toggled.connect(self.set_pinned); row.addWidget(self.pin)

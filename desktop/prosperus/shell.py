@@ -6,12 +6,12 @@ from pathlib import Path
 import subprocess
 import sys
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, QUrl
+from PySide6.QtCore import QPointF, QRectF, QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QFont, QKeySequence, QPainter, QPainterPath, QPen, QShortcut, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QFrame, QHBoxLayout, QInputDialog,
     QLabel, QLayout, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPlainTextEdit, QPushButton, QScrollArea, QSizeGrip, QStackedWidget,
-    QTextBrowser, QVBoxLayout, QWidget)
+    QTextBrowser, QVBoxLayout, QWidget, QStyle)
 
 from . import __version__
 from .appearance import (Palette, Wallpaper, draw_symbol, paint_wallpaper,
@@ -23,12 +23,21 @@ from .file_actions import FileActions, local_paths
 from .desktop_keys import DesktopKeys, SHORTCUT_HELP
 from .controls import ControlsDialog, SessionControls
 from .layout_settings import LayoutDialog
+from .accessibility import Accessibility, AccessibilityDialog
+from .hardware import HardwareDialog
 
 STYLE = Palette().css()
 
 
 def button(text, callback, parent=None):
     widget = QPushButton(text, parent)
+    icons = {'Carpetas': 'SP_DirIcon', 'Explorar': 'SP_DirOpenIcon',
+             'Nueva nota': 'SP_FileIcon', 'Nuevo proyecto': 'SP_FileDialogNewFolder',
+             'Guardar': 'SP_DialogSaveButton', 'Cerrar': 'SP_DialogCloseButton',
+             'Aplicaciones': 'SP_ComputerIcon', 'Controles': 'SP_FileDialogDetailedView',
+             'Ayuda · F1': 'SP_DialogHelpButton', 'Actualizar': 'SP_BrowserReload'}
+    if text in icons:
+        widget.setIcon(widget.style().standardIcon(getattr(QStyle.StandardPixmap, icons[text])))
     widget.clicked.connect(callback)
     widget.setCursor(Qt.CursorShape.PointingHandCursor)
     return widget
@@ -75,11 +84,11 @@ class NotePanel(QFrame):
         super().__init__(shell.surface)
         self.shell, self.path, self.project = shell, path, shell.folder
         self.minimized = False
-        self.colors = palette_for(shell.vault, path.parent)
-        self.wallpaper = wallpaper_for(shell.vault, path)
+        self.colors = shell.accessibility.palette(palette_for(shell.vault, path.parent))
+        self.wallpaper = None if shell.accessibility.high_contrast else wallpaper_for(shell.vault, path)
         self.original = shell.vault.read(path)
         self.setObjectName('note')
-        self.setStyleSheet(self.colors.css())
+        self.setStyleSheet(shell.accessibility.css(self.colors))
         self.setMinimumSize(360, 250)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 8)
@@ -91,8 +100,8 @@ class NotePanel(QFrame):
         self.save_button = button('Guardar', self.save)
         self.save_button.hide()
         top.addWidget(self.save_button)
-        minimize = button('—', self.minimize); minimize.setAccessibleName('Minimizar nota')
-        close = button('×', self.close_note); close.setAccessibleName('Cerrar nota')
+        minimize = button('— Minimizar', self.minimize); minimize.setAccessibleName('Minimizar nota')
+        close = button('× Cerrar', self.close_note); close.setAccessibleName('Cerrar nota')
         top.addWidget(minimize); top.addWidget(close)
         layout.addLayout(top)
         self.pages = QStackedWidget()
@@ -225,10 +234,20 @@ class MapNode(QPushButton):
 
     def mouseDoubleClickEvent(self, event):
         if not self.center and event.button() == Qt.MouseButton.LeftButton:
-            self.surface.shell.activate(self.path)
+            if not self.surface.shell.accessibility.single_click:
+                self.surface.shell.activate(self.path)
             event.accept()
         else:
             super().mouseDoubleClickEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        open_path = (not self.center and event.button() == Qt.MouseButton.LeftButton
+                     and self.rect().contains(event.position().toPoint())
+                     and event.modifiers() == Qt.KeyboardModifier.NoModifier
+                     and self.surface.shell.accessibility.single_click)
+        super().mouseReleaseEvent(event)
+        if open_path:
+            self.surface.shell.activate(self.path)
 
     def keyPressEvent(self, event):
         if not self.center and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
@@ -250,17 +269,18 @@ class MapNode(QPushButton):
         colors = self.surface.shell.colors
         selected = self.path in self.surface.selection
         fill = QColor(colors.hover if selected or self.underMouse() or self.hasFocus() else colors.card)
-        fill.setAlpha(235 if self.center else 220)
+        fill.setAlpha(255 if self.surface.shell.accessibility.high_contrast else (235 if self.center else 220))
         rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         p.setBrush(fill); p.setPen(QPen(QColor(colors.accent if selected or self.hasFocus() else colors.border), 2.5 if selected else 1.2))
         p.drawRoundedRect(rect, 13, 13)
         kind = 'folder' if self.center or self.path.is_dir() else 'note'
         draw_symbol(p, QRectF(self.width() / 2 - 10, 10, 20, 20), kind, colors.accent)
         p.setPen(QColor(colors.text))
-        p.setFont(QFont('DejaVu Sans', 13 if self.center else 10, QFont.Weight.Bold if self.center else QFont.Weight.Normal))
+        font_size = self.surface.shell.accessibility.font_size
+        p.setFont(QFont('DejaVu Sans', font_size(13 if self.center else 10), QFont.Weight.Bold if self.center else QFont.Weight.Normal))
         text = p.fontMetrics().elidedText(self.title, Qt.TextElideMode.ElideRight, self.width() - 20)
         p.drawText(QRectF(10, 34, self.width() - 20, self.height() - 59), Qt.AlignmentFlag.AlignCenter, text)
-        p.setFont(QFont('DejaVu Sans', 8)); p.setPen(QColor(colors.muted))
+        p.setFont(QFont('DejaVu Sans', font_size(8))); p.setPen(QColor(colors.muted))
         p.drawText(QRectF(8, self.height() - 22, self.width() - 16, 17), Qt.AlignmentFlag.AlignCenter, self.subtitle)
 
 
@@ -379,6 +399,7 @@ class Explorer(QDialog):
         row.addWidget(button('Ver mapa', self.show_map)); layout.addLayout(row)
         self.location = label('', 'muted'); layout.addWidget(self.location)
         self.search = QLineEdit(); self.search.setPlaceholderText('Nombre o contenido de notas…')
+        self.search.setAccessibleName('Buscar en el explorador')
         self.search.setToolTip('Busca en nombres, rutas y contenido guardado de notas Markdown; incluye subcarpetas.')
         self.search.textChanged.connect(self.refresh); layout.addWidget(self.search)
         self.items = QListWidget(); self.items.setStyleSheet('QListWidget { border: none; background: transparent; }')
@@ -386,6 +407,7 @@ class Explorer(QDialog):
         self.items.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.items.customContextMenuRequested.connect(self.context_menu)
         self.items.itemActivated.connect(self.activate); layout.addWidget(self.items)
+        self.items.itemClicked.connect(self.single_click)
         tools = QHBoxLayout()
         tools.addWidget(button('Copiar', lambda: shell.files.copy(self.selected_paths())))
         tools.addWidget(button('Pegar', lambda: shell.files.paste(self.folder)))
@@ -404,8 +426,13 @@ class Explorer(QDialog):
         self.finished.connect(lambda: shell.files.changed.disconnect(self.refresh))
         for key, action in [('Alt+Up', self.go_up), ('F5', self.refresh), ('Ctrl+N', self.new_note),
                             ('Ctrl+Shift+N', self.new_folder), ('Ctrl+Alt+N', self.new_project),
-                            ('Ctrl+W', self.reject), ('Ctrl+L', self.search.setFocus)]:
+                            ('Ctrl+W', self.reject), ('Ctrl+L', self.search.setFocus),
+                            ('Ctrl+F', self.search.setFocus), ('Ctrl+R', self.refresh)]:
             shortcut = QShortcut(QKeySequence(key), self); shortcut.activated.connect(action)
+
+    def single_click(self, item):
+        if self.shell.accessibility.single_click and QApplication.keyboardModifiers() == Qt.KeyboardModifier.NoModifier:
+            self.activate(item)
 
     def selected_paths(self):
         return [item.data(Qt.ItemDataRole.UserRole) for item in self.items.selectedItems()]
@@ -471,8 +498,10 @@ class Desktop(QMainWindow):
     """Coordina mapa, notas y diálogos; Vault concentra el acceso a los archivos."""
     PAGE_SIZE = 8
 
-    def __init__(self, root, kiosk=False, system_session=False):
+    def __init__(self, root, kiosk=False, system_session=False, settings=None):
         super().__init__()
+        self.settings = settings if settings is not None else QSettings('PrOSperus', 'Desktop')
+        self.accessibility = Accessibility.load(self.settings)
         self.vault = Vault(root)
         self.folder = self.vault.root
         self.kiosk = kiosk
@@ -494,8 +523,10 @@ class Desktop(QMainWindow):
         self.resize(1360, 850)
         self.setMinimumSize(860, 650)
         self.background = Wallpaper()
-        self.setCentralWidget(self.background)
+        self.viewport = QScrollArea(); self.viewport.setWidgetResizable(True)
+        self.viewport.setWidget(self.background); self.setCentralWidget(self.viewport)
         layout = QVBoxLayout(self.background)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         layout.setContentsMargins(42, 26, 36, 18)
         layout.setSpacing(8)
         heading = QHBoxLayout()
@@ -560,6 +591,7 @@ class Desktop(QMainWindow):
         self.shortcuts = []
         self.shortcut('Escape', self.close_top_note)
         self.shortcut('Ctrl+L', self.search.setFocus)
+        self.shortcut('Ctrl+F', self.search.setFocus)
         self.shortcut('Ctrl+O', self.open_first_note)
         self.shortcut('Ctrl+N', self.new_note)
         self.shortcut('Ctrl+Home', lambda: self.navigate(self.vault.root))
@@ -569,19 +601,24 @@ class Desktop(QMainWindow):
                             ('Meta+D', self.toggle_desktop), ('Meta+I', self.open_controls),
                             ('Alt+Up', self.go_up), ('Alt+Left', lambda: self.history_step(-1)),
                             ('Alt+Right', lambda: self.history_step(1)), ('Ctrl+W', self.close_top_note),
-                            ('F1', self.show_help), ('F5', self.refresh_projects),
+                            ('F1', self.show_help), ('F5', self.refresh_projects), ('Ctrl+R', self.refresh_projects),
+                            ('Alt+F2', self.toggle_applications), ('Ctrl+Tab', self.next_note),
+                            ('Ctrl+Shift+Tab', lambda: self.next_note(-1)),
                             ('F11', self.toggle_fullscreen)]:
             self.shortcut(key, action)
         self.refresh_projects()
         for index in range(9):
             self.shortcut(f'Ctrl+{index + 1}', lambda i=index: self.open_project_index(i))
-        self.apply_appearance()
+        self.apply_accessibility()
         print('PROSPERUS_READY ' + __version__, flush=True)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self.position_overlays()
+
+    def position_overlays(self):
         if hasattr(self, 'drawer'):
-            self.drawer.setGeometry(0, 0, min(370, self.width() - 100), self.background.height())
+            self.drawer.setGeometry(0, 0, min(round(370 * self.accessibility.text_scale / 100), self.width() - 100), self.background.height())
             self.edge.setGeometry(0, self.background.height() // 2 - 45, 25, 90)
             self.drawer.raise_()
 
@@ -589,11 +626,32 @@ class Desktop(QMainWindow):
         item = QShortcut(QKeySequence(key), self); item.activated.connect(callback); self.shortcuts.append(item)
 
     def apply_appearance(self):
-        self.colors = palette_for(self.vault, self.folder)
-        self.setStyleSheet(self.colors.css())
+        self.colors = self.accessibility.palette(palette_for(self.vault, self.folder))
+        self.setStyleSheet(self.accessibility.css(self.colors))
         self.background.palette = self.colors
-        self.background.wallpaper = wallpaper_for(self.vault, self.folder)
+        self.background.wallpaper = None if self.accessibility.high_contrast else wallpaper_for(self.vault, self.folder)
         self.background.update(); self.surface.update()
+
+    def apply_accessibility(self):
+        self.apply_appearance()
+        self.dock_scroll.setFixedHeight(max(62, round(62 * self.accessibility.text_scale / 100),
+                                            80 if self.accessibility.large_buttons else 62))
+        for panel in self.panels.values():
+            panel.colors = self.accessibility.palette(palette_for(self.vault, panel.path.parent))
+            panel.wallpaper = None if self.accessibility.high_contrast else wallpaper_for(self.vault, panel.path)
+            panel.setStyleSheet(self.accessibility.css(panel.colors)); panel.update()
+        self.drawer.refresh()
+        self.update_dock()
+        self.position_overlays()
+
+    def next_note(self, direction=1):
+        panels = [p for p in self.panels.values() if p.project == self.folder and not p.minimized]
+        if not panels:
+            return
+        focus = QApplication.focusWidget()
+        index = next((i for i, p in enumerate(panels) if focus == p or (focus and p.isAncestorOf(focus))),
+                     -1 if direction == 1 else 0)
+        panels[(index + direction) % len(panels)].restore()
 
     def refresh_projects(self):
         self.project_paths = [p for p in self.vault.entries(self.vault.root) if p.is_dir()]
@@ -632,6 +690,12 @@ class Desktop(QMainWindow):
 
     def open_layout_settings(self):
         dialog = LayoutDialog(self); dialog.exec(); dialog.deleteLater()
+
+    def open_accessibility(self):
+        dialog = AccessibilityDialog(self); dialog.exec(); dialog.deleteLater()
+
+    def open_hardware(self):
+        dialog = HardwareDialog(self); dialog.exec(); dialog.deleteLater()
 
     def show_help(self):
         dialog = QDialog(self); dialog.setWindowTitle('Atajos y manejo del escritorio'); dialog.resize(640, 570)
