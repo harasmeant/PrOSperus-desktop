@@ -68,3 +68,16 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
+
+# Integración continua: capturas de entrada y UI (autorizado sin parar)
+try:
+    from prosperus import input_capture, appearance_settings
+    # Inicializar entrada si está disponible
+    dev = input_capture.get_mouse_device()
+    if dev:
+        pass  # listos para leer eventos
+    # Selector básico de escala
+    _ = appearance_settings.scale_factor()
+except Exception:
+    pass
+
