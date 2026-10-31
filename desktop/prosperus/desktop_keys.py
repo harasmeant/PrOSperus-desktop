@@ -27,6 +27,7 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 - **Mayús+F10 / Menú:** menú contextual del mapa o de la lista de archivos.
 - **F1:** esta ayuda. **F5 / Ctrl+R:** actualizar. **F11:** pantalla completa.
 - **Alt+F4:** cerrar la ventana, con confirmación si hay notas sin guardar.
+- **Ctrl+I:** información del sistema (versión, autor, licencia).
 
 ## Aplicaciones y controles
 - **Windows / Super:** abrir o cerrar Aplicaciones, cuando el sistema entrega esa tecla a PrOSperus.
