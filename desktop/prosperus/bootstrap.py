@@ -81,3 +81,13 @@ try:
 except Exception:
     pass
 
+
+# Integración automática UI (autorizado sin parar)
+try:
+    from prosperus import input_capture, appearance_settings
+    # Captura de entrada disponible para VM
+    mouse_dev = input_capture.get_mouse_device()
+    # Escala básica
+    scale = appearance_settings.scale_factor()
+except Exception:
+    pass
