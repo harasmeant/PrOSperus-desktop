@@ -18,3 +18,4 @@ evidence/local/
 *.raw
 *.img
 *.iso
+config.yaml
