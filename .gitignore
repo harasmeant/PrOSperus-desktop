@@ -19,3 +19,5 @@ evidence/local/
 *.img
 *.iso
 config.yaml
+docs/AGENT_TEST.md
+docs/AI_DEVELOPMENT_LOG.md

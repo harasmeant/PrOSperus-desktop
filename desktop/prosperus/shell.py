@@ -596,6 +596,7 @@ class Desktop(QMainWindow):
         self.shortcut('Ctrl+N', self.new_note)
         self.shortcut('Ctrl+Home', lambda: self.navigate(self.vault.root))
         self.shortcut('Ctrl+B', self.toggle_projects)
+        self.shortcut('Ctrl+I', self.show_about)
         for key, action in [('Ctrl+Shift+N', self.new_folder), ('Ctrl+Alt+N', self.new_project),
                             ('Ctrl+Space', self.toggle_applications), ('Meta+E', self.open_explorer),
                             ('Meta+D', self.toggle_desktop), ('Meta+I', self.open_controls),
@@ -701,6 +702,37 @@ class Desktop(QMainWindow):
         dialog = QDialog(self); dialog.setWindowTitle('Atajos y manejo del escritorio'); dialog.resize(640, 570)
         layout = QVBoxLayout(dialog)
         text = QTextBrowser(); text.setMarkdown(SHORTCUT_HELP); layout.addWidget(text)
+        layout.addWidget(button('Cerrar', dialog.accept))
+        dialog.exec(); dialog.deleteLater()
+
+    def show_about(self):
+        dialog = QDialog(self); dialog.setWindowTitle('Acerca de PrOSperus'); dialog.resize(420, 360)
+        layout = QVBoxLayout(dialog)
+        info = QTextBrowser(); info.setOpenExternalLinks(True)
+        info.setMarkdown(f'''
+# PrOSperus desktop
+
+**Versión:** {__version__}
+
+**Autor:** Nicolás (harasmeant)
+
+**Licencia:** GNU General Public License v3 exclusivamente (GPL-3.0-only)
+
+**Descripción:** Escritorio orientado a proyectos inspirado en el prototipo de Obsidian.
+
+## Información del sistema
+
+- **Sistema operativo:** {sys.platform}
+- **Python:** {sys.version.split()[0]}
+- **Qt:** {PySide6.__version__}
+
+## Enlaces
+
+- Repositorio: https://github.com/harasmeant/PrOSperus-desktop
+- Issues: https://github.com/harasmeant/PrOSperus-desktop/issues
+
+''')
+        layout.addWidget(info)
         layout.addWidget(button('Cerrar', dialog.accept))
         dialog.exec(); dialog.deleteLater()
 
