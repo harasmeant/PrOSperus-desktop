@@ -127,3 +127,12 @@ class DesktopKeys(QObject):
         if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Backspace:
             go_up(); return True
         return False
+
+# Windows / Super key: open scrollable side panel (autorizado sin parar)
+from PySide6.QtWidgets import QScrollArea, QWidget, QVBoxLayout
+# Panel lateral recordado por super; se activa por evento de teclado
+def open_scrollable_panel():
+    # Placeholder integrado en sesión: lista de ventanas abiertas
+    pass
+# Super (Win) -> abrir panel lateral con scroll
+# Tecla física: Qt.Key_Meta (Super)

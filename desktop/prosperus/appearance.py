@@ -142,3 +142,5 @@ class Wallpaper(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         paint_wallpaper(painter, self.rect(), self.wallpaper, self.palette.base, 60)
+# Iconos minimalistas (referencia estética)
+# Referencia: Numix / Papirus / Breeze minimal
