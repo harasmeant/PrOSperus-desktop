@@ -8,10 +8,12 @@ mkdir -p out/vm
 
 qemu-system-x86_64 -machine q35,accel=kvm -cpu host -smp 2 -m 2048 \
     -kernel out/boot/vmlinuz -initrd out/boot/initramfs.img \
-    -append 'root=LABEL=prosperus-root rootfstype=ext4 rw console=tty0 console=ttyS0,115200 selinux=0 systemd.show_status=1 video=1024x768' \
+    -append 'root=LABEL=prosperus-root rootfstype=ext4 rw console=tty0 console=ttyS0,115200 selinux=0 systemd.show_status=1' \
     -drive file=out/prosperus.qcow2,format=qcow2,if=virtio,snapshot=on \
-    -vga virtio -usb -device usb-tablet -device virtio-keyboard-pci \
+    -device virtio-vga,xres=1360,yres=850 -usb -device usb-tablet -device virtio-keyboard-pci \
     -netdev user,id=net0 \
     -device virtio-net-pci,netdev=net0 \
+    -audiodev pipewire,id=snd0 -device intel-hda -device hda-duplex,audiodev=snd0 \
     -display gtk \
+    -qmp unix:out/vm/qmp.sock,server=on,wait=off \
     -serial file:out/vm/serial.log

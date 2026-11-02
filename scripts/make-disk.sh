@@ -8,6 +8,6 @@ rm -f /tmp/prosperus-root/run/.containerenv /tmp/prosperus-root/.dockerenv
 truncate -s 0 /tmp/prosperus-root/etc/machine-id
 cp /tmp/prosperus-root/boot/vmlinuz-prosperus /output/boot/vmlinuz
 cp /tmp/prosperus-root/boot/initramfs-prosperus.img /output/boot/initramfs.img
-truncate -s 6G /output/rootfs.raw
+truncate -s 12G /output/rootfs.raw
 mkfs.ext4 -F -L prosperus-root -d /tmp/prosperus-root /output/rootfs.raw
 bash /make-uefi.sh

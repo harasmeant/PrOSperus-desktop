@@ -15,10 +15,11 @@ truncate -s 256M /output/esp.img
 mkfs.vfat -F 32 -n PROSPERUS /output/esp.img
 mmd -i /output/esp.img ::/EFI ::/EFI/BOOT
 mcopy -o -i /output/esp.img /output/boot/BOOTX64.EFI ::/EFI/BOOT/BOOTX64.EFI
-# 1 MiB alignment + 256 MiB ESP + 6 GiB root + 1 MiB backup GPT space.
-truncate -s 6712983552 /output/prosperus-uefi.raw
+# 1 MiB alignment + 256 MiB ESP + root (tamaño real de rootfs.raw) + 1 MiB backup GPT space.
+root_mib=$(( $(stat -c %s /output/rootfs.raw) / 1048576 ))
+truncate -s $(( (1 + 256 + root_mib + 1) * 1048576 )) /output/prosperus-uefi.raw
 sgdisk --clear --new=1:2048:+256M --typecode=1:ef00 --change-name=1:EFI \
-    --new=2:0:+6G --typecode=2:8300 --change-name=2:PrOSperus \
+    --new=2:0:+${root_mib}M --typecode=2:8300 --change-name=2:PrOSperus \
     /output/prosperus-uefi.raw
 dd if=/output/esp.img of=/output/prosperus-uefi.raw bs=1M seek=1 conv=notrunc,sparse status=none
 dd if=/output/rootfs.raw of=/output/prosperus-uefi.raw bs=1M seek=257 conv=notrunc,sparse status=none
