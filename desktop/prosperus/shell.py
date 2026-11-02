@@ -22,6 +22,7 @@ from .model import Vault
 from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
+from .branches import branch_path, leaf_path, point_on
 from .map_layout import link_order, radial_slots, nearest_in_direction, separate
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
@@ -651,44 +652,46 @@ class Surface(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # Árbol literal: troncos que se afinan desde la carpeta, ramitas hacia las hojas y hojas.
         color = QColor(self.shell.colors.accent)
-        color.setAlpha(130)
-        p.setPen(QPen(color, 1.2))
+        p.setPen(Qt.PenStyle.NoPen)
         origin = QPointF(self.center.geometry().center())
-        # Curvas a nodos
+        leaf_color = QColor(self.shell.colors.accent); leaf_color.setAlpha(110)
+
+        def grow(start, end, w0, w1, alpha, bend=.22, leaves=2):
+            direction = end - start
+            control = (start + end) / 2 + QPointF(-direction.y(), direction.x()) * bend
+            color.setAlpha(alpha); p.setBrush(color)
+            p.drawPath(branch_path(start, control, end, w0, w1))
+            # Hojas alternas a lo largo de la rama, apuntando hacia fuera.
+            size = max(7, min(14, math.hypot(direction.x(), direction.y()) * .06))
+            for k in range(leaves):
+                t = .45 + k * .25
+                base = point_on(start, control, end, t)
+                ahead = point_on(start, control, end, min(1, t + .05))
+                angle = math.atan2(ahead.y() - base.y(), ahead.x() - base.x()) + (.9 if k % 2 else -.9)
+                p.setBrush(leaf_color); p.drawPath(leaf_path(base, angle, size))
+
         for widget in self.nodes:
-            end = QPointF(widget.geometry().center())
-            # Siempre curvada: el punto de control se aparta de la recta, en sentido horario.
-            direction = end - origin
-            control = (origin + end) / 2 + QPointF(-direction.y(), direction.x()) * .22
-            path = QPainterPath(origin); path.quadTo(control, end)
-            p.drawPath(path)
-        color.setAlpha(90); p.setPen(QPen(color, 1))
+            grow(origin, QPointF(widget.geometry().center()), 7, 2.2, 150)
         for leaf in self.leaves:
-            if not leaf.isVisible():
-                continue
-            start, end = QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center())
-            path = QPainterPath(start)
-            middle = QPointF((start.x() + end.x()) / 2, (start.y() + end.y()) / 2)
-            path.quadTo(QPointF(middle.x(), start.y()), end)
-            p.drawPath(path)
-        # Enlaces entre notas
-        color.setAlpha(150)
+            if leaf.isVisible():
+                # Ramitas: nacen del nodo padre, más finas y con una sola hoja.
+                grow(QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center()), 2.4, .8, 105, .18, 1)
+        # Enlaces entre notas: rama fina que se curva hacia fuera, más gruesa cuanto más enlazadas.
         node_index = {n: i for i, n in enumerate(self.nodes)}
         for wa, wb in getattr(self, 'link_pairs', []):
             if not wa.isVisible() or not wb.isVisible():
                 continue
-            width = 1.4
+            width = 1.6
             if wa in node_index and wb in node_index:
                 i, j = node_index[wa], node_index[wb]
-                w = self.link_weights.get((min(i, j), max(i, j)), 1)
-                width = 1.4 + 0.6 * min(w, 5)
-            p.setPen(QPen(color, width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-            # Arco que se curva hacia fuera del centro, siguiendo los anillos.
+                width = 1.6 + .7 * min(self.link_weights.get((min(i, j), max(i, j)), 1), 5)
             a, b = QPointF(wa.geometry().center()), QPointF(wb.geometry().center())
             middle = (a + b) / 2
             control = middle + (middle - origin) * .45
-            path = QPainterPath(a); path.quadTo(control, b); p.drawPath(path)
+            color.setAlpha(140); p.setBrush(color)
+            p.drawPath(branch_path(a, control, b, width, width * .5))
 
     def focus_direction(self, path, direction):
         centers = []

@@ -383,3 +383,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 
 - Fondo del escritorio: el velo negro uniforme pasa a ser un degradado teñido con el tono de la carpeta (como `--pd-shade` del prototipo). Oscurece arriba (títulos) y abajo (dock) y deja ver la foto en el centro.
 - Mapa: las tarjetas van en radios equiespaciados alrededor de la carpeta (3, 4, … hasta 8 por página; la siguiente página sigue el mismo patrón), como en el prototipo de Obsidian. Los enlaces entre notas solo deciden el orden: las más enlazadas quedan en radios vecinos. OpenRouter devolvió 429; el código lo escribió Claude.
+- Ramas de árbol en el mapa (`branches.py`): los radios son troncos que se afinan desde la carpeta, las notas hijas salen como ramitas y cada rama lleva hojas alternas; los enlaces entre notas son ramas finas curvadas hacia fuera. Base para estilos de rama según el fondo (técnico, fantasía…).
