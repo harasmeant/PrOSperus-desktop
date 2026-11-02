@@ -21,3 +21,8 @@ evidence/local/
 config.yaml
 docs/AGENT_TEST.md
 docs/AI_DEVELOPMENT_LOG.md
+graphify-out/
+
+# Tono de notificación y fondos personales (derechos de autor sin aclarar): solo en la imagen local.
+image/rootfs/usr/share/sounds/KimPossible/
+image/rootfs/usr/share/prosperus/wallpapers/

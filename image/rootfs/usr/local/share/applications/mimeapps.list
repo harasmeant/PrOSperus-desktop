@@ -1,0 +1,3 @@
+[Default Applications]
+application/x-rpm=org.prosperus.Installer.desktop
+application/vnd.flatpak.ref=org.prosperus.Installer.desktop

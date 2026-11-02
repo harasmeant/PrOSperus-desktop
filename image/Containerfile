@@ -4,7 +4,7 @@ COPY desktop/prosperus /usr/lib/prosperus/prosperus
 COPY demo-system /usr/share/prosperus/demo
 COPY LICENSE /usr/share/licenses/prosperus/LICENSE
 COPY image/rootfs/ /
-RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/libexec/prosperus-session /usr/libexec/prosperus-client \
+RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-instalar /usr/libexec/prosperus-session /usr/libexec/prosperus-client \
     && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
     && passwd --lock root \
     && usermod -aG wheel prosperus \
@@ -16,6 +16,7 @@ RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/libexec/prospe
     && mkdir -p /boot /usr/share/prosperus /var/log/journal \
     && rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort > /usr/share/prosperus/packages.txt \
     && python3 -m compileall -q /usr/lib/prosperus/prosperus \
+    && updatedb \
     && kernel_version="$(ls /usr/lib/modules | sort -V | tail -1)" \
     && cp "/usr/lib/modules/$kernel_version/vmlinuz" /boot/vmlinuz-prosperus \
     && dracut --force --no-hostonly --no-hostonly-cmdline \

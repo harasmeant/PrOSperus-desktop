@@ -4,12 +4,15 @@ FROM ${FEDORA_BASE}
 
 # Sistema mínimo, sesión gráfica y red.
 RUN dnf -y --setopt=install_weak_deps=False install \
-    kernel-core kernel-modules-core dracut systemd systemd-udev systemd-pam \
+    kernel-core kernel-modules-core kernel-modules dracut systemd systemd-udev systemd-pam \
     sway greetd python3-pyside6 qt6-qtwayland python3-gobject \
     mesa-dri-drivers mesa-libEGL mesa-libGL \
     dbus-daemon polkit kbd dejavu-sans-fonts glibc-langpack-es \
     python3-evdev \
     NetworkManager NetworkManager-wifi iputils curl \
-    foot sudo git nano python3-pip \
+    foot sudo git nano python3-pip flatpak plocate \
+    pipewire wireplumber pipewire-pulseaudio pipewire-utils bluez brightnessctl mako libnotify NetworkManager-tui \
     gimp libreoffice-writer \
-    && dnf clean all
+    && dnf clean all && dnf makecache \
+    && flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+    && flatpak update --appstream

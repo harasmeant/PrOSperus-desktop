@@ -1,0 +1,7 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Instalador: busca en Fedora y Flathub, o instala el .rpm/.flatpakref recibido.
+# Sin la barra de Qt: la ventana dibuja su propia cabecera.
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export PYTHONPATH=/usr/lib/prosperus
+exec /usr/bin/python3 -m prosperus.installer "$@"

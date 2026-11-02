@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Instalar programas
+Comment=Busca e instala programas de Fedora y Flathub
+Exec=prosperus-instalar %f
+Icon=system-software-install
+Terminal=false
+Categories=System;PackageManager;
+Keywords=instalar;programas;rpm;dnf;flatpak;flathub;software;
+MimeType=application/x-rpm;application/vnd.flatpak.ref;

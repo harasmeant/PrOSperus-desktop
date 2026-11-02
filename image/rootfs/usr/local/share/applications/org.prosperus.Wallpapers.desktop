@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Fondo de pantalla
+Comment=Elige el fondo de la carpeta o proyecto actual
+Exec=prosperus-fondos
+Icon=preferences-desktop-wallpaper
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=fondo;wallpaper;tema;colores;

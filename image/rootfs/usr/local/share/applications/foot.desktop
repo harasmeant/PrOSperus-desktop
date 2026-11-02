@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Exec=foot
+Icon=foot
+Terminal=false
+Categories=System;TerminalEmulator;
+Keywords=shell;prompt;command;commandline;terminal;consola;foot;
+Name=Consola (Foot)
+GenericName=Terminal
+Comment=Terminal del sistema; también con Super+Intro
