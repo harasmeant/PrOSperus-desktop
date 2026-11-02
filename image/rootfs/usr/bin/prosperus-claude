@@ -1,0 +1,19 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Abre el asistente Claude (Claude Code) en un terminal, dentro del proyecto.
+dir=$HOME
+[ -d "$HOME/Proyectos" ] && dir=$HOME/Proyectos
+[ -n "$1" ] && [ -d "$1" ] && dir=$1
+
+claude_bin=$(command -v claude || true)
+[ -z "$claude_bin" ] && [ -x "$HOME/.local/bin/claude" ] && claude_bin=$HOME/.local/bin/claude
+if [ -z "$claude_bin" ]; then
+    exec foot --title 'Asistente Claude' sh -c 'echo "Claude Code no está instalado."; read -r _'
+fi
+
+notice=
+[ -e /run/prosperus-persistent ] || \
+    notice='Sesión sin persistencia: el inicio de sesión de Claude se perderá al apagar.'
+exec foot --app-id org.prosperus.Claude --title 'Asistente Claude' \
+    --working-directory "$dir" \
+    sh -c '[ -n "$1" ] && printf "%s\n\n" "$1"; exec "$0"' "$claude_bin" "$notice"

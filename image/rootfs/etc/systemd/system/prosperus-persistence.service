@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[Unit]
+Description=PrOSperus: carpeta personal persistente en la partición PROSPERUS_DATA del USB
+After=local-fs.target systemd-udevd.service
+Before=greetd.service NetworkManager.service systemd-user-sessions.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/prosperus-persistence
+
+[Install]
+WantedBy=multi-user.target

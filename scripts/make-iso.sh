@@ -25,9 +25,11 @@ mksquashfs "$work/root" "$work/tree/LiveOS/squashfs.img" \
     -noappend -comp zstd -processors 2 -mem 256M -no-progress
 # Keep the FAT inside the ISO volume. With an appended image larger than 32 MiB,
 # OVMF can calculate an empty El Torito partition from the ISO volume boundary.
+# -isohybrid-gpt-basdat adds a GPT so the same file boots when written to a USB
+# (scripts/write-usb.sh then appends the PROSPERUS_DATA partition).
 xorriso -as mkisofs -V PROSPERUS_LIVE -R -J -no-pad \
     -efi-boot-part --efi-boot-image \
-    -e EFI/efiboot.img -no-emul-boot \
+    -e EFI/efiboot.img -no-emul-boot -isohybrid-gpt-basdat \
     -o /output/prosperus-live-x86_64.iso "$work/tree"
 xorriso -indev /output/prosperus-live-x86_64.iso -report_el_torito plain \
     > /output/boot-catalog.txt 2>&1

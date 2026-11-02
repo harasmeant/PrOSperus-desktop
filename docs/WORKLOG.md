@@ -339,3 +339,12 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Imagen: kernel-modules, PipeWire, WirePlumber, BlueZ, brightnessctl, mako, plocate, NetworkManager-tui, flatpak con Flathub; índices de dnf/Flathub precargados. Notificaciones con mako y tono opcional. La VM tiene sonido (intel-hda → PipeWire del anfitrión), sigue en 2 GiB.
 - Fondos y tono de notificación personales excluidos de git (derechos sin aclarar); solo se usan en la imagen local.
 - 98 pruebas correctas.
+
+## 2 de noviembre de 2026 · ISO para USB con persistencia y asistente Claude
+
+- ISO híbrida (`-isohybrid-gpt-basdat`): grabada en un USB arranca un ordenador real por UEFI (Secure Boot desactivado; la imagen no está firmada).
+- `scripts/write-usb.sh ISO /dev/sdX`: graba la ISO y añade la partición ext4 `PROSPERUS_DATA` con el espacio libre. Solo acepta USB/extraíbles sin particiones montadas y pide confirmar con `SI`.
+- `prosperus-persistence.service`: al arrancar monta `/home/prosperus` y las redes Wi-Fi desde `PROSPERUS_DATA`. El primer arranque copia la carpeta personal de la imagen. Sin partición, la sesión sigue en RAM.
+- Claude Code instalado para el usuario `prosperus` (instalador oficial). Super+C o «Asistente Claude» lo abren en `~/Proyectos`; con persistencia se conservan el inicio de sesión y las actualizaciones.
+- Firmware Wi-Fi/gráficas (Intel, Realtek, Atheros, Broadcom, MediaTek, AMD) y controladores USB/NVMe en el initramfs para equipos reales.
+- Comprobado: tabla GPT de la ISO, `write-usb.sh` sobre un archivo de 6 GiB (partición 4 ext4 `PROSPERUS_DATA`) y el contenido de la imagen. Aún sin probar en un equipo físico. No se ha usado OpenRouter: devolvía 429.

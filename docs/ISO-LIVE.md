@@ -9,8 +9,9 @@ Apagado ACPI comprobado. No se ha probado todavía en hardware físico ni en Box
 
 La receta incluye Fedora, el compositor Cage, PrOSperus y sus dependencias Qt/GIO.
 Está orientada a máquinas virtuales x86_64 con UEFI y Secure Boot desactivado.
-No incluye instalador ni persistencia: las notas y los ajustes de la sesión se
-pierden al apagar. Usa los ejemplos ficticios para probarla.
+No incluye instalador. Desde un CD o una VM las notas y los ajustes se pierden
+al apagar; grabada con `scripts/write-usb.sh` en un USB, la carpeta personal se
+conserva (ver más abajo).
 
 ## Construir
 
@@ -27,6 +28,38 @@ están limitados a dos CPU y 1 GiB de RAM; la compresión usa dos trabajadores y
 256 MiB de buffers. Se necesita espacio adicional para exportar el sistema.
 La base Fedora está fijada por digest, pero los paquetes proceden de los
 repositorios disponibles al construir; no se promete reproducibilidad binaria.
+
+## Arrancar el ordenador desde un USB, con persistencia
+
+La ISO es híbrida (GPT): grabada en un USB, arranca el equipo real por UEFI.
+`scripts/write-usb.sh` la graba y crea en el espacio libre la partición ext4
+`PROSPERUS_DATA`. Al arrancar, el servicio `prosperus-persistence` monta en ella
+`/home/prosperus` (proyectos, documentos, configuración, inicio de sesión de
+Claude) y las redes Wi-Fi guardadas. El sistema sigue siendo de solo lectura: lo
+instalado con `dnf` se pierde al apagar, los documentos no.
+
+```bash
+lsblk -o NAME,SIZE,MODEL,TRAN        # localiza el USB (p. ej. /dev/sdb)
+sudo bash scripts/write-usb.sh out/iso/prosperus-live-x86_64.iso /dev/sdX
+```
+
+El script solo acepta dispositivos extraíbles/USB sin particiones montadas y
+pide escribir `SI`: borra todo el USB. Después:
+
+1. Reinicia y abre el menú de arranque del firmware (F12, F11, F8 o Esc según
+   el fabricante) y elige el USB en modo UEFI.
+2. **Desactiva Secure Boot** en la BIOS/UEFI: la imagen de arranque no está firmada.
+3. Si el USB se graba con otra herramienta (Fedora Media Writer, `dd`), arranca
+   igual pero sin persistencia: todo queda en RAM.
+
+## Asistente Claude
+
+Claude Code viene instalado. Ábrelo con **Super+C**, desde Aplicaciones
+(«Asistente Claude») o escribiendo `claude` en un terminal. Necesita red: conecta
+el Wi-Fi o el cable desde el panel Sistema o con `nmtui`. La primera vez muestra
+un enlace de inicio de sesión; ábrelo en cualquier dispositivo y pega el código.
+Con la partición `PROSPERUS_DATA` la sesión y las actualizaciones de Claude se
+conservan; sin ella hay que iniciar sesión en cada arranque.
 
 ## Probar en Boxes
 

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Asistente Claude
+Comment=Habla con Claude (Claude Code) en la carpeta de proyectos
+Exec=prosperus-claude
+Icon=utilities-terminal
+Terminal=false
+Categories=Development;Utility;
+Keywords=claude;ia;asistente;ai;código;terminal;

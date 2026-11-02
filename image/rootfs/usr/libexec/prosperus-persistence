@@ -1,0 +1,43 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Live: si el USB tiene la partición PROSPERUS_DATA, /home/prosperus y las redes
+# Wi-Fi se guardan en ella. Sin partición, la sesión sigue siendo temporal (RAM).
+# Nunca bloquea el arranque: cualquier fallo deja la sesión temporal.
+dev=
+i=0
+while [ $i -lt 20 ]; do
+    udevadm settle -t 1 2>/dev/null
+    dev=$(blkid -L PROSPERUS_DATA 2>/dev/null) && break
+    sleep 0.5
+    i=$((i + 1))
+done
+if [ -z "$dev" ]; then
+    echo 'Sin partición PROSPERUS_DATA: sesión temporal en RAM.'
+    exit 0
+fi
+fsck.ext4 -p "$dev" || true
+data=/run/prosperus-data
+mkdir -p "$data"
+mount -o noatime "$dev" "$data" || { echo "No se pudo montar $dev." >&2; exit 0; }
+
+# Primer arranque: la carpeta personal de la imagen sirve de plantilla
+# (proyectos de ejemplo, configuración y Claude Code).
+if [ ! -d "$data/home" ]; then
+    mkdir -p "$data/home"
+    cp -a /home/prosperus/. "$data/home/"
+    chown -R prosperus:prosperus "$data/home"
+    chmod 0700 "$data/home"
+fi
+mount --bind "$data/home" /home/prosperus
+
+nm=/etc/NetworkManager/system-connections
+if [ ! -d "$data/system-connections" ]; then
+    mkdir -p "$data/system-connections"
+    chmod 0700 "$data/system-connections"
+    cp -a "$nm/." "$data/system-connections/" 2>/dev/null || true
+fi
+mkdir -p "$nm"
+mount --bind "$data/system-connections" "$nm"
+
+touch /run/prosperus-persistent
+echo "Persistencia activa en $dev."

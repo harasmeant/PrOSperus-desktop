@@ -4,7 +4,7 @@ COPY desktop/prosperus /usr/lib/prosperus/prosperus
 COPY demo-system /usr/share/prosperus/demo
 COPY LICENSE /usr/share/licenses/prosperus/LICENSE
 COPY image/rootfs/ /
-RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-instalar /usr/libexec/prosperus-session /usr/libexec/prosperus-client \
+RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-instalar /usr/bin/prosperus-claude /usr/libexec/prosperus-session /usr/libexec/prosperus-persistence /usr/libexec/prosperus-client \
     && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
     && passwd --lock root \
     && usermod -aG wheel prosperus \
