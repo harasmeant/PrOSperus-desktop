@@ -246,6 +246,7 @@ class NotePanel(QFrame):
             self.setGeometry(self.shell.surface.rect())
         elif self.normal_geometry is not None:
             self.setGeometry(self.normal_geometry); self.normal_geometry = None
+        self.controls.set_maximized(self.normal_geometry is not None)
         self.raise_()
 
     def minimize(self):
@@ -1075,7 +1076,7 @@ class Desktop(QMainWindow):
 
     def position_overlays(self):
         if hasattr(self, 'drawer'):
-            self.drawer.setGeometry(0, 0, min(round(370 * self.accessibility.text_scale / 100), self.width() - 100), self.background.height())
+            self.drawer.setGeometry(0, 0, min(round(660 * self.accessibility.text_scale / 100), self.width() - 100), self.background.height())
             self.edge.setGeometry(0, self.background.height() // 2 - 45, 25, 90)
             self.drawer.raise_()
 

@@ -4,7 +4,7 @@ Este es tu **escritorio de proyectos**. Cada carpeta tiene un mapa, un ambiente 
 
 ## Empieza por aquí
 
-1. Abre **Carpetas**: recorre las portadas con la rueda o las flechas.
+1. Abre **Carpetas**: tus escritorios aparecen en cuadrícula; muévete con las flechas.
 2. Abre una nota con doble clic en el mapa o un clic en la barra inferior.
 3. Muévela por su título, cambia su tamaño y minimízala.
 4. Recupera la misma ventana desde la barra inferior.

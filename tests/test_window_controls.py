@@ -45,6 +45,28 @@ class HoverControlsTests(unittest.TestCase):
         self.assertEqual([x[0] for x in controls.buttons], ['maximize', 'close'])
 
 
+    def test_click_fires_only_when_released_on_the_pressed_button(self):
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+        controls = HoverControls(); controls.show()
+        fired = []; controls.triggered.connect(fired.append)
+        close, minimize = controls._rects()[2].center().toPoint(), controls._rects()[0].center().toPoint()
+        QTest.mousePress(controls, Qt.MouseButton.LeftButton, pos=close)
+        QTest.mouseRelease(controls, Qt.MouseButton.LeftButton, pos=minimize)
+        self.assertEqual(fired, [])
+        QTest.mouseClick(controls, Qt.MouseButton.LeftButton, pos=close)
+        self.assertEqual(fired, ['close'])
+        self.assertIsNone(controls.pressed)
+
+    def test_maximize_turns_into_restore(self):
+        controls = HoverControls()
+        controls.set_maximized(True)
+        self.assertIn('Restaurar', controls.toolTip())
+        controls._set_progress(1.0); controls.grab()  # pinta el símbolo de restaurar sin errores
+        controls.set_maximized(False)
+        self.assertIn('Ampliar', controls.toolTip())
+
+
 class HandleTests(unittest.TestCase):
     def test_target_skips_desktop_handle_hidden_and_fullscreen(self):
         t = tree(ws('General', con(1, 'org.prosperus.Desktop', (0, 0, 1920, 1080)),

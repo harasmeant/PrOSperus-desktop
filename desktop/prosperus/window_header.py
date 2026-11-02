@@ -48,7 +48,10 @@ class WindowHeader(QWidget):
             event.accept()
 
     def toggle_maximized(self):
-        self.target.showNormal() if self.target.isMaximized() else self.target.showMaximized()
+        # En Wayland el cambio llega después: se marca el estado pedido, no el actual.
+        maximized = not self.target.isMaximized()
+        self.target.showMaximized() if maximized else self.target.showNormal()
+        self.controls.set_maximized(maximized)
 
     def trigger(self, action):
         self.target.close() if action == 'close' else self.toggle_maximized()

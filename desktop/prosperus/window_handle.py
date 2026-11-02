@@ -63,7 +63,7 @@ def minimize_command(node, workspace):
 
 def main():
     from PySide6.QtCore import QRectF, Qt, QTimer
-    from PySide6.QtGui import QColor, QGuiApplication, QPainter
+    from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen
     from PySide6.QtWidgets import QApplication, QHBoxLayout, QWidget
     from .window_controls import HoverControls
 
@@ -89,8 +89,10 @@ def main():
         def paintEvent(self, event):
             p = QPainter(self); p.setRenderHint(QPainter.RenderHint.Antialiasing)
             alpha = 90 + int(140 * self.controls.progress)
-            p.setPen(Qt.PenStyle.NoPen); p.setBrush(QColor(20, 24, 20, alpha))
-            p.drawRoundedRect(QRectF(self.rect()), self.height() / 2, self.height() / 2)
+            rect = QRectF(self.rect()).adjusted(.5, .5, -.5, -.5)
+            border = QColor(255, 255, 255, 18 + int(30 * self.controls.progress))
+            p.setPen(QPen(border, 1)); p.setBrush(QColor(20, 24, 20, alpha))
+            p.drawRoundedRect(rect, rect.height() / 2, rect.height() / 2)
 
         def follow(self):
             try:
@@ -98,6 +100,7 @@ def main():
             except (OSError, ValueError):
                 return
             self.target, self.workspace = node, ws
+            self.controls.set_maximized(node is not None and node['id'] in self.saved)
             if node is None:
                 self.position = None; self.hide(); return
             if not self.isVisible():
@@ -118,6 +121,7 @@ def main():
                 return
             if action == 'close':
                 command = f'[con_id={self.target["id"]}] kill'
+                self.saved.pop(self.target['id'], None)
             elif action == 'minimize':
                 command = minimize_command(self.target, self.workspace)
             else:

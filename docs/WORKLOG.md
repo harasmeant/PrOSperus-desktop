@@ -371,3 +371,9 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - `SyncIntervalSec=5s` en el registro del USB y volcado de `swaymsg -t get_inputs/get_outputs` al registro (`prosperus-diag`) para el siguiente intento.
 - El escritorio se ve pero no responde a nada: lo más probable es que Sway se cuelgue con la NVIDIA (nouveau sin firmware). La ISO arranca ahora con `modprobe.blacklist=nouveau`; la pantalla interna va por la AMD. Pendiente de confirmar en el portátil.
 - Confirmado en el portátil: con nouveau bloqueado el escritorio responde; teclado, ratón y el instalador de controladores funcionan.
+
+## 2 de noviembre de 2026 · Escritorios en cuadrícula y controles de ventana
+
+- «Tus proyectos» muestra los escritorios en cuadrícula (antes, tarjetero apilado): tarjetas con su fondo, nombre, notas y carpetas, marca «En uso» y realce al pasar el ratón. Flechas en las cuatro direcciones, Intro o clic abre; Super+Tab sigue recorriéndolos. El panel se ensancha a 660 px y las columnas se ajustan al ancho.
+- Controles de ventana: en reposo, puntos grises discretos que toman su color al desplegarse; anillo sobre el botón señalado; estado pulsado; el clic solo actúa si se suelta sobre el mismo botón; «Ampliar» pasa a «Restaurar» (icono de dos ventanas) en notas, ventanas propias y la píldora de aplicaciones; descripción emergente por botón. La píldora lleva un borde fino y olvida la geometría guardada de las ventanas que cierra.
+- OpenRouter devolvió 429; el código lo escribió Claude. 117 pruebas correctas.

@@ -79,13 +79,20 @@ class DesktopExperienceTests(unittest.TestCase):
         drawer.open_current()
         self.assertEqual(self.window.folder, self.root / 'Laboratorio')
 
-    def test_arrow_keys_on_cover_and_enter_open_project(self):
+    def test_arrow_keys_on_grid_and_enter_open_project(self):
         drawer = self.window.drawer
         drawer.reveal(); self.app.processEvents()
-        front = next(card for card in drawer.stack.cards if card.offset == 0)
+        self.assertEqual(len(drawer.stack.cards), len(drawer.filtered))
+        front = drawer.stack.cards[drawer.index]
         front.setFocus()
-        QTest.keyClick(front, Qt.Key.Key_Down)
+        QTest.keyClick(front, Qt.Key.Key_Right)
         self.assertEqual(drawer.index, 1)
+        # Arriba y abajo saltan una fila entera y no dan la vuelta.
+        QTest.keyClick(drawer.stack, Qt.Key.Key_Up)
+        self.assertEqual(drawer.index, 0)
+        QTest.keyClick(drawer.stack, Qt.Key.Key_Down)
+        self.assertEqual(drawer.index, min(drawer.stack.columns, len(drawer.filtered) - 1))
+        drawer.move_to(1)
         self.assertEqual(self.window.folder, self.root)
         QTest.keyClick(drawer.stack, Qt.Key.Key_Return)
         self.assertEqual(self.window.folder, self.root / 'Cuaderno')
