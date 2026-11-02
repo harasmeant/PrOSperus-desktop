@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Encabezado de ventana personalizado para entornos Wayland (Sway)."""
+import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPalette
@@ -56,7 +57,33 @@ class WindowHeader(QWidget):
             self.target.windowHandle().startSystemMove()
             event.accept()
 
+    def sway_window(self):
+        """(nodo, espacio) de esta ventana en Sway, por proceso y título; None fuera de Sway."""
+        if not os.environ.get('SWAYSOCK'):
+            return None
+        from .window_session import request, walk
+        for ws in walk(request(4)):
+            if ws.get('type') != 'workspace':
+                continue
+            for n in walk(ws):
+                if n.get('pid') == os.getpid() and n.get('name') == self.target.windowTitle():
+                    return n, ws
+        return None
+
     def toggle_maximized(self):
+        # Sway no atiende la petición de maximizar de las aplicaciones (showMaximized no hace
+        # nada): se amplía por IPC, igual que la píldora de controles, y se vuelve al tamaño guardado.
+        try:
+            found = self.sway_window()
+            if found:
+                from .window_handle import maximize_commands
+                from .window_session import request
+                self.saved = getattr(self, 'saved', {})
+                request(0, maximize_commands(*found, self.saved))
+                self.controls.set_maximized(found[0]['id'] in self.saved)
+                return
+        except (OSError, ValueError):
+            pass
         # En Wayland el cambio llega después: se marca el estado pedido, no el actual.
         maximized = not self.target.isMaximized()
         self.target.showMaximized() if maximized else self.target.showNormal()

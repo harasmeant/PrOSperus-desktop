@@ -146,18 +146,26 @@ class WindowManager(QObject):
             except (OSError, ValueError) as e:
                 self.message.emit(f'No se pudo ampliar la aplicación: {e}')
         else:
-            self.arrange()
+            # Recién creada, la ventana aún no ha hecho su primer dibujo y Sway le impone su
+            # tamaño flotante por defecto: la primera orden de tamaño se pierde. Se reintenta.
+            self.arrange(attempts=4)
 
-    def arrange(self):
-        try:
-            focused_output = next(w['output'] for w in request(1) if w.get('focused'))
-            apply(focused_output, self.options_provider())
-        except ValueError as e:
-            # Sin aplicaciones visibles no hay nada que organizar: no es un error.
-            if 'No hay aplicaciones' not in str(e):
+    def arrange(self, attempts=1):
+        for attempt in range(attempts):
+            try:
+                focused_output = next(w['output'] for w in request(1) if w.get('focused'))
+                apply(focused_output, self.options_provider())
+                return
+            except ValueError as e:
+                # Sin aplicaciones visibles no hay nada que organizar: no es un error.
+                if 'No hay aplicaciones' in str(e):
+                    return
+                if attempt + 1 < attempts and 'incompleta' in str(e):
+                    time.sleep(.25); continue
                 self.message.emit(f'No se pudo organizar: {e}')
-        except (OSError, KeyError, StopIteration) as e:
-            self.message.emit(f'No se pudo organizar: {e}')
+            except (OSError, KeyError, StopIteration) as e:
+                self.message.emit(f'No se pudo organizar: {e}')
+            return
 
     def set_mode(self, mode):
         if mode not in ('fibonacci', 'fullscreen'):

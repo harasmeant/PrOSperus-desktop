@@ -97,3 +97,56 @@ class HandleTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class WindowHeaderSwayTests(unittest.TestCase):
+    def test_header_maximizes_through_sway(self):
+        import os
+        from unittest import mock
+        from PySide6.QtWidgets import QApplication, QWidget
+        from prosperus import window_session
+        from prosperus.window_header import WindowHeader
+
+        app = QApplication.instance() or QApplication([])
+        window = QWidget()
+        window.setWindowTitle('Ramas')
+        header = WindowHeader('Ramas', window)
+
+        tree = {
+            'type': 'root',
+            'nodes': [
+                {
+                    'type': 'workspace',
+                    'name': 'General',
+                    'rect': {'x': 0, 'y': 0, 'width': 1600, 'height': 900},
+                    'nodes': [
+                        {
+                            'type': 'floating_con',
+                            'id': 5,
+                            'pid': os.getpid(),
+                            'name': 'Ramas',
+                            'rect': {'x': 100, 'y': 80, 'width': 900, 'height': 700},
+                            'nodes': []
+                        }
+                    ]
+                }
+            ]
+        }
+
+        sent = []
+
+        def fake(kind, payload=''):
+            if kind == 4:
+                return tree
+            else:
+                sent.append(payload)
+                return [{'success': True}]
+
+        with mock.patch.dict(os.environ, {'SWAYSOCK': '/tmp/x'}), mock.patch.object(window_session, 'request', side_effect=fake):
+            header.toggle_maximized()
+            header.toggle_maximized()
+
+        self.assertEqual(len(sent), 2)
+        self.assertIn('width 1600 px height 900 px', sent[0])
+        self.assertIn('width 900 px height 700 px', sent[1])
+        self.assertIn('[con_id=5]', sent[0])

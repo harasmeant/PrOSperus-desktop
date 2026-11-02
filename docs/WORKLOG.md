@@ -420,3 +420,8 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
   - Al cambiar de página, las tarjetas entran desde el lado hacia el que se avanza, con fundido.
   - Fotogramas en `docs/images/animaciones-fotogramas.png`.
 - Corregido un fallo de esta noche: el `min-height` general de los botones aplastaba las tarjetas del panel de proyectos a 42 px. Se quitó y las tarjetas recuperan su alto aunque una hoja de estilo (botones grandes) lo cambie. 127 pruebas correctas.
+- Cerrar, minimizar y maximizar, probados en un Sway sin pantalla con la píldora, Foot y Ramas:
+  - Al abrir una aplicación, el gestor intentaba colocarla antes de su primer dibujo. Sway le imponía su tamaño flotante por defecto (media pantalla) y salía «No se pudo organizar: distribución incompleta» cada vez. Ahora reintenta hasta cuatro veces, cada 250 ms, y la ventana se abre ya colocada.
+  - Foot mostraba sus propios botones de minimizar y maximizar, que Sway ignora (no hacían nada). Se han quitado (`button-width=0`, sin doble clic para maximizar) y la píldora queda como único control: en las pruebas, ampliar, restaurar, minimizar, recuperar desde la barra y cerrar funcionan.
+  - En Sway, «Ampliar» de las ventanas propias (Ramas, Fondos, Instalador) no hacía nada (`showMaximized` se ignora). Ahora amplía por IPC como la píldora (900×700 → 1600×900 → 900×700 comprobado).
+  - La prueba unitaria de esto la escribió qwen2.5-coder. 128 pruebas correctas.
