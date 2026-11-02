@@ -846,6 +846,19 @@ class Desktop(QMainWindow):
     def open_accessibility(self):
         dialog = AccessibilityDialog(self); dialog.exec(); dialog.deleteLater()
 
+    def offer_drivers(self):
+        """Primer arranque: ofrecer controladores si la gráfica lo necesita (una vez por gráfica)."""
+        from .driver_assistant import DriverAssistant, detect_gpus, needs_attention, plan_for, secure_boot_enabled
+        try:
+            plans = [plan_for(gpu, secure_boot_enabled()) for gpu in detect_gpus()]
+        except OSError:
+            return
+        key = 'drivers/asked/' + '-'.join(f'{p.gpu.vendor}:{p.gpu.device:x}' for p in plans)
+        if not needs_attention(plans) or self.settings.value(key, False, type=bool):
+            return
+        self.settings.setValue(key, True); self.settings.sync()
+        dialog = DriverAssistant(self, plans); dialog.exec(); dialog.deleteLater()
+
     def open_hardware(self):
         dialog = HardwareDialog(self); dialog.exec(); dialog.deleteLater()
 
@@ -1191,6 +1204,8 @@ def main():
     # en pantalla completa taparía las aplicaciones flotantes.
     desktop.showFullScreen() if args.kiosk and not os.environ.get('SWAYSOCK') else desktop.show()
     desktop.windows.start()
+    if desktop.system_session:
+        QTimer.singleShot(1500, desktop.offer_drivers)
     if args.screenshot:
         def capture():
             desktop.grab().save(str(args.screenshot)); app.quit()

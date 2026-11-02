@@ -42,11 +42,11 @@ class HardwareDialog(QDialog):
         self.devices.header().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         layout.addWidget(self.devices)
         self.status = QLabel(); self.status.setWordWrap(True); layout.addWidget(self.status)
-        scope = QLabel('Esta versión detecta y muestra el estado; no instala drivers. '
-                       'La instalación guiada queda prevista para la ISO instalable. '
+        scope = QLabel('El asistente recomienda e instala controladores de gráfica. '
                        'USB, impresoras, Bluetooth y firmware requieren comprobaciones adicionales.')
         scope.setWordWrap(True); layout.addWidget(scope)
-        for title, action in [('Actualizar', self.refresh), ('Copiar diagnóstico', self.copy), ('Cerrar', self.accept)]:
+        self.shell = shell
+        for title, action in [('Asistente de controladores…', self.open_assistant), ('Actualizar', self.refresh), ('Copiar diagnóstico', self.copy), ('Cerrar', self.accept)]:
             button = QPushButton(title); button.clicked.connect(action); layout.addWidget(button)
         self.refresh()
 
@@ -63,6 +63,10 @@ class HardwareDialog(QDialog):
         except OSError as error:
             self.rows = []
             self.status.setText('No se pudo consultar el hardware: ' + str(error))
+
+    def open_assistant(self):
+        from .driver_assistant import DriverAssistant
+        dialog = DriverAssistant(self.shell); dialog.exec(); dialog.deleteLater()
 
     def copy(self):
         QApplication.clipboard().setText('PrOSperus · diagnóstico PCI (no valida funcionamiento)\n' +
