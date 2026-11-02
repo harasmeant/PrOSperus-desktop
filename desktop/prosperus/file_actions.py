@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QMenu
 from .transfers import copy_into
 
 
+# Convierte QMimeData en rutas locales, validando que sean archivos del sistema
 def local_paths(mime):
     if mime is None or not mime.hasUrls():
         return []
@@ -17,6 +18,7 @@ def local_paths(mime):
     return [Path(url.toLocalFile()) for url in urls]
 
 
+# Worker que ejecuta copias en un hilo separado para no bloquear la interfaz
 class CopyWorker(QObject):
     completed = Signal(object)
     failed = Signal(str)
@@ -36,6 +38,7 @@ class CopyWorker(QObject):
             self.finished.emit()
 
 
+# Gestor de acciones de archivos (copiar, pegar, importar) con soporte de hilo de fondo
 class FileActions(QObject):
     changed = Signal()
     message = Signal(str)
@@ -53,6 +56,7 @@ class FileActions(QObject):
         self.shell.status.setText(text)
         self.message.emit(text)
 
+    # Copia rutas al portapapeles con formato GNOME para mejor compatibilidad
     def copy(self, paths):
         if not paths:
             self.report('Selecciona una carpeta o una nota para copiar.'); return
@@ -63,6 +67,7 @@ class FileActions(QObject):
         QApplication.clipboard().setMimeData(mime)
         self.report(f'{len(paths)} elementos copiados. Abre el destino y pulsa Ctrl+V.')
 
+    # Pegar desde el portapapeles, iniciando transferencia si hay archivos válidos
     def paste(self, folder):
         try:
             paths = local_paths(QApplication.clipboard().mimeData())
@@ -72,6 +77,7 @@ class FileActions(QObject):
         except (OSError, ValueError) as error:
             self.report(str(error))
 
+    # Inicia una copia en segundo plano usando QThread para no bloquear la UI
     def transfer(self, paths, folder):
         if self.busy:
             self.report('Espera a que termine la copia actual.'); return
@@ -105,16 +111,19 @@ class FileActions(QObject):
         self.thread = None; self.worker = None
         thread.deleteLater()
 
+    # Importa una carpeta completa mediante diálogo de archivo
     def import_folder(self, destination):
         source = QFileDialog.getExistingDirectory(self.shell, 'Elegir carpeta para copiar')
         if source:
             self.transfer([Path(source)], destination)
 
+    # Importa archivos Markdown individuales
     def import_files(self, destination):
         paths, _ = QFileDialog.getOpenFileNames(self.shell, 'Elegir notas para copiar', '', 'Notas Markdown (*.md *.MD)')
         if paths:
             self.transfer([Path(p) for p in paths], destination)
 
+    # Construye menú contextual con opciones de copiar/pegar/mover/imports
     def menu(self, parent, paths, destination, open_path=None, create_note=None, create_folder=None, create_project=None):
         menu = QMenu(parent)
         if len(paths) == 1:

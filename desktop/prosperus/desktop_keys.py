@@ -50,8 +50,10 @@ Dentro de un editor, Ctrl+C, Ctrl+V y Ctrl+A actúan sobre el texto. Copiar una 
 '''
 
 
+# Filtro de eventos global para atajos de escritorio sin robar Ctrl+C/V a editores de texto.
 class DesktopKeys(QObject):
     def __init__(self, shell):
+        # Instala el filtro de eventos y se desconecta al destruir la shell.
         super().__init__(shell)
         self.shell = shell
         self.super_pressed = False
@@ -62,10 +64,13 @@ class DesktopKeys(QObject):
 
     @Slot()
     def detach(self):
+        # Elimina el filtro de eventos cuando la shell se destruye.
         QApplication.instance().removeEventFilter(self)
 
     def eventFilter(self, target, event):
+        # Intercepta teclas para atajos de escritorio antes de que lleguen a los widgets.
         if event.type() == QEvent.Type.ApplicationDeactivate:
+            # Al perder el foco se reinicia Super para evitar atajos fantasma.
             self.super_pressed = False
             return False
         if event.type() not in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease, QEvent.Type.ShortcutOverride):
@@ -75,14 +80,17 @@ class DesktopKeys(QObject):
         if not hasattr(target, 'window'):
             return False
         owner = target
+        # Sube por el árbol de widgets hasta encontrar la shell principal; ignora ventanas ajenas.
         while owner is not None and owner != self.shell:
             owner = owner.parent()
         if owner is None:
             return False
         key = event.key()
+        # Cualquier tecla distinta de Meta mientras Super está pulsada marca una combinación.
         if key != Qt.Key.Key_Meta and self.super_pressed:
             self.super_combination = True
         if event.type() == QEvent.Type.ShortcutOverride:
+            # No interceptar ShortcutOverride: dejar que Qt gestione los atajos estándar.
             return False
         if key == Qt.Key.Key_Meta:
             # Abrir al soltar Super, solo si no formó una combinación: Super+E
@@ -101,6 +109,7 @@ class DesktopKeys(QObject):
                     QTimer.singleShot(0, self.shell.toggle_applications)
             return True
         if event.type() != QEvent.Type.KeyPress:
+            # El resto solo procesa pulsaciones, no sueltas.
             return False
         if key in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab) and event.modifiers() & Qt.KeyboardModifier.MetaModifier:
             # Super+Tab baja por los proyectos; Super+Mayús+Tab sube.
@@ -109,17 +118,20 @@ class DesktopKeys(QObject):
                 drawer.reveal()
             drawer.step(-1 if key == Qt.Key.Key_Backtab or event.modifiers() & Qt.KeyboardModifier.ShiftModifier else 1)
             self.cycling = True
+            # Marca ciclado para que al soltar Super se abra el proyecto elegido.
             return True
         # GNOME/KDE remain responsible for global hardware keys in window mode.
         if self.shell.system_session and self.shell.controls.handle_key(key):
             return True
         context = self.shell.file_context(target)
+        # Obtiene carpeta, rutas y acciones de contexto del widget objetivo.
         if context is None:
             return False
         folder, paths, select_all, go_up = context
         modifiers = event.modifiers()
         if ((modifiers == Qt.KeyboardModifier.ShiftModifier and key == Qt.Key.Key_F10)
                 or (modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Menu)):
+            # Menú contextual con Shift+F10 o tecla Menú.
             from PySide6.QtWidgets import QListWidget
             if isinstance(target, QListWidget):
                 rect = target.visualItemRect(target.currentItem()) if target.currentItem() else target.viewport().rect()
@@ -128,6 +140,7 @@ class DesktopKeys(QObject):
                 self.shell.surface.show_menu(target.mapToGlobal(target.rect().center()))
             return True
         if modifiers == Qt.KeyboardModifier.ControlModifier:
+            # Atajos de Control sobre archivos: copiar, pegar, duplicar, seleccionar todo.
             if key == Qt.Key.Key_C:
                 self.shell.files.copy(paths); return True
             if key == Qt.Key.Key_V:
@@ -139,5 +152,6 @@ class DesktopKeys(QObject):
             if key == Qt.Key.Key_A:
                 select_all(); return True
         if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Backspace:
+            # Retroceso sin modificadores sube un nivel de carpeta.
             go_up(); return True
         return False

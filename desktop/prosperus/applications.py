@@ -9,6 +9,7 @@ gi.require_version('Gio', '2.0')
 from gi.repository import Gio
 
 
+# Lista aplicaciones instaladas y visibles, ordenadas por nombre.
 def catalogue():
     return sorted([
         {'id': app.get_id(), 'name': app.get_display_name(),
@@ -20,6 +21,7 @@ def catalogue():
     ], key=lambda app: app['name'].casefold())
 
 
+# Ejecuta un callable con stdout y stderr redirigidos a /dev/null.
 def _without_output(start):
     # GUI processes must not inherit the JSON response pipe: their output could
     # corrupt the response or keep the launcher waiting until the app closes.
@@ -37,6 +39,7 @@ def _without_output(start):
             os.close(original)
 
 
+# Abre un archivo con la aplicación predeterminada del escritorio.
 def open_file(path):
     """Abre un archivo con la aplicación predeterminada del sistema."""
     file = Gio.File.new_for_path(path)
@@ -46,6 +49,7 @@ def open_file(path):
         raise RuntimeError('No hay ninguna aplicación para abrir este archivo.')
 
 
+# Lanza una aplicación de escritorio por su ID de archivo .desktop.
 def launch(desktop_id):
     app = next((app for app in Gio.AppInfo.get_all()
                 if app.get_id() == desktop_id and app.should_show()), None)
@@ -55,6 +59,7 @@ def launch(desktop_id):
         raise RuntimeError('El sistema no ha podido iniciar la aplicación.')
 
 
+# Punto de entrada CLI: list, launch o open.
 if __name__ == '__main__':
     try:
         if sys.argv[1:] == ['list']:

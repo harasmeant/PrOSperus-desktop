@@ -1,6 +1,7 @@
 # Selector básico de resolución y escala
 # SPDX-License-Identifier: GPL-3.0-only
 
+# Devuelve pares (resolución, etiqueta) para el menú de selección.
 def available_resolutions():
     return [
         ("1360x850", "Estándar (referencia demo)"),
@@ -9,6 +10,7 @@ def available_resolutions():
         ("auto", "Automático / pantalla"),
     ]
 
+# Aplica la resolución con xrandr en la salida DP-1; ignora errores si el modo no existe.
 def apply_resolution(width, height):
     import os
     try:
@@ -16,5 +18,6 @@ def apply_resolution(width, height):
     except Exception:
         pass
 
+# Factor de escala predeterminado (1.0 = sin escalado).
 def scale_factor():
     return 1.0

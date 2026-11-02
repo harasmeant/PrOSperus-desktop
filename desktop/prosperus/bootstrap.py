@@ -9,6 +9,7 @@ INSTALL_COMMAND = ('sudo dnf install --setopt=install_weak_deps=False '
                    'python3-pyside6 qt6-qtwayland python3-gobject')
 
 
+# Detecta sesión Live de Fedora para adaptar los mensajes de espacio en disco
 def live_session():
     try:
         cmdline = Path('/proc/cmdline').read_text()
@@ -17,6 +18,7 @@ def live_session():
     return 'root=live:' in cmdline or 'rd.live.image' in cmdline
 
 
+# Genera diagnóstico de fallo de dependencias con espacio libre y pasos de solución
 def dependency_diagnostic(error):
     lines = ['No se pudo cargar la interfaz de PrOSperus.',
              f'Detalle: {type(error).__name__}: {error}']
@@ -26,6 +28,7 @@ def dependency_diagnostic(error):
     except OSError:
         lines.append('No se pudo consultar el espacio disponible.')
     if live_session():
+        # En Live, /tmp es volátil y el disco virtual puede estar casi lleno
         lines.extend([
             'Estás en Fedora Live: el espacio para instalar paquetes puede ser',
             'mucho menor que el disco virtual configurado en Boxes.',
@@ -49,6 +52,7 @@ def dependency_diagnostic(error):
     return '\n'.join(lines)
 
 
+# Importa Qt y GObject de forma diferida para poder informar fallos sin ventana
 def main():
     # Importar Qt aquí, y no al cargar este módulo, permite explicar un fallo
     # de dependencias incluso cuando todavía no se puede mostrar una ventana.
@@ -57,6 +61,7 @@ def main():
     except (ImportError, OSError) as error:
         print(dependency_diagnostic(error), file=sys.stderr)
         return 1
+    # GObject Introspection se requiere para el módulo Aplicaciones
     try:
         importlib.import_module('gi')
     except (ImportError, OSError):

@@ -9,10 +9,13 @@ from .window_header import WindowHeader
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget)
 
+# Expresión regular que define los caracteres permitidos en el término de búsqueda para evitar inyección en shell.
 SAFE = re.compile(r'^[\w .+-]+$')
 
 
 def search_commands(text):
+    # Ejecuta `dnf5 repoquery` para Fedora o `flatpak search` para Flathub según el texto ingresado.
+    # Retorna una lista de tuplas (source, argv) para cada fuente válida.
     term = text.strip()
     # Nunca pasa por un shell, pero una búsqueda rara no es un nombre de programa.
     if not term or not SAFE.match(term):
@@ -23,6 +26,7 @@ def search_commands(text):
 
 
 def parse_dnf(output):
+    # Analiza la salida tabulado de `repoquery` de Fedora en una lista de diccionarios de paquetes.
     found, seen = [], set()
     for line in output.splitlines():
         name, _, summary = line.partition('\t')
@@ -33,6 +37,8 @@ def parse_dnf(output):
 
 
 def parse_flatpak(output):
+    # Analiza la salida tabulado de `flatpak search` de Flathub.
+    # El ID del flatpak (columna 0) debe contener un punto para filtrar aplicaciones internas o de prueba.
     found = []
     for line in output.splitlines():
         parts = line.split('\t')
@@ -43,12 +49,13 @@ def parse_flatpak(output):
 
 
 def install_command(item):
-    # shortcut: sudo -n usa el sudo sin contraseña de la imagen de desarrollo; usar pkexec en la de uso diario.
+    # Construye la lista de argumentos para la instalación según la fuente ('fedora', 'flathub') o la extensión del archivo local.
     if item['source'] == 'fedora':
         return ['sudo', '-n', 'dnf5', 'install', '-y', item['id']]
     if item['source'] == 'flathub':
         return ['sudo', '-n', 'flatpak', 'install', '-y', '--noninteractive', 'flathub', item['id']]
     path = str(item['id'])
+    # shortcut: sudo -n usa el sudo sin contraseña de la imagen de desarrollo; usar pkexec en la de uso diario.
     if path.lower().endswith('.rpm'):
         return ['sudo', '-n', 'dnf5', 'install', '-y', path]
     if path.lower().endswith('.flatpakref'):
@@ -69,6 +76,7 @@ QPushButton:hover { background: #344030; }
 
 
 class Installer(QWidget):
+    # Interfaz gráfica principal que coordina búsquedas, instalación y registro de actividad.
     def __init__(self, path=None):
         super().__init__()
         self.setWindowTitle('Instalar programas'); self.resize(760, 560); self.setStyleSheet(STYLE)
@@ -88,6 +96,7 @@ class Installer(QWidget):
         self.search.setFocus()
 
     def show_items(self, items):
+        # Limpia la lista y muestra los ítems; asigna prefijos visuales (`[Fedora]`, `[Flathub]`, `[Archivo]`) según el origen.
         self.list.clear()
         for item in items:
             tag = {'fedora': '[Fedora]', 'flathub': '[Flathub]'}.get(item['source'], '[Archivo]')
@@ -97,6 +106,7 @@ class Installer(QWidget):
             self.list.setCurrentRow(0)
 
     def run_search(self):
+        # Obtiene los comandos válidos y ejecuta ambos procesos en paralelo (Fedora y Flathub).
         commands = search_commands(self.search.text())
         if not commands:
             self.log.setPlainText('Escribe un nombre de programa (letras, números, - _ . +).'); return
@@ -108,11 +118,13 @@ class Installer(QWidget):
             process.start(argv[0], argv[1:])
 
     def failed(self, process, error):
+        # Muestra un error si el comando externo no puede iniciarse (ej. ejecutable no encontrado).
         if error == QProcess.ProcessError.FailedToStart:
             self.log.appendPlainText('No está disponible: ' + process.program())
             self.search_done(process, None)
 
     def search_done(self, process, source):
+        # Procesa la salida finalizada de un proceso de búsqueda, la guarda y actualiza la lista de la interfaz.
         if process not in self.searches:
             return
         self.searches.remove(process)
@@ -128,6 +140,7 @@ class Installer(QWidget):
             self.log.appendPlainText(f'{len(items)} resultados.')
 
     def install(self):
+        # Inicia el proceso de instalación para el ítem seleccionado si no hay otra instalación en curso.
         current = self.list.currentItem()
         if current is None or self.job is not None:
             return
@@ -146,6 +159,7 @@ class Installer(QWidget):
         self.job.start(argv[0], argv[1:])
 
     def install_done(self, code, status):
+        # Actualiza el registro de actividad, libera el estado del trabajo y cierra la aplicación si la ventana está oculta.
         self.log.appendPlainText('Instalado.' if code == 0 and status == QProcess.ExitStatus.NormalExit else f'Error (código {code}).')
         self.job.deleteLater(); self.job = None; self.install_button.setEnabled(True)
         if not self.isVisible():

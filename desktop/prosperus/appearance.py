@@ -9,13 +9,16 @@ from PySide6.QtGui import QColor, QIcon, QImage, QPainter, QPainterPath, QPen, Q
 from PySide6.QtWidgets import QWidget
 
 
+# Predefinidos para projects con nombre concreto; el resto se calculan por hash
 HUES = {'Bienvenida': 92, 'Cuaderno': 34, 'Laboratorio': 207,
         'Permacultivo': 92, 'DND': 30, 'Club social': 38,
         'Escritorio Obsidian': 145, 'Cursos 3D': 207, 'Máster Tienda': 345}
 
 
+# Genera una paleta de colores a partir de un tono base (HSL)
 class Palette:
     def __init__(self, hue=145):
+        # Convierte HSL a hex para cada rol de color
         def colour(saturation, lightness):
             return QColor.fromHsl(hue, saturation, lightness).name()
         self.base = colour(45, 19)
@@ -27,6 +30,7 @@ class Palette:
         self.text = colour(28, 224)
         self.muted = colour(25, 158)
 
+    # Devuelve hoja de estilos CSS lista para aplicar
     def css(self):
         return f"""
         QWidget {{ background: transparent; color: {self.text}; font-family: 'DejaVu Sans'; font-size: 13px; }}
@@ -54,6 +58,7 @@ class Palette:
         """
 
 
+# Devuelve la Palette adecuada: si hay wallpaper, usa su tono; si no, usa HUES o hash del nombre
 def palette_for(vault, folder):
     folder = vault.checked(folder)
     wallpaper = wallpaper_for(vault, folder)
@@ -71,6 +76,7 @@ def palette_for(vault, folder):
     return Palette(hue)
 
 
+# Busca recursivamente un archivo wallpaper.{png,jpg,...} en folder o sus padres, hasta vault.root
 def wallpaper_for(vault, folder):
     current = vault.checked(folder)
     if current.is_file():
@@ -88,11 +94,13 @@ def wallpaper_for(vault, folder):
         current = current.parent
 
 
+# Cachea Pixmaps para evitar recargas; modificado permite invalidar cuando cambia el archivo
 @lru_cache(maxsize=12)
 def wallpaper_pixmap(path, modified):
     return QPixmap(str(path))
 
 
+# Calcula el tono circular promedio del wallpaper, ponderado por saturación y valor; cacheado
 @lru_cache(maxsize=32)
 def wallpaper_hue(path, modified):
     """Devuelve el tono circular promedio del wallpaper."""
@@ -126,6 +134,7 @@ def wallpaper_hue(path, modified):
     return int(round(hue_deg))
 
 
+# Pinta el fondo: base color, wallpaper escalado y sombra superpuesta
 def paint_wallpaper(painter, rect, path, base, shade=80):
     painter.fillRect(rect, QColor(base))
     if path:
@@ -141,9 +150,11 @@ def paint_wallpaper(painter, rect, path, base, shade=80):
     painter.fillRect(rect, QColor(0, 0, 0, shade))
 
 
+# Dibuja un símbolo vectorial en el rectángulo dado (coordenadas 0-24)
 def draw_symbol(painter, rect, kind, color):
     painter.save()
     painter.translate(rect.x(), rect.y())
+    # Escala el path de 24x24 al tamaño real del rectángulo
     painter.scale(rect.width() / 24, rect.height() / 24)
     painter.setPen(QPen(QColor(color), 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
     painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -251,6 +262,7 @@ def draw_symbol(painter, rect, kind, color):
     painter.restore()
 
 
+# Crea un QIcon de 24x24 renderizando el símbolo con el color dado
 def symbol_icon(kind, color):
     pixmap = QPixmap(24, 24)
     pixmap.fill(Qt.GlobalColor.transparent)
@@ -261,12 +273,14 @@ def symbol_icon(kind, color):
     return QIcon(pixmap)
 
 
+# QWidget que pinta el fondo de pantalla heredado
 class Wallpaper(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.wallpaper = None
         self.palette = Palette()
 
+    # paintEvent personalizado: usa paint_wallpaper con la palette base
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)

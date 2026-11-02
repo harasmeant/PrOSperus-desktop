@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFormLayout,
                               QLabel, QPushButton, QVBoxLayout)
 
 
+# Clase de datos inmutable que almacena preferencias de accesibilidad.
 @dataclass(frozen=True)
 class Accessibility:
     text_scale: int = 100
@@ -15,6 +16,8 @@ class Accessibility:
     high_contrast: bool = False
     single_click: bool = False
 
+    # Carga la configuración de accesibilidad desde QSettings, validando valores seguros
+    # y aplicando defaults (100) si los valores son inválidos o no están en la lista permitida.
     @classmethod
     def load(cls, settings):
         try:
@@ -26,15 +29,19 @@ class Accessibility:
         return cls(scale if scale in (100, 125, 150) else 100,
                    flag('large_buttons'), flag('high_contrast'), flag('single_click'))
 
+    # Guarda la configuración actual en QSettings y síncroniza con el archivo de configuración.
+    # Devuelve True si el estado de escritura es NoError.
     def save(self, settings):
         for key, value in vars(self).items():
             settings.setValue('accessibility/' + key, value)
         settings.sync()
         return settings.status() == QSettings.Status.NoError
 
+    # Escala el tamaño de fuente proporcionalmente al factor text_scale, redondeando al entero.
     def font_size(self, points):
         return round(points * self.text_scale / 100)
 
+    # Ajusta los colores del palette a alto contraste si está activado, dejando pasar si no.
     def palette(self, palette):
         if self.high_contrast:
             palette.base = palette.panel = palette.card = '#000000'
@@ -44,6 +51,8 @@ class Accessibility:
             palette.border = '#ffffff'
         return palette
 
+    # Genera CSS personalizado modificando tamaños de fuente y estilos de enfoque/selección
+    # según la configuración de accesibilidad (tamaño grande, botones grandes, contraste).
     def css(self, palette):
         css = re.sub(r'font-size: (\d+)px',
                      lambda m: f'font-size: {self.font_size(int(m[1]))}px', palette.css())
@@ -59,7 +68,11 @@ class Accessibility:
         return css
 
 
+# Diálogo configurador de accesibilidad con controles de interfaz de usuario,
+# vinculado al shell para aplicar cambios en tiempo real.
 class AccessibilityDialog(QDialog):
+    # Inicializa el diálogo, crea los controles de formulario (combinación, casillas)
+    # y los enlaza con la configuración actual del shell.
     def __init__(self, shell):
         super().__init__(shell)
         self.shell = shell
@@ -86,6 +99,8 @@ class AccessibilityDialog(QDialog):
         apply = QPushButton('Aplicar y guardar'); apply.clicked.connect(self.apply); layout.addWidget(apply)
         close = QPushButton('Cerrar'); close.clicked.connect(self.accept); layout.addWidget(close)
 
+    # Aplica y guarda la nueva configuración de accesibilidad en el shell,
+    # actualiza el atributo de acceso y muestra un mensaje de estado.
     def apply(self):
         options = Accessibility(self.scale.currentData(), self.large.isChecked(),
                                 self.contrast.isChecked(), self.single.isChecked())

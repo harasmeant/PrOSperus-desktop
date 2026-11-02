@@ -27,7 +27,7 @@ def apply_wallpaper(source, folder):
         raise ValueError('Elige una carpeta de proyecto.')
 
     suffixes = ('.png', '.jpg', '.jpeg', '.webp', '.avif')
-    # Renombra todos los wallpapers existentes para conservarlos (nunca se eliminan)
+    # Conservar wallpapers anteriores mediante renombrado (no se eliminan)
     for f in folder.glob('wallpaper.*'):
         if f.suffix.lower() in suffixes and f.stem == 'wallpaper':
             backup = f.parent / ('.wallpaper-anterior' + f.suffix)
@@ -38,6 +38,7 @@ def apply_wallpaper(source, folder):
     return target
 
 
+# Gestor y selector de fondos de pantalla para el proyecto actual.
 class WallpaperPicker(QWidget):
     def __init__(self):
         super().__init__()
@@ -57,6 +58,7 @@ class WallpaperPicker(QWidget):
         self.list_widget.setIconSize(QSize(220, 138))
         self.list_widget.setUniformItemSizes(True)
 
+        # Directorio de wallpapers por defecto, sobreescribible por PROSPERUS_WALLPAPERS
         images_dir = Path(os.environ.get('PROSPERUS_WALLPAPERS', '/usr/share/prosperus/wallpapers'))
 
         if not images_dir.is_dir():
@@ -84,7 +86,7 @@ class WallpaperPicker(QWidget):
                     self.list_widget.addItem(item)
                 layout.addWidget(self.list_widget)
 
-        # Botones en horizonte alineados a la derecha
+        # Botones alineados a la derecha con un estiramiento
         btn_layout = QHBoxLayout()
         btn_layout.addStretch(1)
         btn_apply = QPushButton('Usar en esta carpeta')
@@ -94,6 +96,7 @@ class WallpaperPicker(QWidget):
         layout.addLayout(btn_layout)
 
         btn_apply.clicked.connect(lambda: self._on_apply())
+        # Doble clic en cualquier elemento también aplica el wallpaper
         self.list_widget.itemDoubleClicked.connect(lambda item=None: self._on_apply(item))
         btn_close.clicked.connect(self.close)
 
@@ -105,14 +108,17 @@ class WallpaperPicker(QWidget):
             return
         src = Path(item.data(Qt.ItemDataRole.UserRole))
         try:
+            # Aplicar wallpaper y cerrar ventana
             apply_wallpaper(src, Path.cwd())
             self.close()
         except (OSError, ValueError) as e:
+            # Mostrar mensaje descriptivo del error
             QMessageBox.warning(self, 'Error', str(e))
 
 
 def main():
     app = QApplication(sys.argv)
+    # Establecer nombre de aplicación para el gestor de ventanas del escritorio
     app.setDesktopFileName('org.prosperus.Wallpapers')
     window = WallpaperPicker()
     window.show()

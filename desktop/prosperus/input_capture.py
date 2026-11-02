@@ -14,6 +14,7 @@ try:
 except Exception:
     HAS_PYNPUT = False
 
+# Busca un dispositivo de entrada que informe eventos de movimiento relativo (EV_REL).
 def get_mouse_device():
     if not HAS_EVDEV:
         return None
@@ -27,6 +28,7 @@ def get_mouse_device():
         pass
     return None
 
+# Inicia un listener global de teclado en hilo daemon; pynput falla en Wayland puro (Sway/Cage), por lo que el escritorio gestiona sus atajos mediante Qt.
 def listen_keyboard(on_press=None):
     """Start a global key listener in a daemon thread and return it.
 

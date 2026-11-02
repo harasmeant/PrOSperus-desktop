@@ -66,7 +66,7 @@ def separate(rects, fixed, bounds, gap, iterations=60):
                 if ox == 0 or oy == 0:
                     continue
                 if ox <= oy:
-                    # horizontal push
+                    # horizontal push: determine push direction based on right edge positions
                     push = ox
                     c1x = r1[0] + r1[2] / 2
                     c2x = r2[0] + r2[2] / 2
@@ -77,7 +77,7 @@ def separate(rects, fixed, bounds, gap, iterations=60):
                     r1[0] += dir1 * push / 2
                     r2[0] -= dir1 * push / 2
                 else:
-                    # vertical push
+                    # vertical push: determine push direction based on bottom edge positions
                     push = oy
                     c1y = r1[1] + r1[3] / 2
                     c2y = r2[1] + r2[3] / 2
@@ -120,7 +120,7 @@ def separate(rects, fixed, bounds, gap, iterations=60):
                         dir1 = -1 if c1y < c2y else 1
                     r1[1] += dir1 * push
                 moved = True
-        # clamp all movables
+        # clamp all movables within bounds
         for r in mov:
             r[0] = max(bx, min(bx + bw - r[2], r[0]))
             r[1] = max(by, min(by + bh - r[3], r[1]))
@@ -151,6 +151,7 @@ def nearest_in_direction(points, origin, direction):
         diff = min(diff, 2 * math.pi - diff)
         if diff <= math.radians(60):
             dist = math.hypot(dx, dy)
+            # penalize vertical offset for horizontal directions, and vice versa
             if direction in ('right', 'left'):
                 off = abs(dy)
             else:
@@ -231,11 +232,13 @@ def concentric_slots(count, cx, cy, center_w, center_h, cell_w, cell_h, gap=22, 
     while len(slots) < count:
         rx = center_w / 2 + cell_w / 2 + gap + ring * (cell_w + gap) / 2
         ry = center_h / 2 + cell_h / 2 + gap + ring * (cell_h + gap) / 2
+        # si el anillo excede los límites, romper la recursión
         if cx - rx + cell_w / 2 < left and cx + rx - cell_w / 2 > right:
             break
         ring += 1
         perimeter = math.pi * (3 * (rx + ry) - math.sqrt((3 * rx + ry) * (rx + 3 * ry)))
         for x, y in ellipse_points(max(8, int(perimeter / (cell_w * .4))), cx, cy, rx, ry):
+            # verificar que no salga de bounds ni se solape con slots existentes
             if len(slots) < count and fits(x, y):
                 slots.append((x, y)); taken.append((x, y, cell_w, cell_h))
     return slots
@@ -246,10 +249,12 @@ def link_order(count, weights):
     if not weights:
         return list(range(count))
     weight = lambda a, b: weights.get((min(a, b), max(a, b)), 0)
+    # calcular gravedad total de cada nodo
     totals = [sum(weight(i, j) for j in range(count) if j != i) for i in range(count)]
     order = [max(range(count), key=lambda i: (totals[i], -i))]
     rest = [i for i in range(count) if i != order[0]]
     while rest:
+        # seleccionar siguiente nodo: mayor conexión con el último, luego mayor gravedad, menor índice
         best = max(rest, key=lambda i: (weight(order[-1], i), max(weight(p, i) for p in order), -i))
         order.append(best); rest.remove(best)
     return order
