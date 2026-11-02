@@ -151,6 +151,10 @@ class DesktopKeys(QObject):
                 return True
             if key == Qt.Key.Key_A:
                 select_all(); return True
+        if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_F2 and len(paths) == 1:
+            self.shell.rename_path(paths[0]); return True
+        if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Delete and paths:
+            self.shell.trash_paths(paths); return True
         if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Backspace:
             # Retroceso sin modificadores sube un nivel de carpeta.
             go_up(); return True

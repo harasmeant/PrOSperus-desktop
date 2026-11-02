@@ -943,6 +943,48 @@ class Explorer(QDialog):
         path = self.shell.new_folder(folder=self.folder)
         self.go(path) if path else self.refresh()
 
+    def _open_under(self, paths):
+        return [p for p in self.panels if any(p == q or p.is_relative_to(q) for q in paths)]
+
+    def rename_path(self, path):
+        if self._open_under([path]):
+            self.status.setText('Cierra primero la nota abierta para renombrarla.'); return
+        current = path.stem if path.is_file() else path.name
+        name, ok = QInputDialog.getText(self, 'Renombrar', 'Nuevo nombre:', text=current)
+        if not ok or not name.strip() or name.strip() == current:
+            return
+        try:
+            target, updated = self.vault.rename(path, name)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, 'No se pudo renombrar', str(error)); return
+        self.surface.selection = []
+        self.navigate(target if target.is_dir() and path == self.folder else self.folder if self.folder.exists() else target.parent)
+        self.refresh_projects()
+        self.status.setText(f'Renombrado a {target.name}' + (f' · enlaces actualizados en {len(updated)} notas' if updated else ''))
+
+    def trash_paths(self, paths):
+        if not paths:
+            return
+        if self._open_under(paths):
+            self.status.setText('Cierra primero las notas abiertas.'); return
+        names = ', '.join(p.name for p in paths[:4]) + ('…' if len(paths) > 4 else '')
+        if QMessageBox.question(self, 'Mover a la papelera', f'¿Mover a la papelera {names}?\n'
+                                'Se guardan en .papelera dentro de tus proyectos y puedes recuperarlos.') != QMessageBox.StandardButton.Yes:
+            return
+        moved = []
+        for path in paths:
+            try:
+                self.vault.trash(path); moved.append(path.name)
+            except (OSError, ValueError) as error:
+                QMessageBox.warning(self, 'No se pudo mover ' + path.name, str(error))
+        if moved:
+            self.surface.selection = []
+            folder = self.folder
+            while not folder.exists():
+                folder = folder.parent
+            self.navigate(folder); self.refresh_projects()
+            self.status.setText('En la papelera: ' + ', '.join(moved))
+
     def new_project(self):
         if self.shell.new_project():
             self.accept()

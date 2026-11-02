@@ -418,3 +418,40 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(install_command({'source': 'file', 'id': '/tmp/x.rpm'})[-1], '/tmp/x.rpm')
         with self.assertRaises(ValueError):
             install_command({'source': 'file', 'id': '/tmp/x.sh'})
+
+
+class RenameTrashTests(unittest.TestCase):
+    def test_rename_wikilinks_rules(self):
+        from prosperus.model import rename_wikilinks
+        text = '[[Plan]] [[plan|el plan]] [[Ideas/Plan#Fechas]] [[Plan.md]] [[Planta]] `[[Plan]]`\n```\n[[Plan]]\n```'
+        result, count = rename_wikilinks(text, 'Plan', 'Plan 2026')
+        self.assertEqual(count, 4)
+        self.assertEqual(result, '[[Plan 2026]] [[Plan 2026|el plan]] [[Ideas/Plan 2026#Fechas]] [[Plan 2026.md]] '
+                                 '[[Planta]] `[[Plan]]`\n```\n[[Plan]]\n```')
+
+    def test_vault_rename_updates_links_and_trash_keeps_files(self):
+        import tempfile
+        from pathlib import Path
+        from prosperus.model import Vault
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); (root / 'A').mkdir()
+            (root / 'A' / 'Plan.md').write_text('# Plan\n', encoding='utf-8')
+            (root / 'Indice.md').write_text('Ver [[Plan]] y [[Otra]]\n', encoding='utf-8')
+            vault = Vault(root)
+            target, updated = vault.rename(root / 'A' / 'Plan.md', 'Plan 2026')
+            self.assertEqual(target, root / 'A' / 'Plan 2026.md')
+            self.assertEqual((root / 'Indice.md').read_text(encoding='utf-8'), 'Ver [[Plan 2026]] y [[Otra]]\n')
+            self.assertEqual(updated, [root / 'Indice.md'])
+            with self.assertRaises(FileExistsError):
+                vault.rename(root / 'A', 'A')  # nunca sobrescribe
+            folder, _ = vault.rename(root / 'A', 'B')
+            self.assertTrue((root / 'B' / 'Plan 2026.md').is_file())
+            first = vault.trash(root / 'Indice.md')
+            (root / 'Indice.md').write_text('otra\n', encoding='utf-8')
+            second = vault.trash(root / 'Indice.md')
+            self.assertEqual({first.name, second.name}, {'Indice.md', 'Indice (2).md'})
+            self.assertNotIn(first, list(vault.notes()))  # la papelera está oculta
+            with self.assertRaises(ValueError):
+                vault.trash(root / '.papelera')
+            with self.assertRaises(ValueError):
+                vault.rename(root, 'x')

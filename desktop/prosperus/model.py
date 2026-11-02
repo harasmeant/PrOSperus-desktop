@@ -16,6 +16,36 @@ def searchable(value):
                    if unicodedata.category(c) != 'Mn')
 
 
+# Escrito por qwen2.5-coder (local) con dos correcciones: prefijo de carpeta y sufijo .md.
+WIKILINK = re.compile(r'\[\[([^\]\n|#]+)((?:#[^\]\n|]*)?)((?:\|[^\]\n]*)?)\]\]')
+# group(1) = target (may contain folders, may end in .md), group(2) = '#heading' or '', group(3) = '|label' or ''
+
+def rename_wikilinks(text, old, new):
+    """Point wikilinks to note `old` at `new`. Returns (new_text, count)."""
+    count = 0
+
+    def replace(match):
+        nonlocal count
+        target, heading, label = match.group(1), match.group(2), match.group(3)
+        # Split target into folder prefix and name at the LAST '/' (prefix keeps its trailing '/', may be '').
+        cut = target.rfind('/') + 1
+        prefix, name = target[:cut], target[cut:]
+        # If name (stripped) ends with '.md' (case-insensitive), remove it and remember suffix = the original 4 chars, else suffix = ''.
+        suffix = name[-3:] if name.lower().endswith('.md') else ''
+        name = name[:-3] if suffix else name
+        # If name.strip().casefold() != old.strip().casefold(): return match.group(0) unchanged.
+        if name.strip().casefold() != old.strip().casefold():
+            return match.group(0)
+        # Count += 1 and return '[[' + prefix + new + suffix + heading + label + ']]'
+        count += 1
+        return f'[[{prefix}{new}{suffix}{heading}{label}]]'
+
+    chunks = re.split(r'(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)', text)
+    # Apply WIKILINK.sub(replace, chunk) ONLY to chunks with an EVEN index (index 0, 2, 4...); keep odd (code) chunks unchanged.
+    new_chunks = [WIKILINK.sub(replace, chunk) if i % 2 == 0 else chunk for i, chunk in enumerate(chunks)]
+    return ''.join(new_chunks), count
+
+
 class Vault:
     MAX_NOTE_BYTES = 2 * 1024 * 1024
 
@@ -162,6 +192,44 @@ class Vault:
         if target.exists() or target.is_symlink():
             raise FileExistsError('Ya existe un elemento con ese nombre en el destino.')
         # Mismo sistema de archivos: rename es atómico y no deja copias a medias.
+        os.rename(path, target)
+        return target
+
+    TRASH = '.papelera'
+
+    def rename(self, path, name):
+        """Renombra una nota o carpeta en su sitio. Al renombrar una nota, los wikilinks que la
+        nombran se actualizan en todas las notas. Devuelve (nueva ruta, notas actualizadas)."""
+        path = self.checked(path)
+        if path == self.root:
+            raise ValueError('No se puede renombrar la carpeta de proyectos.')
+        note = path.is_file()
+        if note and path.suffix.lower() != '.md':
+            raise ValueError('Solo se renombran notas Markdown y carpetas.')
+        target = self.child_path(path.parent, name, note=note)
+        os.rename(path, target)
+        updated = []
+        if note and target.stem.casefold() != path.stem.casefold():
+            for other in list(self.notes()):
+                try:
+                    text = self.read(other)
+                    changed, count = rename_wikilinks(text, path.stem, target.stem)
+                    if count:
+                        self.save_note(other, changed, text); updated.append(other)
+                except (OSError, ValueError):
+                    continue  # una nota ilegible no impide renombrar
+        return target, updated
+
+    def trash(self, path):
+        """Mueve a .papelera (oculta, en la raíz) sin borrar nada; nunca sobrescribe."""
+        path = self.checked(path)
+        bin_ = self.root / self.TRASH
+        if path == self.root or path == bin_ or path.is_relative_to(bin_):
+            raise ValueError('Esto no se puede mover a la papelera.')
+        bin_.mkdir(exist_ok=True)
+        target, number = bin_ / path.name, 2
+        while target.exists() or target.is_symlink():
+            target = bin_ / f'{path.stem} ({number}){path.suffix}'; number += 1
         os.rename(path, target)
         return target
 

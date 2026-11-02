@@ -407,3 +407,9 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
   - `app_item` y su prueba los escribió qwen2.5-coder:7b en local (Ollama), con una ronda de correcciones. 125 pruebas correctas.
 - Notas translúcidas: fondo del color del panel al 60 % (40 % de transparencia), sin la copia del fondo de pantalla, para que se vea el escritorio de detrás. En alto contraste siguen opacas.
 - Consola Foot translúcida: el fondo entero, incluida la barra de título, al 60 %, con una paleta suave a juego (colores propuestos por qwen2.5-coder; el gris claro se corrigió porque no se leía). Se valoró Konsole a petición, pero se descartó porque arrastra unos 120 paquetes de KDE.
+- Renombrar y mover a la papelera:
+  - Menú contextual «Renombrar…» (F2) y «Mover a la papelera» (Supr) para notas y carpetas.
+  - Al renombrar una nota se actualizan sus wikilinks en todas las notas (`[[Plan]]`, `[[Plan|texto]]`, `[[carpeta/Plan#título]]`, `[[Plan.md]]`), sin tocar los bloques de código.
+  - La papelera es `.papelera` en la raíz de los proyectos: oculta, nada se borra y nunca se sobrescribe (`Nota (2).md`).
+  - Con una nota abierta se pide cerrarla antes.
+  - `rename_wikilinks` la escribió qwen2.5-coder en local, con un esqueleto guiado y dos correcciones (barra del prefijo y el sufijo `.md`, que era un error de la especificación). 127 pruebas correctas.

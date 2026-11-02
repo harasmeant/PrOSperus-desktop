@@ -136,6 +136,10 @@ class FileActions(QObject):
         paste.setEnabled(mime is not None and mime.hasUrls() and not self.busy)
         move = menu.addAction('Mover a otro proyecto…', lambda: self.shell.move_to(paths))
         move.setEnabled(bool(paths) and not self.busy)
+        rename = menu.addAction('Renombrar…\tF2', lambda: self.shell.rename_path(paths[0]))
+        rename.setEnabled(len(paths) == 1 and not self.busy)
+        trash = menu.addAction('Mover a la papelera\tSupr', lambda: self.shell.trash_paths(paths))
+        trash.setEnabled(bool(paths) and not self.busy)
         if len(paths) == 1 and paths[0].is_dir():
             menu.addAction('Pegar dentro de esta carpeta', lambda: self.paste(paths[0]))
         menu.addSeparator()
