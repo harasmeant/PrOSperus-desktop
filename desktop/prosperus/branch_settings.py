@@ -61,6 +61,12 @@ class Preview(QWidget):
         super().__init__()
         self.wallpaper, self.colors, self.traits = wallpaper, palette, {}
         self.ratio = screen_ratio()
+        # Tantas tarjetas como subcarpetas tenga (de 3 a 8, lo que cabe en una página del mapa).
+        try:
+            folders = sum(1 for entry in Path.cwd().iterdir() if entry.is_dir() and not entry.name.startswith('.'))
+        except OSError:
+            folders = 0
+        self.count = max(3, min(8, folders))
         self.setMinimumSize(480, 220)
 
     def paintEvent(self, event):
@@ -79,7 +85,7 @@ class Preview(QWidget):
         cx, cy = surface.center().x(), surface.center().y()
         centre = QRectF(cx - m['cw'] / 2, cy - (m['nh'] + 8) / 2, m['cw'], m['nh'] + 8)
         cards = [QRectF(x - m['fw'] / 2, y - m['fh'] / 2, m['fw'], m['fh'])
-                 for x, y in radial_slots(6, cx, cy, m['rx'], m['ry'])]
+                 for x, y in radial_slots(self.count, cx, cy, m['rx'], m['ry'])]
         visible = QPainterPath(); visible.addRect(screen)
         for card in [centre] + cards:
             hole = QPainterPath(); hole.addRoundedRect(card, 10, 10); visible = visible.subtracted(hole)

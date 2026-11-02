@@ -234,9 +234,21 @@ def map_metrics(width, height):
 
 
 def radial_slots(count, cx, cy, rx, ry):
-    """Radios equiespaciados como en el prototipo: el primero arriba y en sentido horario."""
-    return [(cx + rx * math.cos(-math.pi / 2 + i * 2 * math.pi / count),
-             cy + ry * math.sin(-math.pi / 2 + i * 2 * math.pi / count)) for i in range(count)]
+    """Radios equiespaciados como en el prototipo: el primero arriba y en sentido horario.
+    La figura se encaja en el óvalo: con un número impar (3, 5, 7) los puntos no llegan abajo,
+    así que se centra y se estira hasta tocar los bordes; el orden y la simetría no cambian."""
+    if count <= 0:
+        return []
+    raw = [(math.cos(-math.pi / 2 + i * 2 * math.pi / count), math.sin(-math.pi / 2 + i * 2 * math.pi / count))
+           for i in range(count)]
+    if count < 3:
+        return [(cx + rx * x, cy + ry * y) for x, y in raw]
+    def fit(values):
+        low, high = min(values), max(values)
+        middle, half = (low + high) / 2, (high - low) / 2 or 1
+        return [(v - middle) / half for v in values]
+    xs, ys = fit([x for x, _ in raw]), fit([y for _, y in raw])
+    return [(cx + rx * x, cy + ry * y) for x, y in zip(xs, ys)]
 
 
 def concentric_slots(count, cx, cy, center_w, center_h, cell_w, cell_h, gap=22, bounds=None):
