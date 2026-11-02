@@ -81,7 +81,7 @@ def vine(painter, start, end, start_width, end_width, color, seed=0, sprigs=3, c
         turn = 1 if (k + seed) % 2 else -1
         width = start_width + (end_width - start_width) * t
         # Tallo corto hacia un lado, que acaba en zarcillo o en hoja (alternando).
-        stem_angle = heading + turn * .85
+        stem_angle = heading + turn * .38
         stem_end = base + QPointF(math.cos(stem_angle), math.sin(stem_angle)) * size * .9
         stem = cubic_points(base, base + QPointF(math.cos(heading), math.sin(heading)) * size * .4, stem_end, stem_end, 10)
         painter.setBrush(color); painter.drawPath(tapered(stem, width * .55, width * .3))
@@ -89,15 +89,15 @@ def vine(painter, start, end, start_width, end_width, color, seed=0, sprigs=3, c
             curl_points = spiral_points(stem_end, stem_angle, size * 1.7, turn)
             painter.drawPath(tapered(curl_points, width * .35, .5))
         else:
-            leaf, vein = leaf_paths(stem_end, stem_angle - turn * .25, size * 1.15)
+            leaf, vein = leaf_paths(stem_end, stem_angle - turn * .1, size * 1.15)
             painter.setBrush(soft); painter.drawPath(leaf)
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(QPen(QColor(0, 0, 0, 90), .8)); painter.drawPath(vein)
             painter.setPen(Qt.PenStyle.NoPen)
         # Hoja pequeña del otro lado, como en la incrustación.
-        small, _ = leaf_paths(base, heading - turn * .9, size * .55)
+        small, _ = leaf_paths(base, heading - turn * .42, size * .55)
         painter.setBrush(soft); painter.drawPath(small)
     # Brote final: un pequeño zarcillo junto al nodo.
     i = int(.9 * (len(points) - 1))
     painter.setBrush(color)
-    painter.drawPath(tapered(spiral_points(points[i], _heading(points, i) + .9, size * .7, -1 if seed % 2 else 1), max(1.0, end_width * .6), .4))
+    painter.drawPath(tapered(spiral_points(points[i], _heading(points, i) + .4, size * .7, -1 if seed % 2 else 1), max(1.0, end_width * .6), .4))
