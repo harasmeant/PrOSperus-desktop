@@ -42,7 +42,7 @@ mount --bind "$data/home" /home/prosperus
 mkdir -p "$data/journal"
 if mount --bind "$data/journal" /var/log/journal; then
     mkdir -p /run/systemd/journald.conf.d
-    printf '[Journal]\nStorage=persistent\nSystemMaxUse=200M\n' \
+    printf '[Journal]\nStorage=persistent\nSystemMaxUse=200M\nSyncIntervalSec=5s\n' \
         > /run/systemd/journald.conf.d/zz-prosperus-usb.conf
     systemctl restart systemd-journald && journalctl --flush || true
 fi

@@ -363,3 +363,9 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Persistencia: el initramfs monta el disco USB entero (iso9660) y el kernel no deja abrir la partición 4 («is in use»). `prosperus-persistence` la abre ahora con un loop con desplazamiento. Comprobado arrancando la ISO como disco USB en QEMU (`usb-storage`): carpeta personal y registro guardados, ext4 limpio tras apagado ACPI.
 - Pantalla negra: Sway podía arrancar sobre simpledrm antes de amdgpu. `prosperus-session` espera hasta 15 s a una gráfica real y fija `WLR_DRM_DEVICES` a la de arranque. Pendiente de confirmar en el portátil.
 - El registro del sistema se guarda en `PROSPERUS_DATA/journal` (journald persistente solo con la partición). OpenRouter devolvió 429; el código lo escribió Claude.
+
+## 2 de noviembre de 2026 · Sin teclado ni ratón en el portátil
+
+- Segunda prueba: la persistencia funciona (registro guardado en `PROSPERUS_DATA/journal`), pero teclado y ratón no respondían.
+- El registro termina a los 20 s, justo al abrir la sesión: journald solo escribía en disco cada 5 min y el apagado fue forzado, así que se perdió lo de Sway. El kernel sí detecta teclado interno, touchpad ELAN y los periféricos USB; amdgpu y nouveau cargan (nouveau sin firmware).
+- `SyncIntervalSec=5s` en el registro del USB y volcado de `swaymsg -t get_inputs/get_outputs` al registro (`prosperus-diag`) para el siguiente intento.
