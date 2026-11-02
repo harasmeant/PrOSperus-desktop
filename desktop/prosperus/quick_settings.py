@@ -1,9 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Panel rápido de la esquina derecha: brillo, volumen, wifi, bluetooth y notificaciones."""
+import os
 import subprocess
+import threading
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
                              QSlider, QPushButton, QWidget)
-from PySide6.QtCore import QProcess, Qt
+from PySide6.QtCore import QProcess, Qt, Signal
 
 def run(argv):
     """Ejecuta un comando sin shell y captura la salida."""
@@ -42,8 +44,22 @@ def terminal(argv):
 
 
 class QuickSettings(QFrame):
+    state_ready = Signal(dict)
+
     def __init__(self, shell):
         super().__init__()
+        self.state_ready.connect(self.apply)
+        self.setMinimumWidth(360)
+        c = shell.colors
+        self.setStyleSheet(f'''
+            #quickSettings {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 14px; }}
+            QLabel {{ color: {c.text}; background: transparent; }}
+            QPushButton {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 8px; padding: 6px 12px; }}
+            QPushButton:checked {{ border: 2px solid {c.accent}; }}
+            QPushButton:disabled {{ color: {c.border}; }}
+            QSlider::groove:horizontal {{ height: 6px; background: {c.card}; border-radius: 3px; }}
+            QSlider::sub-page:horizontal {{ background: {c.accent}; border-radius: 3px; }}
+            QSlider::handle:horizontal {{ background: {c.text}; width: 16px; margin: -5px 0; border-radius: 8px; }}''')
         self.shell = shell
         self.setObjectName("quickSettings")
         self.box = QVBoxLayout(self)
@@ -129,7 +145,7 @@ class QuickSettings(QFrame):
         self.foot_row.addWidget(self.btn_help)
         self.box.addLayout(self.foot_row)
 
-    def _set_br(self): run(['brightnessctl', 'set', f'{self.brightness.value()}%'])
+    def _set_br(self): run(['brightnessctl', '-c', 'backlight', 'set', f'{self.brightness.value()}%'])
     def _set_vol(self): run(['wpctl', 'set-volume', '@DEFAULT_AUDIO_SINK@', f'{self.volume.value()/100:.2f}'])
     def _set_mute(self): run(['wpctl', 'set-mute', '@DEFAULT_AUDIO_SINK@', '1' if self.mute.isChecked() else '0']); self.refresh()
     def _set_wifi(self): run(['nmcli', 'radio', 'wifi', 'on' if self.wifi.isChecked() else 'off']); self.refresh()
@@ -137,46 +153,38 @@ class QuickSettings(QFrame):
     def _set_dnd(self): run(['makoctl', 'mode', '-a' if self.dnd.isChecked() else '-r', 'do-not-disturb']); self.refresh()
 
     def refresh(self):
-        # Brillo
-        val_br = parse_brightness(run(['brightnessctl', '-m']))
+        # Las órdenes del sistema pueden tardar: se consultan en otro hilo y el panel se abre al instante.
+        threading.Thread(target=lambda: self.state_ready.emit(collect()), daemon=True).start()
+
+    def apply(self, state):
+        val_br = state['brightness']
+        self.brightness.setEnabled(val_br is not None); self.br_err.setVisible(val_br is None)
         if val_br is not None:
             self.brightness.setValue(val_br)
-            self.brightness.setEnabled(True)
-            self.br_err.hide()
-        else:
-            self.brightness.setEnabled(False)
-            self.br_err.show()
-        # Volumen
-        val_vol = parse_volume(run(['wpctl', 'get-volume', '@DEFAULT_AUDIO_SINK@']))
+        val_vol = state['volume']
+        for widget in (self.volume, self.mute):
+            widget.setEnabled(val_vol is not None)
+        self.vol_err.setVisible(val_vol is None)
         if val_vol is not None:
-            self.volume.setValue(val_vol[0])
-            self.mute.setChecked(val_vol[1])
-            self.volume.setEnabled(True)
-            self.mute.setEnabled(True)
-            self.vol_err.hide()
-        else:
-            self.volume.setEnabled(False)
-            self.mute.setEnabled(False)
-            self.vol_err.show()
-        # Wifi
-        wifi_st = run(['nmcli', 'radio', 'wifi'])
-        is_wifi = wifi_st == 'enabled'
-        self.wifi.setText('Activado' if is_wifi else 'Desactivado')
-        self.wifi.setChecked(is_wifi)
-        conns = run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active'])
-        if conns:
-            names = [n for n in conns.splitlines() if n != 'lo']
-            self.wifi_conn.setText(", ".join(names) if names else "Sin conexión")
-        else: self.wifi_conn.setText("Sin conexión")
-        # Bluetooth
-        bt_st = parse_powered(run(['bluetoothctl', 'show']))
-        if bt_st is not None:
-            self.bluetooth.setText("Bluetooth" if bt_st else "Bluetooth (Off)")
-            self.bluetooth.setChecked(bt_st)
-            self.bluetooth.setEnabled(True)
-        else:
-            self.bluetooth.setText("No disponible")
-            self.bluetooth.setEnabled(False)
-        # Notificaciones
-        mako = run(['makoctl', 'mode']) or ""
-        self.dnd.setChecked('do-not-disturb' in mako)
+            self.volume.setValue(val_vol[0]); self.mute.setChecked(val_vol[1])
+        is_wifi = state['wifi'] == 'enabled'
+        self.wifi.setText('Activado' if is_wifi else 'Desactivado'); self.wifi.setChecked(is_wifi)
+        names = [n for n in (state['connections'] or '').splitlines() if n != 'lo']
+        self.wifi_conn.setText(', '.join(names) if names else 'Sin conexión')
+        bt_st = state['bluetooth']
+        self.bluetooth.setEnabled(bt_st is not None); self.bt_btn.setEnabled(bt_st is not None)
+        self.bluetooth.setText('No disponible' if bt_st is None else ('Activado' if bt_st else 'Desactivado'))
+        self.bluetooth.setChecked(bool(bt_st))
+        self.dnd.setChecked('do-not-disturb' in (state['mode'] or ''))
+
+
+def collect():
+    """Estado del sistema; se ejecuta fuera del hilo de la interfaz."""
+    # Sin adaptador, bluetoothctl espera a un controlador que no llega: ni se le pregunta.
+    adapter = os.path.isdir('/sys/class/bluetooth') and bool(os.listdir('/sys/class/bluetooth'))
+    return {'brightness': parse_brightness(run(['brightnessctl', '-m', '-c', 'backlight'])),
+            'volume': parse_volume(run(['wpctl', 'get-volume', '@DEFAULT_AUDIO_SINK@'])),
+            'wifi': run(['nmcli', 'radio', 'wifi']),
+            'connections': run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active']),
+            'bluetooth': parse_powered(run(['bluetoothctl', 'show'])) if adapter else None,
+            'mode': run(['makoctl', 'mode'])}

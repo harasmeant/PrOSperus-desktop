@@ -215,6 +215,20 @@ class QuickSettingsTests(unittest.TestCase):
         self.assertTrue(parse_powered('Controller 00:11 (public)\n\tPowered: yes\n'))
         self.assertIsNone(parse_powered('No default controller available'))
 
+    def test_panel_applies_state_without_bluetooth(self):
+        from PySide6.QtWidgets import QApplication
+        from prosperus.appearance import Palette
+        from prosperus.quick_settings import QuickSettings
+        app = QApplication.instance() or QApplication([])
+        shell = type('Shell', (), {'colors': Palette(120)})()
+        panel = QuickSettings(shell)
+        panel.apply({'brightness': None, 'volume': (35, False), 'wifi': 'enabled', 'connections': 'lo\nCasa',
+                     'bluetooth': None, 'mode': 'default'})
+        self.assertFalse(panel.brightness.isEnabled())
+        self.assertEqual(panel.volume.value(), 35)
+        self.assertEqual(panel.wifi_conn.text(), 'Casa')
+        self.assertEqual(panel.bluetooth.text(), 'No disponible')
+
 
 class LinkLayoutTests(unittest.TestCase):
     def test_concentric_slots_do_not_overlap_and_links_stay_adjacent(self):

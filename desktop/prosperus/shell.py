@@ -991,6 +991,7 @@ class Desktop(QMainWindow):
         quick_action = QWidgetAction(self.quick.menu); quick_action.setDefaultWidget(self.quick_panel)
         self.quick.menu.addAction(quick_action)
         self.quick.menu.aboutToShow.connect(self.quick_panel.refresh)
+        self.quick.menu.setStyleSheet(f'QMenu {{ background: {self.colors.panel}; border: 1px solid {self.colors.border}; padding: 4px; }}')
         heading.addWidget(self.quick, 0, Qt.AlignmentFlag.AlignTop)
         layout.addLayout(heading)
         self.surface = Surface(self); layout.addWidget(self.surface, 1)
