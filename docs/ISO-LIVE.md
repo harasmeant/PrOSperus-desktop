@@ -35,7 +35,8 @@ La ISO es híbrida (GPT): grabada en un USB, arranca el equipo real por UEFI.
 `scripts/write-usb.sh` la graba y crea en el espacio libre la partición ext4
 `PROSPERUS_DATA`. Al arrancar, el servicio `prosperus-persistence` monta en ella
 `/home/prosperus` (proyectos, documentos, configuración, inicio de sesión de
-Claude) y las redes Wi-Fi guardadas. El sistema sigue siendo de solo lectura: lo
+Claude) y las redes Wi-Fi guardadas. También guarda ahí el registro del sistema
+(`journal/`, máximo 200 MiB) para diagnosticar arranques fallidos. El sistema sigue siendo de solo lectura: lo
 instalado con `dnf` se pierde al apagar, los documentos no.
 
 ```bash
@@ -49,7 +50,9 @@ pide escribir `SI`: borra todo el USB. Después:
 1. Reinicia y abre el menú de arranque del firmware (F12, F11, F8 o Esc según
    el fabricante) y elige el USB en modo UEFI.
 2. **Desactiva Secure Boot** en la BIOS/UEFI: la imagen de arranque no está firmada.
-3. Si el USB se graba con otra herramienta (Fedora Media Writer, `dd`), arranca
+3. En portátiles con dos gráficas (p. ej. AMD + NVIDIA) la sesión espera al driver
+   real y usa la gráfica de arranque (`boot_vga`), la que mueve la pantalla interna.
+4. Si el USB se graba con otra herramienta (Fedora Media Writer, `dd`), arranca
    igual pero sin persistencia: todo queda en RAM.
 
 ## Varios monitores

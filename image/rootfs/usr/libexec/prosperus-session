@@ -5,5 +5,22 @@ export XDG_CURRENT_DESKTOP=PrOSperus
 export QT_QPA_PLATFORM=wayland
 export WLR_RENDERER=pixman
 export XKB_DEFAULT_LAYOUT=es
+# En equipos reales el framebuffer provisional (simpledrm) aparece antes que el
+# driver de la gráfica; si Sway lo toma, la pantalla queda negra al cargar amdgpu/i915.
+# Se espera a una gráfica real y se usa la de arranque (boot_vga) en portátiles híbridos.
+i=0
+while [ $i -lt 30 ]; do
+    first= boot=
+    for card in /sys/class/drm/card[0-9]*; do
+        case $card in *-*) continue ;; esac
+        driver=$(basename "$(readlink -f "$card/device/driver" 2>/dev/null)")
+        case $driver in ''|simple-framebuffer|simpledrm|efi-framebuffer) continue ;; esac
+        [ -n "$first" ] || first=/dev/dri/${card##*/}
+        [ "$(cat "$card/device/boot_vga" 2>/dev/null)" = 1 ] && boot=/dev/dri/${card##*/}
+    done
+    [ -n "$first" ] && { export WLR_DRM_DEVICES=${boot:-$first}; break; }
+    sleep 0.5
+    i=$((i + 1))
+done
 # Sway sustituye a Cage: permite varias ventanas sobre el mapa de proyectos.
 exec dbus-run-session -- systemd-cat --identifier=prosperus-session sway --config /etc/sway/prosperus.conf

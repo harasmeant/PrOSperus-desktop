@@ -15,6 +15,14 @@ if [ -z "$dev" ]; then
     echo 'Sin partición PROSPERUS_DATA: sesión temporal en RAM.'
     exit 0
 fi
+# Grabado desde la ISO híbrida, el initramfs monta el disco USB entero (iso9660)
+# y el kernel no deja abrir su partición: se accede a ella por un loop con desplazamiento.
+part=/sys/class/block/$(basename "$dev")
+if [ -e "$part/partition" ]; then
+    parent=$(basename "$(readlink -f "$part/..")")
+    loop=$(losetup -f --show --offset $(( $(cat "$part/start") * 512 )) \
+        --sizelimit $(( $(cat "$part/size") * 512 )) "/dev/$parent" 2>/dev/null) && dev=$loop
+fi
 fsck.ext4 -p "$dev" || true
 data=/run/prosperus-data
 mkdir -p "$data"
@@ -29,6 +37,15 @@ if [ ! -d "$data/home" ]; then
     chmod 0700 "$data/home"
 fi
 mount --bind "$data/home" /home/prosperus
+
+# Registro del sistema en el USB: permite diagnosticar arranques fallidos.
+mkdir -p "$data/journal"
+if mount --bind "$data/journal" /var/log/journal; then
+    mkdir -p /run/systemd/journald.conf.d
+    printf '[Journal]\nStorage=persistent\nSystemMaxUse=200M\n' \
+        > /run/systemd/journald.conf.d/zz-prosperus-usb.conf
+    systemctl restart systemd-journald && journalctl --flush || true
+fi
 
 nm=/etc/NetworkManager/system-connections
 if [ ! -d "$data/system-connections" ]; then

@@ -356,3 +356,10 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Imagen: paquete `wl-mirror`. 107 pruebas correctas. OpenRouter devolvió 429; el código lo escribió Claude.
 - Notas: siguen el botón «Fibonacci / Pantalla completa» del dock (antes solo afectaba a aplicaciones). En Fibonacci se reparten sin solaparse al abrir, cerrar o cambiar de modo; en Pantalla completa la nota ocupa todo el escritorio. Botón «□ Ampliar / ❐ Restaurar» en cada nota. 110 pruebas correctas.
 - Controles de ventana discretos (`window_controls.py`): tres puntos (minimizar, ampliar, cerrar) que crecen con su símbolo al pasar el ratón. En notas y en las ventanas propias (instalador, fondos: ampliar y cerrar). Para aplicaciones externas, `prosperus-handle` dibuja una píldora flotante centrada sobre el borde superior de la ventana enfocada (Sway no tiene botones); actúa por con_id y no roba el foco. Comprobado en la VM con la ISO: la píldora sigue a la terminal (foot). 115 pruebas correctas.
+
+## 2 de noviembre de 2026 · USB en equipo real: persistencia y pantalla negra
+
+- Primera prueba en hardware (HP Pavilion, AMD Cezanne + NVIDIA GTX 1650): arrancaba pero quedaba en negro y `PROSPERUS_DATA` seguía vacía.
+- Persistencia: el initramfs monta el disco USB entero (iso9660) y el kernel no deja abrir la partición 4 («is in use»). `prosperus-persistence` la abre ahora con un loop con desplazamiento. Comprobado arrancando la ISO como disco USB en QEMU (`usb-storage`): carpeta personal y registro guardados, ext4 limpio tras apagado ACPI.
+- Pantalla negra: Sway podía arrancar sobre simpledrm antes de amdgpu. `prosperus-session` espera hasta 15 s a una gráfica real y fija `WLR_DRM_DEVICES` a la de arranque. Pendiente de confirmar en el portátil.
+- El registro del sistema se guarda en `PROSPERUS_DATA/journal` (journald persistente solo con la partición). OpenRouter devolvió 429; el código lo escribió Claude.
