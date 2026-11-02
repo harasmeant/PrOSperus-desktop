@@ -353,6 +353,15 @@ class LinkLayoutTests(unittest.TestCase):
             window.save()
             self.assertTrue((Path(folder) / '.prosperus-ramas.json').is_file())
 
+    def test_map_metrics_keep_proportions_on_wide_screens(self):
+        from prosperus.map_layout import map_metrics
+        for width, height in ((1880, 800), (1240, 600), (2520, 800), (3400, 1160), (5080, 1080), (980, 520)):
+            m = map_metrics(width, height)
+            # La elipse cabe en la superficie y no se estira más de 2,3 veces su alto (21:9, 32:9).
+            self.assertLessEqual(m['rx'] + m['nw'] / 2, width / 2)
+            self.assertLessEqual(m['rx'], max(m['ry'] * 2.3, m['cw'] / 2 + m['nw'] / 2 + 24) + 1e-9)
+            self.assertGreater(m['rx'], m['cw'] / 2)
+
     def test_concentric_slots_do_not_overlap_and_links_stay_adjacent(self):
         from prosperus.map_layout import concentric_slots, link_order
         slots = concentric_slots(12, 640, 300, 226, 116, 190, 108)

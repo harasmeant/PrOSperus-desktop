@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFileDialog, 
 from . import branch_style
 from .appearance import Palette, paint_wallpaper, wallpaper_hue, wallpaper_traits
 from .branches import BUILTIN_ORNAMENTS, branch
-from .map_layout import radial_slots
+from .map_layout import map_metrics, radial_slots
 from .window_header import WindowHeader
 
 STYLE_LABELS = (('straight', 'Art déco'), ('magic', 'Art nouveau'), ('detail', 'Brotes'))
@@ -43,37 +43,62 @@ def find_wallpaper(folder):
         current = current.parent
 
 
+# Formatos de pantalla para la vista previa (además de la pantalla real).
+ASPECTS = (('16:9', 16 / 9), ('16:10', 16 / 10), ('21:9', 64 / 27), ('32:9', 32 / 9), ('4:3', 4 / 3))
+
+
+def screen_ratio():
+    screen = QApplication.primaryScreen()
+    size = screen.size() if screen else None
+    return (size.width() / size.height()) if size and size.height() else 16 / 9
+
+
 class Preview(QWidget):
-    """Mapa en miniatura: carpeta central y seis tarjetas con las ramas tal como quedarían."""
+    """El escritorio entero a escala, con la proporción de la pantalla elegida y las mismas medidas
+    que el mapa real (map_metrics): lo que se ve aquí es lo que saldrá."""
 
     def __init__(self, wallpaper, palette):
         super().__init__()
         self.wallpaper, self.colors, self.traits = wallpaper, palette, {}
+        self.ratio = screen_ratio()
         self.setMinimumSize(480, 220)
 
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
-        rect = QRectF(self.rect())
-        clip = QPainterPath(); clip.addRoundedRect(rect, 12, 12); p.setClipPath(clip)
-        paint_wallpaper(p, rect, self.wallpaper, self.colors.base, (60, 20, 60), self.colors.shade)
-        w, h = rect.width(), rect.height()
-        centre = QRectF(w / 2 - 70, h / 2 - 30, 140, 60)
-        cards = [QRectF(x - 55, y - 18, 110, 36) for x, y in radial_slots(6, w / 2, h / 2, w * .34, h * .34)]
-        visible = QPainterPath(); visible.addRect(rect)
+        # Pantalla virtual de 1080 px de alto con la proporción elegida, encajada en el recuadro.
+        H = 1080.0; W = H * self.ratio
+        k = min(self.width() / W, self.height() / H)
+        p.translate((self.width() - W * k) / 2, (self.height() - H * k) / 2); p.scale(k, k)
+        screen = QRectF(0, 0, W, H)
+        clip = QPainterPath(); clip.addRoundedRect(screen, 12 / k, 12 / k); p.setClipPath(clip)
+        paint_wallpaper(p, screen, self.wallpaper, self.colors.base, (110, 30, 120), self.colors.shade)
+        # Superficie del mapa: sin la cabecera (~120 px) ni el dock y el pie (~185 px), como en el escritorio.
+        surface = QRectF(42, 120, W - 78, H - 305)
+        m = map_metrics(surface.width(), surface.height())
+        cx, cy = surface.center().x(), surface.center().y()
+        centre = QRectF(cx - m['cw'] / 2, cy - (m['nh'] + 8) / 2, m['cw'], m['nh'] + 8)
+        cards = [QRectF(x - m['fw'] / 2, y - m['fh'] / 2, m['fw'], m['fh'])
+                 for x, y in radial_slots(6, cx, cy, m['rx'], m['ry'])]
+        visible = QPainterPath(); visible.addRect(screen)
         for card in [centre] + cards:
-            hole = QPainterPath(); hole.addRoundedRect(card, 9, 9); visible = visible.subtracted(hole)
-        p.setClipPath(visible)
+            hole = QPainterPath(); hole.addRoundedRect(card, 10, 10); visible = visible.subtracted(hole)
+        p.setClipPath(visible.intersected(clip))
         pearl = QColor(self.colors.text)
         pearl.setAlpha(max(0, min(255, round(165 * self.traits.get('opacity', 1)))))
-        for k, card in enumerate(cards):
-            branch(p, centre.center(), card.center(), 6.5, 2, pearl, k, 4, traits=self.traits)
-        p.setClipping(False)
-        p.setPen(QPen(QColor(self.colors.border), 1.2))
+        for i, card in enumerate(cards):
+            branch(p, centre.center(), card.center(), 7.5, 2.2, pearl, i, 5, traits=self.traits)
+        p.setClipPath(clip)
+        font = p.font(); font.setPixelSize(15); font.setBold(True); p.setFont(font)
         for card, text in [(centre, Path.cwd().name)] + [(c, 'Carpeta %d' % (i + 1)) for i, c in enumerate(cards)]:
-            p.setBrush(QColor(self.colors.panel)); p.drawRoundedRect(card, 9, 9)
+            p.setPen(QPen(QColor(self.colors.border), 1.5)); p.setBrush(QColor(self.colors.panel))
+            p.drawRoundedRect(card, 10, 10)
             p.setPen(QColor(self.colors.text)); p.drawText(card, Qt.AlignmentFlag.AlignCenter, text)
-            p.setPen(QPen(QColor(self.colors.border), 1.2))
+        # Cabecera y dock en silueta para situarse.
+        font.setPixelSize(30); p.setFont(font); p.setPen(QColor(self.colors.text))
+        p.drawText(QRectF(132, 44, W, 50), Qt.AlignmentFlag.AlignLeft, Path.cwd().name)
+        p.setPen(QPen(QColor(self.colors.border), 1.5)); p.setBrush(QColor(self.colors.panel))
+        p.drawRoundedRect(QRectF(42, H - 125, W - 78, 82), 14, 14)
 
 
 class BranchSettings(QWidget):
@@ -105,6 +130,16 @@ class BranchSettings(QWidget):
         layout.addWidget(WindowHeader('Ramas para: {}'.format(self.folder.name), self))
         self.preview = Preview(self.wallpaper, self.colors)
         layout.addWidget(self.preview, 1)
+        formats = QHBoxLayout()
+        formats.addWidget(QLabel('Ver en pantalla'))
+        self.aspect = QComboBox()
+        ratio = screen_ratio()
+        self.aspect.addItem('Esta pantalla (%.2f:1)' % ratio, ratio)
+        for name, value in ASPECTS:
+            self.aspect.addItem(name, value)
+        self.aspect.currentIndexChanged.connect(lambda: (setattr(self.preview, 'ratio', self.aspect.currentData()), self.preview.update()))
+        formats.addWidget(self.aspect); formats.addStretch(1)
+        layout.addLayout(formats)
 
         saved = branch_style.raw(self.folder)
         self.auto = QCheckBox('Automático: el estilo sale del fondo')

@@ -220,6 +220,19 @@ def force_layout(points, weights, cx, cy, rx, ry, iterations=150):
     return [(x, y) for x, y in pts]
 
 
+def map_metrics(width, height):
+    """Medidas del mapa para una superficie: tarjetas, carpeta central y radios de la elipse.
+    La elipse no pasa de 2,3 veces más ancha que alta: en 21:9 o 32:9 no se estira sin fin."""
+    nw = max(134, min(190, int(width * .17)))
+    nh = max(80, min(108, int(height * .21)))
+    cw = max(166, min(226, int(width * .2)))
+    fw, fh = max(130, min(176, int(width * .14))), 42
+    lw, lh = max(104, min(150, int(width * .11))), 26
+    ry = max(nh + 30, height * .36)
+    rx = max(cw / 2 + nw / 2 + 24, min(width * .34, ry * 2.3))
+    return {'nw': nw, 'nh': nh, 'cw': cw, 'fw': fw, 'fh': fh, 'lw': lw, 'lh': lh, 'rx': rx, 'ry': ry}
+
+
 def radial_slots(count, cx, cy, rx, ry):
     """Radios equiespaciados como en el prototipo: el primero arriba y en sentido horario."""
     return [(cx + rx * math.cos(-math.pi / 2 + i * 2 * math.pi / count),

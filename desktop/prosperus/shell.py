@@ -24,7 +24,7 @@ from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
 from .branches import branch
 from . import branch_style
-from .map_layout import link_order, radial_slots, nearest_in_direction, separate
+from .map_layout import link_order, map_metrics, radial_slots, nearest_in_direction, separate
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
 from .window_manager import WindowManager
@@ -572,21 +572,16 @@ class Surface(QWidget):
 
     def arrange(self):
         width, height = self.width(), self.height()
-        nw = max(134, min(190, int(width * .17)))
-        nh = max(80, min(108, int(height * .21)))
-        cw = max(166, min(226, int(width * .2)))
+        m = map_metrics(width, height)
+        nw, nh, cw, fw, fh, lw, lh = (m[k] for k in ('nw', 'nh', 'cw', 'fw', 'fh', 'lw', 'lh'))
         self.center.setGeometry((width - cw) // 2, (height - nh - 8) // 2, cw, nh + 8)
-        fw, fh = max(130, min(176, int(width * .14))), 42
-        lw, lh = max(104, min(150, int(width * .11))), 26
 
         def clamp(x, y, w, h):
             return QRect(round(max(4, min(width - w - 4, x - w / 2))), round(max(4, min(height - h - 4, y - h / 2))), w, h)
 
         # Radios equiespaciados (3, 4, … hasta PAGE_SIZE por página, como en el prototipo).
         # Los enlaces solo deciden el orden: las notas más enlazadas caen en radios vecinos.
-        rx = max(cw / 2 + nw / 2 + 24, width * .34)
-        ry = max(nh + 30, height * .36)
-        self.slots = radial_slots(len(self.nodes), width / 2, height / 2, rx, ry)
+        self.slots = radial_slots(len(self.nodes), width / 2, height / 2, m['rx'], m['ry'])
         manual = self.manual.setdefault(self.shell.folder, {})
         self.slot_of, used = {}, set()
         for widget in self.nodes:
@@ -611,6 +606,10 @@ class Surface(QWidget):
             angle = math.atan2(cy - height / 2, cx - width / 2)
             dx, dy = math.cos(angle), math.sin(angle)
             horizontal = abs(dx) > abs(dy)
+            outward = cx + dx * (fw / 2 + lw / 2 + 50)
+            if horizontal and not lw / 2 + 4 <= outward <= width - lw / 2 - 4:
+                # Sin sitio hacia fuera (pantallas estrechas): las hojas van debajo o encima de la tarjeta.
+                horizontal, dx, dy = False, 0.0, (1.0 if cy >= height / 2 else -1.0)
             gap = lh + 8 if horizontal else lw + 10
             distance = (fw / 2 + lw / 2 + 50) if horizontal else (fh / 2 + lh / 2 + 56)
             for j, leaf in enumerate(leaves):
