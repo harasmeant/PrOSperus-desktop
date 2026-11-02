@@ -23,6 +23,11 @@ from .window_header import WindowHeader
 STYLE_LABELS = (('straight', 'Art déco'), ('magic', 'Art nouveau'), ('detail', 'Brotes'))
 TWEAK_LABELS = (('curl', 'Curvatura'), ('width', 'Grosor'), ('opacity', 'Opacidad'))
 PLACE_LABELS = (('rama', 'Sobre la rama'), ('brote', 'Al final de un tallo'))
+SIDE_LABELS = (('horario', 'Horario'), ('antihorario', 'Antihorario'), ('ambos', 'Ambos lados, alternando'))
+ORDER_LABELS = (('fuera', 'Del centro hacia fuera (la de fuera encima)'), ('dentro', 'De fuera hacia el centro (la de dentro encima)'))
+# Barras del adorno: clave, etiqueta, mínimo, máximo, escala (valor guardado = barra / escala), unidad.
+ORNAMENT_BARS = (('density', 'Frecuencia', 0, 100, 100, ''), ('angle', 'Ángulo', 0, 180, 1, '°'),
+                 ('size', 'Tamaño', 30, 300, 100, '%'), ('opacity', 'Opacidad', 0, 100, 100, '%'))
 
 
 def find_wallpaper(folder):
@@ -44,7 +49,7 @@ class Preview(QWidget):
     def __init__(self, wallpaper, palette):
         super().__init__()
         self.wallpaper, self.colors, self.traits = wallpaper, palette, {}
-        self.setMinimumSize(520, 300)
+        self.setMinimumSize(480, 220)
 
     def paintEvent(self, event):
         p = QPainter(self)
@@ -76,7 +81,7 @@ class BranchSettings(QWidget):
         super().__init__()
         self.folder = Path(folder or Path.cwd())
         self.setWindowTitle('Ramas')
-        self.resize(1000, 720)
+        self.resize(1000, 760)
         self.wallpaper = find_wallpaper(self.folder)
         self.auto_traits = {}
         hue = None
@@ -148,24 +153,50 @@ class BranchSettings(QWidget):
         row.addWidget(add); row.addWidget(remove); row.addStretch(1)
         box.addLayout(row)
         edit = QFormLayout()
-        self.every = QSpinBox(); self.every.setRange(1, 20); self.every.setPrefix('1 de cada '); self.every.setSuffix(' brotes')
-        self.place = QComboBox()
-        for key, label in PLACE_LABELS:
-            self.place.addItem(label, key)
-        self.size = QSlider(Qt.Orientation.Horizontal); self.size.setRange(30, 300)
+        self.bars, self.bars_end = {}, {}
+        for key, label, low, high, scale, unit in ORNAMENT_BARS:
+            self.bars[key] = self.value_slider(edit, label, low, high, scale, unit)
+        self.side = self.combo(edit, 'Lado', SIDE_LABELS)
+        self.order = self.combo(edit, 'Superposición', ORDER_LABELS)
+        self.place = self.combo(edit, 'Dónde', PLACE_LABELS)
+        self.gradient = QCheckBox('Gradiente: otro valor al final de la rama')
+        edit.addRow('', self.gradient)
+        for key, label, low, high, scale, unit in ORNAMENT_BARS[1:]:
+            self.bars_end[key] = self.value_slider(edit, label + ' al final', low, high, scale, unit)
         self.tint = QCheckBox('Teñir con el color de las ramas')
-        edit.addRow('Cada cuánto', self.every); edit.addRow('Dónde', self.place)
-        edit.addRow('Tamaño', self.size); edit.addRow('', self.tint)
+        edit.addRow('', self.tint)
         box.addLayout(edit)
-        self.every.valueChanged.connect(self.edit_ornament); self.place.currentIndexChanged.connect(self.edit_ornament)
-        self.size.valueChanged.connect(self.edit_ornament); self.tint.toggled.connect(self.edit_ornament)
+        self.edit_form = edit
+        self.editors = list(self.bars.values()) + list(self.bars_end.values()) + [self.side, self.order, self.place, self.gradient, self.tint]
+        for widget in self.editors:
+            signal = widget.toggled if isinstance(widget, QCheckBox) else widget.currentIndexChanged if isinstance(widget, QComboBox) else widget.valueChanged
+            signal.connect(self.edit_ornament)
         self.refresh_ornaments()
+        return box
+
+    def value_slider(self, form, label, low, high, scale, unit):
+        """Barra con su valor a la derecha."""
+        row = QHBoxLayout()
+        slider = QSlider(Qt.Orientation.Horizontal); slider.setRange(low, high)
+        value = QLabel(); value.setMinimumWidth(42)
+        show = lambda v: value.setText(f'{v / scale:.2f}' if scale == 100 and not unit else f'{v}{unit}')
+        slider.valueChanged.connect(show); show(slider.value())
+        row.addWidget(slider, 1); row.addWidget(value)
+        form.addRow(label, row)
+        slider.scale, slider.show_value = scale, show
+        return slider
+
+    def combo(self, form, label, options):
+        box = QComboBox()
+        for key, text in options:
+            box.addItem(text, key)
+        form.addRow(label, box)
         return box
 
     def ornament_label(self, item):
         name = item['file'] if item['kind'] == 'imagen' else BUILTIN_ORNAMENTS[item['kind']]
-        place = dict(PLACE_LABELS)[item['place']].lower()
-        return f"{name} · 1 de cada {item['every']} · {place}"
+        frequency = 'nunca' if item['density'] <= 0 else f"frecuencia {item['density']:.2f}"
+        return f"{name} · {frequency} · {item['angle']:.0f}° {dict(SIDE_LABELS)[item['side']].split(',')[0].lower()}"
 
     def refresh_ornaments(self, row=None):
         self.ornament_list.blockSignals(True)
@@ -183,28 +214,61 @@ class BranchSettings(QWidget):
 
     def select_ornament(self, row):
         editing = 0 <= row < len(self.ornaments)
-        for widget in (self.every, self.place, self.size, self.tint):
+        for widget in self.editors:
             widget.setEnabled(editing); widget.blockSignals(True)
         if editing:
             item = self.ornaments[row]
-            self.every.setValue(item['every']); self.place.setCurrentIndex(self.place.findData(item['place']))
-            self.size.setValue(round(item['size'] * 100)); self.tint.setChecked(item['tint'])
-        for widget in (self.every, self.place, self.size, self.tint):
+            for key, slider in self.bars.items():
+                slider.setValue(round(item[key] * slider.scale))
+            gradient = any(item[key + '_end'] != item[key] for key in self.bars_end)
+            for key, slider in self.bars_end.items():
+                slider.setValue(round(item[key + '_end'] * slider.scale))
+            self.gradient.setChecked(gradient)
+            for box, key in ((self.side, 'side'), (self.order, 'order'), (self.place, 'place')):
+                box.setCurrentIndex(box.findData(item[key]))
+            self.tint.setChecked(item['tint'])
+        for widget in self.editors:
             widget.blockSignals(False)
+        self.show_gradient(editing and self.gradient.isChecked())
+        # Con las señales bloqueadas las etiquetas de valor no se enteran: se refrescan a mano.
+        for slider in list(self.bars.values()) + list(self.bars_end.values()):
+            slider.show_value(slider.value())
+
+    def show_gradient(self, visible):
+        """Las barras «al final» solo ocupan sitio con el gradiente activado."""
+        for slider in self.bars_end.values():
+            row = self.row_of(slider)
+            if row >= 0:
+                self.edit_form.setRowVisible(row, visible)
+
+    def row_of(self, slider):
+        for row in range(self.edit_form.rowCount()):
+            field = self.edit_form.itemAt(row, QFormLayout.ItemRole.FieldRole)
+            if field and field.layout() and field.layout().indexOf(slider) >= 0:
+                return row
+        return -1
 
     def edit_ornament(self, *_):
         row = self.ornament_list.currentRow()
         if not 0 <= row < len(self.ornaments):
             return
-        self.ornaments[row].update(every=self.every.value(), place=self.place.currentData(),
-                                   size=self.size.value() / 100, tint=self.tint.isChecked())
-        self.ornament_list.item(row).setText(self.ornament_label(self.ornaments[row]))
+        item = self.ornaments[row]
+        for key, slider in self.bars.items():
+            item[key] = slider.value() / slider.scale
+        gradient = self.gradient.isChecked()
+        self.show_gradient(gradient)
+        for key, slider in self.bars_end.items():
+            item[key + '_end'] = slider.value() / slider.scale if gradient else item[key]
+        item.update(side=self.side.currentData(), order=self.order.currentData(), place=self.place.currentData(),
+                    tint=self.tint.isChecked())
+        self.ornament_list.item(row).setText(self.ornament_label(item))
         self.update_preview()
 
     def add_ornament(self, item):
         if len(self.ornaments) >= branch_style.MAX_ORNAMENTS:
             QMessageBox.information(self, 'Adornos', 'Como mucho %d adornos.' % branch_style.MAX_ORNAMENTS); return
-        item = {'every': 3, 'place': 'rama', 'size': 1.0, 'tint': True, **item}
+        item = branch_style.clean({'ornaments': [{'density': .3, 'angle': 45, **item}]}, self.folder)['ornaments'][0] \
+            if item.get('kind') != 'imagen' else {**branch_style.clean({'ornaments': [{'kind': 'seta'}]})['ornaments'][0], **item}
         self.ornaments.append(item); self.refresh_ornaments(len(self.ornaments) - 1); self.update_preview()
 
     def add_image(self, path=None):
@@ -238,7 +302,7 @@ class BranchSettings(QWidget):
             data[key] = round(self.sliders[key].value() / 100, 2)
         data['ornaments'] = []
         for item in getattr(self, 'ornaments', []):
-            entry = {key: item[key] for key in ('kind', 'every', 'place', 'size', 'tint')}
+            entry = {key: value for key, value in item.items() if key not in ('path', 'file')}
             if item['kind'] == 'imagen':
                 # Una imagen heredada de una carpeta de arriba se copia aquí para que viaje con esta.
                 entry['file'] = branch_style.add_image(self.folder, item['path']) if for_saving else item['file']

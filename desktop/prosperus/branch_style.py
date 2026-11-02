@@ -15,9 +15,13 @@ STYLE_KEYS = ('straight', 'magic', 'detail')
 TWEAKS = {'curl': (0.0, 2.5), 'width': (0.4, 2.5), 'opacity': (0.2, 1.6)}
 # Adornos: piezas de serie o imágenes propias guardadas junto al archivo de ajustes.
 IMAGES = '.prosperus-adornos'
-BUILTIN = ('seta', 'lirio', 'pavo', 'zarcillo', 'hoja', 'greca', 'rombo', 'destello')
+BUILTIN = ('pluma', 'seta', 'lirio', 'pavo', 'zarcillo', 'hoja', 'greca', 'rombo', 'destello')
 IMAGE_SUFFIXES = ('.png', '.jpg', '.jpeg', '.webp', '.gif')
 PLACES = ('rama', 'brote')
+SIDES = ('horario', 'antihorario', 'ambos')
+ORDERS = ('fuera', 'dentro')
+# Valores con gradiente (principio → final de la rama) y su rango.
+GRADIENTS = {'size': (.3, 3.0, 1.0), 'angle': (0.0, 180.0, 45.0), 'opacity': (0.0, 1.0, 1.0)}
 MAX_ORNAMENTS = 12
 
 
@@ -58,11 +62,21 @@ def clean(data, base=None):
         if not isinstance(item, dict) or len(ornaments) >= MAX_ORNAMENTS:
             continue
         kind = item.get('kind')
-        entry = {'kind': kind,
-                 'every': max(1, min(20, int(item['every']))) if isinstance(item.get('every'), (int, float)) else 3,
+        number = lambda key: item[key] if isinstance(item.get(key), (int, float)) and not isinstance(item.get(key), bool) else None
+        density = number('density')
+        if density is None and number('every'):
+            density = .6 / max(1, number('every'))  # ajustes antiguos: «1 de cada N brotes»
+        entry = {'kind': kind, 'density': max(0.0, min(1.0, density if density is not None else .3)),
                  'place': item.get('place') if item.get('place') in PLACES else 'rama',
-                 'size': max(.3, min(3.0, float(item['size']))) if isinstance(item.get('size'), (int, float)) else 1.0,
+                 'side': item.get('side') if item.get('side') in SIDES else 'horario',
+                 'order': item.get('order') if item.get('order') in ORDERS else 'fuera',
                  'tint': item.get('tint') is not False}
+        for key, (low, high, default) in GRADIENTS.items():
+            start = number(key)
+            start = default if start is None else max(low, min(high, float(start)))
+            end = number(key + '_end')
+            entry[key] = start
+            entry[key + '_end'] = start if end is None else max(low, min(high, float(end)))
         if kind == 'imagen':
             # Solo el nombre: la imagen tiene que estar en .prosperus-adornos de esa carpeta.
             name = Path(str(item.get('file', ''))).name

@@ -299,15 +299,22 @@ class LinkLayoutTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 branch_style.add_image(folder, root / 'nota.md')
             branch_style.save(folder, {'ornaments': [
-                {'kind': 'seta', 'every': 0, 'place': 'raro', 'size': 9},
+                {'kind': 'pluma', 'density': 7, 'angle': 400, 'angle_end': -5, 'size': 9, 'side': 'raro',
+                 'order': 'dentro', 'place': 'raro', 'opacity': .5},
                 {'kind': 'imagen', 'file': '../../jake.png', 'every': 2, 'place': 'brote', 'tint': False},
                 {'kind': 'imagen', 'file': 'no-existe.png'}, {'kind': 'bomba'}]})
             ornaments = branch_style.load(folder, root)['ornaments']
-            # Frecuencia, sitio y tamaño recortados; solo vale el nombre dentro de .prosperus-adornos.
-            self.assertEqual([o['kind'] for o in ornaments], ['seta', 'imagen'])
-            self.assertEqual((ornaments[0]['every'], ornaments[0]['place'], ornaments[0]['size']), (1, 'rama', 3.0))
+            # Valores recortados a su rango; sin «_end» no hay gradiente; solo vale el nombre dentro de .prosperus-adornos.
+            self.assertEqual([o['kind'] for o in ornaments], ['pluma', 'imagen'])
+            feather = ornaments[0]
+            self.assertEqual((feather['density'], feather['angle'], feather['angle_end'], feather['size'], feather['size_end']),
+                             (1.0, 180.0, 0.0, 3.0, 3.0))
+            self.assertEqual((feather['side'], feather['order'], feather['place'], feather['opacity_end']), ('horario', 'dentro', 'rama', .5))
+            self.assertAlmostEqual(ornaments[1]['density'], .3)  # ajustes antiguos: 1 de cada 2 brotes
             self.assertEqual(ornaments[1]['path'], folder / '.prosperus-adornos' / 'jake.png')
             self.assertFalse(ornaments[1]['tint'])
+            from prosperus.branches import ornament_spacing
+            self.assertIsNone(ornament_spacing(0)); self.assertEqual(ornament_spacing(1), 6)
             canvas = QImage(300, 200, QImage.Format.Format_ARGB32); canvas.fill(0)
             painter = QPainter(canvas)
             branch(painter, QPointF(20, 100), QPointF(280, 100), 7, 2, QColor('white'), 1, 6, traits={'ornaments': ornaments})
@@ -323,6 +330,13 @@ class LinkLayoutTests(unittest.TestCase):
             window = BranchSettings(Path(folder))
             window.auto.setChecked(False); window.sliders['straight'].setValue(100)
             self.assertEqual(window.preview.traits['straight'], 1.0)
+            window.add_ornament({'kind': 'pluma'})
+            window.bars['angle'].setValue(90); window.side.setCurrentIndex(window.side.findData('ambos'))
+            window.gradient.setChecked(True); window.bars_end['size'].setValue(200)
+            feather = window.preview.traits['ornaments'][0]
+            self.assertEqual((feather['angle'], feather['side'], feather['size_end']), (90, 'ambos', 2.0))
+            window.gradient.setChecked(False)
+            self.assertEqual(window.preview.traits['ornaments'][0]['size_end'], feather['size'])
             window.grab()
             window.save()
             self.assertTrue((Path(folder) / '.prosperus-ramas.json').is_file())
