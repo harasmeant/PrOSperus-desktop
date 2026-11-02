@@ -105,8 +105,11 @@ def main():
             position = handle_position(node['rect'], self.width())
             if position != self.position:
                 try:
-                    request(0, f'[app_id="{HANDLE_ID}"] move absolute position {position[0]} px {position[1]} px')
-                    self.position = position
+                    replies = request(0, f'[app_id="{HANDLE_ID}"] move absolute position {position[0]} px {position[1]} px')
+                    # Recién mostrada, Sway aún no la ha mapeado y la orden no coincide con nada:
+                    # solo se da por colocada cuando Sway lo confirma (se reintenta en el siguiente ciclo).
+                    if replies and all(r.get('success') for r in replies):
+                        self.position = position
                 except (OSError, ValueError):
                     pass
 
