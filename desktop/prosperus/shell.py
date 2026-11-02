@@ -22,7 +22,7 @@ from .model import Vault
 from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
-from .branches import branch_path, leaf_path, point_on
+from .branches import vine
 from .map_layout import link_order, radial_slots, nearest_in_direction, separate
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
@@ -652,46 +652,33 @@ class Surface(QWidget):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Árbol literal: troncos que se afinan desde la carpeta, ramitas hacia las hojas y hojas.
-        color = QColor(self.shell.colors.accent)
-        p.setPen(Qt.PenStyle.NoPen)
+        # Enredadera monocroma (tono nácar): troncos en S que se afinan, zarcillos y hojas.
         origin = QPointF(self.center.geometry().center())
-        leaf_color = QColor(self.shell.colors.accent); leaf_color.setAlpha(110)
-
-        def grow(start, end, w0, w1, alpha, bend=.22, leaves=2):
-            direction = end - start
-            control = (start + end) / 2 + QPointF(-direction.y(), direction.x()) * bend
-            color.setAlpha(alpha); p.setBrush(color)
-            p.drawPath(branch_path(start, control, end, w0, w1))
-            # Hojas alternas a lo largo de la rama, apuntando hacia fuera.
-            size = max(7, min(14, math.hypot(direction.x(), direction.y()) * .06))
-            for k in range(leaves):
-                t = .45 + k * .25
-                base = point_on(start, control, end, t)
-                ahead = point_on(start, control, end, min(1, t + .05))
-                angle = math.atan2(ahead.y() - base.y(), ahead.x() - base.x()) + (.9 if k % 2 else -.9)
-                p.setBrush(leaf_color); p.drawPath(leaf_path(base, angle, size))
-
-        for widget in self.nodes:
-            grow(origin, QPointF(widget.geometry().center()), 7, 2.2, 150)
-        for leaf in self.leaves:
+        pearl = QColor(self.shell.colors.text)
+        # Las ramas nacen en el borde de las tarjetas: no se ven a través de ellas.
+        visible = QPainterPath(); visible.addRect(QRectF(self.rect()))
+        for card in [self.center] + self.nodes + [leaf for leaf in self.leaves if leaf.isVisible()]:
+            hole = QPainterPath(); hole.addRoundedRect(QRectF(card.geometry()), 10, 10)
+            visible = visible.subtracted(hole)
+        p.setClipPath(visible)
+        for k, widget in enumerate(self.nodes):
+            pearl.setAlpha(165)
+            vine(p, origin, QPointF(widget.geometry().center()), 7.5, 2.2, pearl, k, 5)
+        for k, leaf in enumerate(self.leaves):
             if leaf.isVisible():
-                # Ramitas: nacen del nodo padre, más finas y con una sola hoja.
-                grow(QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center()), 2.4, .8, 105, .18, 1)
-        # Enlaces entre notas: rama fina que se curva hacia fuera, más gruesa cuanto más enlazadas.
+                pearl.setAlpha(120)
+                vine(p, QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center()), 2.4, .9, pearl, k, 1, .12)
+        # Enlaces entre notas: zarcillo fino entre vecinos, más grueso cuanto más enlazadas.
         node_index = {n: i for i, n in enumerate(self.nodes)}
-        for wa, wb in getattr(self, 'link_pairs', []):
+        for k, (wa, wb) in enumerate(getattr(self, 'link_pairs', [])):
             if not wa.isVisible() or not wb.isVisible():
                 continue
             width = 1.6
             if wa in node_index and wb in node_index:
                 i, j = node_index[wa], node_index[wb]
                 width = 1.6 + .7 * min(self.link_weights.get((min(i, j), max(i, j)), 1), 5)
-            a, b = QPointF(wa.geometry().center()), QPointF(wb.geometry().center())
-            middle = (a + b) / 2
-            control = middle + (middle - origin) * .45
-            color.setAlpha(140); p.setBrush(color)
-            p.drawPath(branch_path(a, control, b, width, width * .5))
+            pearl.setAlpha(140)
+            vine(p, QPointF(wa.geometry().center()), QPointF(wb.geometry().center()), width, width * .6, pearl, k, 2, .25)
 
     def focus_direction(self, path, direction):
         centers = []
