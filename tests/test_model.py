@@ -231,6 +231,32 @@ class QuickSettingsTests(unittest.TestCase):
 
 
 class LinkLayoutTests(unittest.TestCase):
+    def test_wallpaper_traits_and_procedural_branch(self):
+        import tempfile
+        from pathlib import Path
+        from PySide6.QtCore import QPointF
+        from PySide6.QtGui import QColor, QImage, QPainter
+        from prosperus.appearance import wallpaper_traits
+        from prosperus.branches import branch
+        with tempfile.TemporaryDirectory() as folder:
+            # Rejilla de líneas rectas: fondo «técnico»; degradado liso: orgánico.
+            grid = QImage(160, 100, QImage.Format.Format_RGB32); grid.fill(QColor('black'))
+            painter = QPainter(grid); painter.setPen(QColor('white'))
+            for x in range(0, 160, 16):
+                painter.drawLine(x, 0, x, 100)
+            painter.end()
+            path = Path(folder) / 'grid.png'; grid.save(str(path))
+            plain = QImage(160, 100, QImage.Format.Format_RGB32); plain.fill(QColor('#203020'))
+            flat = Path(folder) / 'flat.png'; plain.save(str(flat))
+            technical, organic = wallpaper_traits(path, 0), wallpaper_traits(flat, 0)
+            self.assertGreater(technical['straight'], .5)
+            self.assertEqual(organic['straight'], 0)
+            canvas = QImage(300, 200, QImage.Format.Format_ARGB32); canvas.fill(0)
+            painter = QPainter(canvas)
+            for traits in (technical, organic, None):
+                branch(painter, QPointF(20, 100), QPointF(280, 100), 7, 2, QColor('white'), 1, 5, traits=traits)
+            painter.end()
+
     def test_concentric_slots_do_not_overlap_and_links_stay_adjacent(self):
         from prosperus.map_layout import concentric_slots, link_order
         slots = concentric_slots(12, 640, 300, 226, 116, 190, 108)

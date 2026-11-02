@@ -17,12 +17,12 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
 
 from . import __version__
 from .appearance import (Palette, Wallpaper, draw_symbol, paint_wallpaper,
-                         palette_for, symbol_icon, wallpaper_for)
+                         palette_for, symbol_icon, wallpaper_for, wallpaper_traits)
 from .model import Vault
 from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
-from .branches import vine
+from .branches import branch
 from .map_layout import link_order, radial_slots, nearest_in_direction, separate
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
@@ -655,6 +655,12 @@ class Surface(QWidget):
         # Enredadera monocroma (tono nácar): troncos en S que se afinan, zarcillos y hojas.
         origin = QPointF(self.center.geometry().center())
         pearl = QColor(self.shell.colors.text)
+        # Estilo procedural: sale del fondo de la carpeta y solo cambia si cambia el archivo.
+        source = self.shell.background.wallpaper
+        try:
+            traits = wallpaper_traits(source, source.stat().st_mtime_ns) if source else None
+        except OSError:
+            traits = None
         # Las ramas nacen en el borde de las tarjetas: no se ven a través de ellas.
         visible = QPainterPath(); visible.addRect(QRectF(self.rect()))
         for card in [self.center] + self.nodes + [leaf for leaf in self.leaves if leaf.isVisible()]:
@@ -663,11 +669,11 @@ class Surface(QWidget):
         p.setClipPath(visible)
         for k, widget in enumerate(self.nodes):
             pearl.setAlpha(165)
-            vine(p, origin, QPointF(widget.geometry().center()), 7.5, 2.2, pearl, k, 5)
+            branch(p, origin, QPointF(widget.geometry().center()), 7.5, 2.2, pearl, k, 5, traits=traits)
         for k, leaf in enumerate(self.leaves):
             if leaf.isVisible():
                 pearl.setAlpha(120)
-                vine(p, QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center()), 2.4, .9, pearl, k, 1, .12)
+                branch(p, QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center()), 2.4, .9, pearl, k, 1, .12, traits)
         # Enlaces entre notas: zarcillo fino entre vecinos, más grueso cuanto más enlazadas.
         node_index = {n: i for i, n in enumerate(self.nodes)}
         for k, (wa, wb) in enumerate(getattr(self, 'link_pairs', [])):
@@ -678,7 +684,7 @@ class Surface(QWidget):
                 i, j = node_index[wa], node_index[wb]
                 width = 1.6 + .7 * min(self.link_weights.get((min(i, j), max(i, j)), 1), 5)
             pearl.setAlpha(140)
-            vine(p, QPointF(wa.geometry().center()), QPointF(wb.geometry().center()), width, width * .6, pearl, k, 2, .25)
+            branch(p, QPointF(wa.geometry().center()), QPointF(wb.geometry().center()), width, width * .6, pearl, k, 2, .25, traits)
 
     def focus_direction(self, path, direction):
         centers = []

@@ -300,3 +300,43 @@ class Wallpaper(QWidget):
         paint_wallpaper(painter, self.rect(), self.wallpaper, self.palette.base, (110, 30, 120), self.palette.shade)
 # Iconos minimalistas (referencia estética)
 # Referencia: Numix / Papirus / Breeze minimal
+
+
+# Rasgos del fondo para las ramas procedurales (0..1): rectitud (objetos fabricados),
+# detalle (textura) y brillo (destellos). Se recalculan solo si cambia el archivo.
+@lru_cache(maxsize=32)
+def wallpaper_traits(path, modified):
+    image = QImage(str(path))
+    if image.isNull():
+        return None
+    w, h = 160, 100
+    image = image.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+    grey = [[QColor(image.pixel(x, y)).lightness() for x in range(w)] for y in range(h)]
+    edges, magnitude_sum, sparks = {}, 0.0, 0
+    for y in range(1, h - 1):
+        for x in range(1, w - 1):
+            gx = (grey[y-1][x+1] + 2 * grey[y][x+1] + grey[y+1][x+1]) - (grey[y-1][x-1] + 2 * grey[y][x-1] + grey[y+1][x-1])
+            gy = (grey[y+1][x-1] + 2 * grey[y+1][x] + grey[y+1][x+1]) - (grey[y-1][x-1] + 2 * grey[y-1][x] + grey[y-1][x+1])
+            magnitude = math.hypot(gx, gy); magnitude_sum += magnitude
+            if magnitude > 140:
+                edges[(x, y)] = math.atan2(gy, gx)
+            around = (grey[y-1][x] + grey[y+1][x] + grey[y][x-1] + grey[y][x+1]) / 4
+            if grey[y][x] > 120 and grey[y][x] - around > 25:
+                sparks += 1
+    # Borde recto: 5 px antes y después a lo largo del borde siguen con la misma orientación.
+    straight = 0
+    for (x, y), angle in edges.items():
+        along = (-math.sin(angle), math.cos(angle))
+        def same(step):
+            other = edges.get((round(x + along[0] * step), round(y + along[1] * step)))
+            if other is None:
+                return False
+            d = abs((angle - other + math.pi) % (2 * math.pi) - math.pi)
+            return min(d, math.pi - d) < .14
+        straight += same(5) and same(-5)
+    clamp = lambda v: max(0.0, min(1.0, v))
+    inner = (w - 2) * (h - 2)
+    return {'straight': clamp((straight / len(edges) if edges else 0) / .22),
+            'detail': clamp((magnitude_sum / inner - 12) / 24),
+            'glow': clamp(sparks / inner * 40),
+            'seed': int(hashlib.sha256(str(path).encode()).hexdigest()[:6], 16)}
