@@ -7,7 +7,7 @@ import random
 from PySide6.QtCore import QPointF, Qt
 from functools import lru_cache
 
-from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QColor, QImage, QLinearGradient, QPainter, QPainterPath, QPen
 
 
 def cubic_points(p0, c1, c2, p1, steps=32):
@@ -309,6 +309,21 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
     # Retoques personales (aplicación «Ramas»): curvatura y grosor.
     curl *= traits.get('curl', 1)
     start_width *= traits.get('width', 1); end_width *= traits.get('width', 1)
+    # Gradiente propio de la rama (aparte del de los adornos): opacidad y luz del principio a la punta.
+    base_color, gradient = QColor(color), traits.get('branch_gradient')
+
+    def tone(t, factor=1.0):
+        result = QColor(base_color)
+        if gradient:
+            light = gradient['light'] + (gradient['light_end'] - gradient['light']) * t
+            target = QColor(255, 255, 255) if light > 0 else QColor(0, 0, 0)
+            mix = abs(light) * .6
+            result = QColor(round(result.red() + (target.red() - result.red()) * mix),
+                            round(result.green() + (target.green() - result.green()) * mix),
+                            round(result.blue() + (target.blue() - result.blue()) * mix), result.alpha())
+            factor *= 1 + (gradient['alpha_end'] - 1) * t
+        result.setAlphaF(max(0.0, min(1.0, base_color.alphaF() * factor)))
+        return result
     direction = end - start
     length = math.hypot(direction.x(), direction.y()) or 1
     side = QPointF(-direction.y(), direction.x()) * (curl * (1 if seed % 2 else -1))
@@ -324,7 +339,13 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
         whip = cubic_points(start, start + direction * .2 + swirl * 1.3, start + direction * .85 - swirl * .7, end)
         points = [p * (1 - glow) + w * glow for p, w in zip(points, whip)]
     painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(color)
+    if gradient:
+        fill = QLinearGradient(start, end)
+        for stop in (0, .5, 1):
+            fill.setColorAt(stop, tone(stop))
+        painter.setBrush(fill)
+    else:
+        painter.setBrush(color)
     band = tapered(points, start_width, end_width)
     if straight > .5:
         # Doble línea art déco: la banda queda hueca por dentro.
@@ -340,6 +361,7 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
         base, heading = points[i], _heading(points, i)
         turn = 1 if (k + seed) % 2 else -1
         width = start_width + (end_width - start_width) * t
+        color, soft = tone(t), tone(t, .8)  # cada brote, del color de su tramo de rama
         roll = rng.random()
         if roll < glow * .75:
             # Brote art nouveau: tallo largo y sinuoso que acaba en seta, lirio, ojo de pavo real o zarcillo.
@@ -396,9 +418,10 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
             painter.setPen(Qt.PenStyle.NoPen)
         small, _ = leaf_paths(base, heading - turn * .42, size * .55)
         painter.setBrush(soft); painter.drawPath(small)
-    # Adornos propios (aplicación «Ramas»): repartidos por la longitud de la rama.
+    # Adornos propios (aplicación «Ramas»): repartidos por la longitud de la rama, con su propio gradiente.
     if traits.get('ornaments'):
-        place_ornaments(painter, traits['ornaments'], points, start_width, end_width, color, size, seed)
+        place_ornaments(painter, traits['ornaments'], points, start_width, end_width, base_color, size, seed)
+    color, soft = tone(.9), tone(.9, .8)
     # Destellos alrededor de la rama según el brillo del fondo.
     for _ in range(round(glow * 3)):
         i = rng.randrange(len(points))

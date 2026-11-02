@@ -57,6 +57,13 @@ def clean(data, base=None):
     for key, (low, high) in TWEAKS.items():
         if isinstance(data.get(key), (int, float)):
             result[key] = max(low, min(high, float(data[key])))
+    if data.get('branch_gradient') is True:
+        # Gradiente de la rama: opacidad final (relativa a la del principio) y luz -1..1 en cada extremo.
+        value = lambda key, low, high, default: max(low, min(high, float(data[key]))) \
+            if isinstance(data.get(key), (int, float)) and not isinstance(data.get(key), bool) else default
+        start = value('opacity', *TWEAKS['opacity'], 1.0)
+        result['branch_gradient'] = {'alpha_end': value('opacity_end', *TWEAKS['opacity'], start) / (start or 1),
+                                     'light': value('light', -1.0, 1.0, 0.0), 'light_end': value('light_end', -1.0, 1.0, 0.0)}
     ornaments = []
     for item in data.get('ornaments', []) if isinstance(data.get('ornaments'), list) else []:
         if not isinstance(item, dict) or len(ornaments) >= MAX_ORNAMENTS:

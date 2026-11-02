@@ -281,6 +281,18 @@ class LinkLayoutTests(unittest.TestCase):
             self.assertIn('straight', branch_style.load(child, root))  # vuelve a heredar de arriba
             with self.assertRaises(ValueError):
                 branch_style.save(root / 'no-existe', {})
+            # Gradiente de la rama: aparte de los adornos y solo si está activado.
+            self.assertNotIn('branch_gradient', branch_style.clean({'opacity_end': .2, 'light': 1}))
+            gradient = branch_style.clean({'branch_gradient': True, 'opacity': .8, 'opacity_end': .2, 'light': 5, 'light_end': -.5})
+            self.assertEqual(gradient['branch_gradient'], {'alpha_end': .25, 'light': 1.0, 'light_end': -.5})
+            from PySide6.QtCore import QPointF
+            from PySide6.QtGui import QColor, QImage, QPainter
+            from prosperus.branches import branch
+            canvas = QImage(300, 120, QImage.Format.Format_ARGB32); canvas.fill(0)
+            painter = QPainter(canvas)
+            branch(painter, QPointF(10, 60), QPointF(290, 60), 12, 10, QColor(200, 200, 200), 0, 0, 0, gradient)
+            painter.end()
+            self.assertGreater(canvas.pixelColor(20, 60).alpha(), canvas.pixelColor(280, 60).alpha())
 
     def test_branch_ornaments_images_frequency_and_safety(self):
         import tempfile

@@ -119,6 +119,21 @@ class BranchSettings(QWidget):
         for key, label in TWEAK_LABELS:
             low, high = branch_style.TWEAKS[key]
             self.sliders[key] = self.slider(form, label, round(low * 100), round(high * 100), saved.get(key, 1) * 100)
+        # Gradiente de la rama, aparte del de los adornos.
+        self.branch_form = form
+        self.branch_gradient = QCheckBox('Gradiente en la rama')
+        self.branch_gradient.setChecked(saved.get('branch_gradient') is True)
+        form.addRow('', self.branch_gradient)
+        self.branch_bars = {
+            'opacity_end': self.value_slider(form, 'Opacidad al final', 0, 160, 100, '%'),
+            'light': self.value_slider(form, 'Luz al principio', -100, 100, 100, ''),
+            'light_end': self.value_slider(form, 'Luz al final', -100, 100, 100, '')}
+        defaults = {'opacity_end': saved.get('opacity', 1), 'light': 0, 'light_end': 0}
+        for key, slider in self.branch_bars.items():
+            value = saved.get(key, defaults[key])
+            slider.setValue(round((value if isinstance(value, (int, float)) else defaults[key]) * 100))
+            slider.valueChanged.connect(self.update_preview)
+        self.branch_gradient.toggled.connect(self.update_preview)
         columns.addLayout(self.build_ornaments(saved), 1)
         self.measured = QLabel(); self.measured.setObjectName('muted')
         layout.addWidget(self.measured)
@@ -242,8 +257,12 @@ class BranchSettings(QWidget):
                 self.edit_form.setRowVisible(row, visible)
 
     def row_of(self, slider):
-        for row in range(self.edit_form.rowCount()):
-            field = self.edit_form.itemAt(row, QFormLayout.ItemRole.FieldRole)
+        return self.row_in(self.edit_form, slider)
+
+    @staticmethod
+    def row_in(form, slider):
+        for row in range(form.rowCount()):
+            field = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
             if field and field.layout() and field.layout().indexOf(slider) >= 0:
                 return row
         return -1
@@ -300,6 +319,10 @@ class BranchSettings(QWidget):
         data = {'auto': self.auto.isChecked()}
         for key in branch_style.STYLE_KEYS + tuple(branch_style.TWEAKS):
             data[key] = round(self.sliders[key].value() / 100, 2)
+        if hasattr(self, 'branch_gradient'):
+            data['branch_gradient'] = self.branch_gradient.isChecked()
+            for key, slider in self.branch_bars.items():
+                data[key] = round(slider.value() / 100, 2)
         data['ornaments'] = []
         for item in getattr(self, 'ornaments', []):
             entry = {key: value for key, value in item.items() if key not in ('path', 'file')}
@@ -320,6 +343,11 @@ class BranchSettings(QWidget):
         automatic = self.auto.isChecked()
         for key in branch_style.STYLE_KEYS:
             self.sliders[key].setEnabled(not automatic)
+        if hasattr(self, 'branch_bars'):
+            for slider in self.branch_bars.values():
+                row = self.row_in(self.branch_form, slider)
+                if row >= 0:
+                    self.branch_form.setRowVisible(row, self.branch_gradient.isChecked())
         self.preview.traits = self.preview_traits()
         if self.auto_traits:
             self.measured.setText('Según el fondo: art déco {:.0%} · art nouveau {:.0%} · brotes {:.0%}'.format(
