@@ -113,8 +113,45 @@ def dot(painter, centre, radius, color):
     painter.setBrush(color); painter.drawPath(path)
 
 
+def lily_path(base, angle, size):
+    """Lirio art nouveau: capullo alargado entre dos pétalos que se abren hacia fuera."""
+    up = QPointF(math.cos(angle), math.sin(angle)); side = QPointF(-up.y(), up.x())
+    tip = base + up * size * 1.25
+    path = QPainterPath(base)
+    path.cubicTo(base + side * size * .35 + up * size * .4, tip + side * size * .18 - up * size * .25, tip)
+    path.cubicTo(tip - side * size * .18 - up * size * .25, base - side * size * .35 + up * size * .4, base)
+    for sign in (1, -1):
+        petal = QPainterPath(base + up * size * .2)
+        petal.cubicTo(base + side * sign * size * .7 + up * size * .2, base + side * sign * size * .85 + up * size * .75,
+                      base + side * sign * size * .55 + up * size * 1.0)
+        petal.cubicTo(base + side * sign * size * .5 + up * size * .55, base + side * sign * size * .25 + up * size * .35, base + up * size * .2)
+        path = path.united(petal)
+    return path
+
+
+def peacock_eye(base, angle, size):
+    """Ojo de pluma de pavo real: gota con anillo hueco y pupila."""
+    up = QPointF(math.cos(angle), math.sin(angle)); side = QPointF(-up.y(), up.x())
+    def drop(scale, lift):
+        start = base + up * size * lift
+        tip = start + up * size * scale
+        path = QPainterPath(start)
+        path.cubicTo(start + side * size * .55 * scale + up * size * .1, tip + side * size * .45 * scale, tip)
+        path.cubicTo(tip - side * size * .45 * scale, start - side * size * .55 * scale + up * size * .1, start)
+        return path
+    outer, ring_hole = drop(1.0, 0), drop(.62, .22)
+    pupil = QPainterPath(); pupil.addEllipse(base + up * size * .58, size * .13, size * .17)
+    return outer.subtracted(ring_hole).united(pupil)
+
+
+def _upward(heading, turn):
+    """Ángulo perpendicular a la rama que apunta hacia arriba de la pantalla (las setas crecen hacia arriba)."""
+    a, b = heading + math.pi / 2, heading - math.pi / 2
+    return a if math.sin(a) < math.sin(b) else b
+
+
 def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3, curl=.18, traits=None):
-    """Rama procedural en un solo color. traits (del fondo) mezcla enredadera orgánica y brazo
+    """Rama procedural en un solo color. traits (del fondo) mezcla enredadera orgánica y
     geométrico (straight, filigrana art déco), regula los brotes (detail) y añade setas y destellos (magic)."""
     traits = traits or {}
     straight, detail, glow = traits.get('straight', 0), traits.get('detail', .4), traits.get('magic', 0)
@@ -127,6 +164,12 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
     bow = QPointF(-direction.y(), direction.x()) * (curl * .9)
     arc = cubic_points(start, start + direction * .3 + bow, start + direction * .7 + bow, end)
     points = [c * (1 - straight) + a * straight for c, a in zip(curve, arc)]
+    if glow:
+        # Latigazo art nouveau: la curva se tensa al principio y se enrosca cerca del final.
+        # Mismo sentido de giro en todas las ramas: las vecinas no se cruzan.
+        swirl = QPointF(-direction.y(), direction.x()) * curl
+        whip = cubic_points(start, start + direction * .2 + swirl * 1.3, start + direction * .85 - swirl * .7, end)
+        points = [p * (1 - glow) + w * glow for p, w in zip(points, whip)]
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(color)
     band = tapered(points, start_width, end_width)
@@ -137,7 +180,7 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
     soft = QColor(color); soft.setAlpha(int(color.alpha() * .8))
     dark = QColor(0, 0, 0, 120)
     size = max(8.0, min(17.0, length * .07))
-    count = max(1, round(sprigs * (.6 + .8 * detail)))
+    count = max(1, round(sprigs * (.6 + .8 * detail + .6 * glow)))
     for k in range(count):
         t = .22 + k * (.6 / max(1, count - 1)) if count > 1 else .55
         i = int(t * (len(points) - 1))
@@ -145,8 +188,29 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
         turn = 1 if (k + seed) % 2 else -1
         width = start_width + (end_width - start_width) * t
         roll = rng.random()
-        if roll < glow * .5:
-            mushroom(painter, base, heading + turn * 1.2, size * 1.1, soft, True)
+        if roll < glow * .75:
+            # Brote art nouveau: tallo largo y sinuoso que acaba en seta, lirio, ojo de pavo real o zarcillo.
+            kind = (k + seed) % 4
+            if kind == 0:
+                mushroom(painter, base, _upward(heading, turn), size * 1.4, soft, True)
+                continue
+            stem_angle = heading + turn * .5
+            reach = size * 1.6
+            stem_end = base + QPointF(math.cos(stem_angle), math.sin(stem_angle)) * reach
+            bend = QPointF(-math.sin(stem_angle), math.cos(stem_angle)) * reach * .35 * turn
+            stem = cubic_points(base, base + QPointF(math.cos(heading), math.sin(heading)) * reach * .5 + bend,
+                                stem_end - bend * .5, stem_end, 16)
+            painter.setBrush(color); painter.drawPath(tapered(stem, width * .55, width * .2))
+            end_angle = _heading(stem, len(stem) - 1)
+            if kind == 1:
+                painter.setBrush(soft); painter.drawPath(lily_path(stem_end, end_angle, size * 1.05))
+            elif kind == 2:
+                painter.setBrush(soft); painter.drawPath(peacock_eye(stem_end, end_angle, size * 1.3))
+            else:
+                painter.drawPath(tapered(spiral_points(stem_end, end_angle, size * 2.2, turn), width * .3, .4))
+            # Perlas a lo largo del tallo.
+            for t in (.35, .6):
+                dot(painter, stem[int(t * (len(stem) - 1))] + bend * .25, width * .28, soft)
             continue
         if roll < straight:
             # Brote geométrico: tallo recto, punto de compás y greca o rombo con nervio.
@@ -180,7 +244,7 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
         small, _ = leaf_paths(base, heading - turn * .42, size * .55)
         painter.setBrush(soft); painter.drawPath(small)
     # Destellos alrededor de la rama según el brillo del fondo.
-    for _ in range(round(glow * 4)):
+    for _ in range(round(glow * 3)):
         i = rng.randrange(len(points))
         offset = QPointF(rng.uniform(-1, 1), rng.uniform(-1, 1)) * size * 1.4
         sparkle(painter, points[i] + offset, size * rng.uniform(.25, .5), soft)
