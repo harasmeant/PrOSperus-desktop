@@ -229,6 +229,26 @@ class QuickSettingsTests(unittest.TestCase):
         self.assertEqual(panel.wifi_conn.text(), 'Casa')
         self.assertEqual(panel.bluetooth.text(), 'No disponible')
 
+    def test_sliders_apply_on_any_change_but_not_when_reading(self):
+        from unittest import mock
+        from PySide6.QtWidgets import QApplication
+        from prosperus import quick_settings
+        from prosperus.appearance import Palette
+        app = QApplication.instance() or QApplication([])
+        panel = quick_settings.QuickSettings(type('Shell', (), {'colors': Palette(120)})())
+        calls = []
+        with mock.patch.object(quick_settings, 'attempt', side_effect=lambda argv: (calls.append(argv) or (True, ''))):
+            panel.apply({'brightness': 50, 'volume': (40, False), 'wifi': None, 'connections': '',
+                         'bluetooth': None, 'mode': 'default'})
+            self.assertFalse(panel.br_timer.isActive() or panel.vol_timer.isActive())
+            panel.brightness.setValue(70); panel.volume.setValue(20)  # clic, rueda o flechas
+            self.assertTrue(panel.br_timer.isActive())
+            panel.br_timer.stop(); panel._set_br(); panel.vol_timer.stop(); panel._set_vol()
+        self.assertIn('70%', calls[0]); self.assertIn('0.20', calls[1])
+        with mock.patch.object(quick_settings.subprocess, 'run', side_effect=FileNotFoundError):
+            panel._set_br()
+        self.assertFalse(panel.br_err.isHidden())
+
 
 class LinkLayoutTests(unittest.TestCase):
     def test_wallpaper_traits_and_procedural_branch(self):

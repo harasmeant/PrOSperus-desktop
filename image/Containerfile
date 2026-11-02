@@ -9,7 +9,7 @@ COPY image/rootfs/ /
 RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-ramas /usr/bin/prosperus-instalar /usr/bin/prosperus-claude /usr/bin/prosperus-handle /usr/libexec/prosperus-session /usr/libexec/prosperus-persistence /usr/libexec/prosperus-client \
     && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
     && passwd --lock root \
-    && usermod -aG wheel prosperus \
+    && usermod -aG wheel,video,audio prosperus \
     && chmod 0440 /etc/sudoers.d/prosperus-vm \
     && systemctl enable NetworkManager.service \
     && systemctl enable greetd.service \

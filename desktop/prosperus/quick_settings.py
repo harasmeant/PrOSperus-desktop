@@ -2,18 +2,31 @@
 """Panel rápido de la esquina derecha: brillo, volumen, wifi, bluetooth y notificaciones."""
 import os
 import subprocess
+import sys
 import threading
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
                              QSlider, QPushButton, QWidget)
-from PySide6.QtCore import QProcess, Qt, Signal
+from PySide6.QtCore import QProcess, Qt, QTimer, Signal
 
 def run(argv):
-    """Ejecuta un comando sin shell y captura la salida."""
+    """Ejecuta un comando sin shell y captura la salida (None si falla)."""
+    return attempt(argv)[1]
+
+
+def attempt(argv):
+    """(correcto, salida o motivo del fallo). Los fallos quedan en el registro del sistema
+    (la salida del escritorio va al journal) para poder diagnosticar en el equipo real."""
     try:
         res = subprocess.run(argv, timeout=3, capture_output=True, text=True, check=True)
-        return res.stdout.strip()
-    except (subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
-        return None
+        return True, res.stdout.strip()
+    except subprocess.CalledProcessError as error:
+        reason = (error.stderr or error.stdout or '').strip() or f'código {error.returncode}'
+    except FileNotFoundError:
+        reason = 'no está instalado'
+    except (subprocess.SubprocessError, OSError) as error:
+        reason = str(error)
+    print(f'prosperus-panel: {" ".join(argv)}: {reason}', file=sys.stderr, flush=True)
+    return False, None
 
 def parse_volume(text):
     """Parsea salida de wpctl: 'Volume: 0.40 [MUTED]' -> (40, True)."""
@@ -69,7 +82,10 @@ class QuickSettings(QFrame):
         self.br_lbl = QLabel("Brillo:")
         self.brightness = QSlider(Qt.Horizontal)
         self.brightness.setRange(5, 100)
-        self.brightness.sliderReleased.connect(self._set_br)
+        # Se aplica al moverla de cualquier forma (arrastrar, clic, rueda, flechas), con un pequeño
+        # retardo para no lanzar una orden por cada píxel.
+        self.br_timer = QTimer(self, singleShot=True, interval=120, timeout=self._set_br)
+        self.brightness.valueChanged.connect(lambda _: self.br_timer.start())
         self.br_err = QLabel("Esta pantalla no permite cambiar el brillo.")
         self.br_err.hide()
         self.br_row.addWidget(self.br_lbl)
@@ -82,7 +98,8 @@ class QuickSettings(QFrame):
         self.vol_lbl = QLabel("Volumen:")
         self.volume = QSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
-        self.volume.sliderReleased.connect(self._set_vol)
+        self.vol_timer = QTimer(self, singleShot=True, interval=120, timeout=self._set_vol)
+        self.volume.valueChanged.connect(lambda _: self.vol_timer.start())
         self.mute = QPushButton("Silencio")
         self.mute.setCheckable(True)
         self.mute.clicked.connect(self._set_mute)
@@ -145,8 +162,16 @@ class QuickSettings(QFrame):
         self.foot_row.addWidget(self.btn_help)
         self.box.addLayout(self.foot_row)
 
-    def _set_br(self): run(['brightnessctl', '-c', 'backlight', 'set', f'{self.brightness.value()}%'])
-    def _set_vol(self): run(['wpctl', 'set-volume', '@DEFAULT_AUDIO_SINK@', f'{self.volume.value()/100:.2f}'])
+    def _set_br(self):
+        ok, _ = attempt(['brightnessctl', '-q', '-c', 'backlight', 'set', f'{self.brightness.value()}%'])
+        self.br_err.setText('No se pudo cambiar el brillo (detalles en el registro).')
+        self.br_err.setVisible(not ok)
+
+    def _set_vol(self):
+        ok, _ = attempt(['wpctl', 'set-volume', '-l', '1.0', '@DEFAULT_AUDIO_SINK@', f'{self.volume.value()/100:.2f}'])
+        self.vol_err.setText('No se pudo cambiar el volumen (detalles en el registro).')
+        self.vol_err.setVisible(not ok)
+
     def _set_mute(self): run(['wpctl', 'set-mute', '@DEFAULT_AUDIO_SINK@', '1' if self.mute.isChecked() else '0']); self.refresh()
     def _set_wifi(self): run(['nmcli', 'radio', 'wifi', 'on' if self.wifi.isChecked() else 'off']); self.refresh()
     def _set_bt(self): run(['bluetoothctl', 'power', 'on' if self.bluetooth.isChecked() else 'off']); self.refresh()
@@ -160,13 +185,18 @@ class QuickSettings(QFrame):
         val_br = state['brightness']
         self.brightness.setEnabled(val_br is not None); self.br_err.setVisible(val_br is None)
         if val_br is not None:
-            self.brightness.setValue(val_br)
+            self.brightness.blockSignals(True); self.brightness.setValue(val_br); self.brightness.blockSignals(False)
+        else:
+            self.br_err.setText('Esta pantalla no permite cambiar el brillo.')
         val_vol = state['volume']
         for widget in (self.volume, self.mute):
             widget.setEnabled(val_vol is not None)
         self.vol_err.setVisible(val_vol is None)
         if val_vol is not None:
-            self.volume.setValue(val_vol[0]); self.mute.setChecked(val_vol[1])
+            self.volume.blockSignals(True); self.volume.setValue(val_vol[0]); self.volume.blockSignals(False)
+            self.mute.setChecked(val_vol[1])
+        else:
+            self.vol_err.setText('Sin salida de sonido.')
         is_wifi = state['wifi'] == 'enabled'
         self.wifi.setText('Activado' if is_wifi else 'Desactivado'); self.wifi.setChecked(is_wifi)
         names = [n for n in (state['connections'] or '').splitlines() if n != 'lo']

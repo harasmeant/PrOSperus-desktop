@@ -56,15 +56,19 @@ class Accessibility:
     def css(self, palette):
         css = re.sub(r'font-size: (\d+)px',
                      lambda m: f'font-size: {self.font_size(int(m[1]))}px', palette.css())
+        # Foco visible pero suave; en notas y editores basta el cursor (el marco tapaba el texto).
+        # Con alto contraste, todo lleva el marco grueso.
+        boxes = 'QLineEdit:focus, QListWidget:focus, QComboBox:focus, QSpinBox:focus, QCheckBox:focus'
+        if self.high_contrast:
+            boxes += ', QPlainTextEdit:focus, QTextBrowser:focus'
         css += '''
-        QLineEdit:focus, QPlainTextEdit:focus, QTextBrowser:focus,
-        QListWidget:focus, QComboBox:focus, QSpinBox:focus, QCheckBox:focus {
-            border: 2px solid %s;
+        %s {
+            border: %s solid %s;
         }
         QListWidget::item:selected { background: %s; color: %s; }
-        ''' % (palette.accent, palette.hover, palette.text)
+        ''' % (boxes, '2px' if self.high_contrast else '1px', palette.accent, palette.hover, palette.text)
         if self.large_buttons:
-            css += 'QPushButton { min-height: 28px; padding: 8px 13px; }'
+            css += 'QPushButton { min-height: 30px; padding: 12px 20px; }'
         return css
 
 

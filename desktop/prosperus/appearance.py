@@ -21,14 +21,15 @@ class Palette:
         # Convierte HSL a hex para cada rol de color
         def colour(saturation, lightness):
             return QColor.fromHsl(hue, saturation, lightness).name()
-        self.base = colour(45, 19)
-        self.panel = colour(48, 32)
-        self.card = colour(48, 43)
-        self.hover = colour(49, 57)
-        self.border = colour(40, 82)
-        self.accent = colour(65, 177)
-        self.text = colour(28, 224)
-        self.muted = colour(25, 158)
+        # Colores suaves: poca saturación y bordes discretos; el acento ya no chilla.
+        self.base = colour(34, 20)
+        self.panel = colour(30, 31)
+        self.card = colour(28, 40)
+        self.hover = colour(30, 54)
+        self.border = colour(26, 74)
+        self.accent = colour(42, 186)
+        self.text = colour(22, 228)
+        self.muted = colour(18, 160)
         # Velo del prototipo: --pd-shade = hsl(h, s, 5%), teñido, no negro.
         self.shade = colour(45, 13)
 
@@ -37,26 +38,49 @@ class Palette:
         return f"""
         QWidget {{ background: transparent; color: {self.text}; font-family: 'DejaVu Sans'; font-size: 13px; }}
         QMainWindow, QDialog {{ background: {self.base}; }}
-        QPushButton {{ background: {self.card}; border: 1px solid {self.border}; border-radius: 8px; padding: 9px 13px; text-align: left; }}
+        QPushButton {{ background: {self.card}; border: 1px solid {self.border}; border-radius: 12px;
+                       padding: 10px 18px; min-height: 20px; text-align: left; }}
         QPushButton:hover {{ background: {self.hover}; border-color: {self.accent}; }}
-        QPushButton:focus {{ border: 2px solid {self.accent}; }}
+        QPushButton:pressed {{ background: {self.panel}; }}
+        QPushButton:focus {{ border: 1px solid {self.accent}; }}
+        QPushButton:checked {{ background: {self.hover}; border: 1px solid {self.accent}; }}
         QPushButton:disabled {{ color: {self.muted}; border-color: {self.panel}; }}
-        QPushButton#minimized {{ background: {self.hover}; border: 2px solid {self.accent}; }}
-        QLineEdit {{ background: {self.panel}; border: 1px solid {self.border}; border-radius: 8px; padding: 9px; selection-background-color: {self.hover}; }}
+        QPushButton#minimized {{ background: {self.hover}; border: 1px solid {self.accent}; }}
+        QPushButton::menu-indicator {{ width: 0; }}
+        QLineEdit, QComboBox, QSpinBox {{ background: {self.panel}; border: 1px solid {self.border}; border-radius: 10px;
+                       padding: 9px 12px; min-height: 18px; selection-background-color: {self.hover}; }}
+        QComboBox::drop-down, QSpinBox::up-button, QSpinBox::down-button {{ border: none; width: 22px; }}
+        QComboBox QAbstractItemView {{ background: {self.panel}; border: 1px solid {self.border}; padding: 6px;
+                       selection-background-color: {self.hover}; outline: none; }}
+        QCheckBox, QRadioButton {{ spacing: 10px; padding: 4px 0; }}
+        QCheckBox::indicator, QRadioButton::indicator {{ width: 18px; height: 18px; border: 1px solid {self.border};
+                       border-radius: 6px; background: {self.panel}; }}
+        QRadioButton::indicator {{ border-radius: 9px; }}
+        QCheckBox::indicator:checked, QRadioButton::indicator:checked {{ background: {self.accent}; border-color: {self.accent}; }}
+        QMenu {{ background: {self.panel}; border: 1px solid {self.border}; border-radius: 14px; padding: 8px; }}
+        QMenu::item {{ padding: 10px 26px 10px 14px; border-radius: 9px; margin: 1px 0; }}
+        QMenu::item:selected {{ background: {self.hover}; }}
+        QMenu::item:disabled {{ color: {self.muted}; }}
+        QMenu::icon {{ padding-left: 12px; }}
+        QMenu::separator {{ height: 1px; background: {self.border}; margin: 6px 10px; }}
+        QListWidget {{ background: {self.panel}; border: 1px solid {self.border}; border-radius: 12px; padding: 6px; outline: none; }}
+        QListWidget::item {{ padding: 8px 10px; border-radius: 8px; }}
+        QListWidget::item:hover {{ background: {self.card}; }}
         QLabel#title {{ font-size: 30px; font-weight: bold; }}
         QLabel#eyebrow {{ color: {self.accent}; font-size: 11px; letter-spacing: 2px; }}
         QLabel#muted {{ color: {self.muted}; font-size: 11px; }}
+        QLabel#section {{ color: {self.accent}; font-size: 11px; letter-spacing: 1.5px; padding-top: 6px; }}
         QFrame#sidebar {{ background: {self.base}; border-right: 1px solid {self.border}; }}
-        QFrame#dock {{ background: {self.panel}; border: 1px solid {self.border}; border-radius: 14px; }}
-        QFrame#note {{ border: 1px solid {self.accent}; border-radius: 12px; }}
-        QLabel#noteTitle {{ font-size: 14px; font-weight: bold; }}
-        QTextBrowser, QPlainTextEdit {{ border: none; background: transparent; padding: 15px; selection-background-color: {self.hover}; font-size: 15px; }}
+        QFrame#dock {{ background: {self.panel}; border: 1px solid {self.border}; border-radius: 16px; }}
+        QFrame#note {{ border: 1px solid {self.border}; border-radius: 16px; }}
+        QLabel#noteTitle {{ font-size: 16px; font-weight: bold; }}
+        QTextBrowser, QPlainTextEdit {{ border: none; background: transparent; padding: 18px 22px; selection-background-color: {self.hover}; font-size: 15px; }}
         QScrollArea {{ border: none; background: transparent; }}
         QScrollBar:horizontal {{ height: 6px; background: transparent; }}
         QScrollBar:vertical {{ width: 7px; background: transparent; }}
         QScrollBar::handle {{ background: {self.border}; border-radius: 3px; min-width: 24px; min-height: 24px; }}
         QScrollBar::add-line, QScrollBar::sub-line {{ width: 0; height: 0; }}
-        QToolTip {{ background: {self.panel}; color: {self.text}; border: 1px solid {self.border}; }}
+        QToolTip {{ background: {self.panel}; color: {self.text}; border: 1px solid {self.border}; border-radius: 8px; padding: 6px 10px; }}
         """
 
 
