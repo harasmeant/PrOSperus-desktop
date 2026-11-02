@@ -11,6 +11,35 @@ from PySide6.QtWidgets import QButtonGroup, QDialog, QPushButton, QHBoxLayout, Q
 from .model import searchable
 
 
+def use_icon_theme():
+    """En Sway Qt no tiene tema de iconos (solo hicolor): se usa Adwaita, con el clásico de respaldo."""
+    if QIcon.themeName() in ('', 'hicolor'):
+        QIcon.setThemeName('Adwaita')
+        QIcon.setFallbackThemeName('AdwaitaLegacy')
+
+
+def app_item(app, favorites, colors):
+    """Return a QListWidgetItem for an application dict in an icon grid."""
+    from .appearance import symbol_icon
+    item = QListWidgetItem()
+    icon_path = app.get('icon', '')
+    if icon_path.startswith('/') and Path(icon_path).is_file():
+        icon = QIcon(icon_path)
+    elif app.get('icon'):
+        icon = QIcon.fromTheme(app['icon'])
+    else:
+        icon = symbol_icon('apps', colors.accent)
+    if icon.isNull():
+        icon = symbol_icon('apps', colors.accent)
+    item.setIcon(icon)
+    item.setText(f"{'★  ' if app['id'] in favorites else ''}{app['name']}")
+    item.setToolTip(app.get('description') or app['name'])
+    item.setData(Qt.ItemDataRole.UserRole, dict(app, kind='app'))
+    item.setSizeHint(QSize(120, 104))
+    item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+    return item
+
+
 class ApplicationService(QObject):
     completed = Signal(str, object)
     failed = Signal(str)
@@ -81,6 +110,7 @@ class ApplicationBrowser(QDialog):
         self.shell = shell
         self.service = shell.apps
         self.mode = mode
+        use_icon_theme()
         self.setWindowTitle('Buscar')
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
         self.resize(720, 540)
@@ -118,11 +148,12 @@ class ApplicationBrowser(QDialog):
         self.list = QListWidget()
         self.list.setViewMode(QListView.ViewMode.IconMode)
         self.list.setIconSize(QSize(48, 48))
-        self.list.setGridSize(QSize(132, 112))
+        self.list.setGridSize(QSize(132, 116))
         self.list.setResizeMode(QListView.ResizeMode.Adjust)
         self.list.setMovement(QListView.Movement.Static)
         self.list.setWordWrap(True)
         self.list.setUniformItemSizes(True)
+        self.list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.list.setSpacing(8)
         self.list.setObjectName('launcherGrid')
         self.list.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -169,8 +200,9 @@ class ApplicationBrowser(QDialog):
     #launcherSearch {{
         background-color: {self.shell.colors.card};
         border: 1px solid {self.shell.colors.border};
-        border-radius: 10px;
-        padding: 0 14px;
+        border-radius: 12px;
+        padding: 10px 16px;
+        min-height: 24px;
         font-size: 15px;
     }}
     #launcherSearch:focus {{
@@ -183,8 +215,9 @@ class ApplicationBrowser(QDialog):
     #launcherGrid::item {{
         background-color: {self.shell.colors.card};
         border: 1px solid {self.shell.colors.border};
-        border-radius: 12px;
-        padding: 8px;
+        border-radius: 14px;
+        padding: 10px 6px 6px 6px;
+        margin: 4px;
         color: {self.shell.colors.text};
     }}
     #launcherGrid::item:hover {{
@@ -240,20 +273,7 @@ class ApplicationBrowser(QDialog):
             apps = [app for app in self.service.catalogue if all(t in searchable(' '.join([app['name'], app.get('description', ''), *app.get('keywords', [])])) for t in terms)]
             from .appearance import symbol_icon
             for app in sorted(apps, key=lambda a: (a['id'] not in favorites, searchable(a['name']))):
-                icon_str = app.get('icon', '')
-                if icon_str:
-                    icon = QIcon.fromTheme(icon_str)
-                    if icon.isNull():
-                        icon = symbol_icon('apps', self.shell.colors.accent)
-                else:
-                    icon = symbol_icon('apps', self.shell.colors.accent)
-                label_text = app['name']
-                if app['id'] in favorites:
-                    label_text = '★  ' + label_text
-                item = QListWidgetItem(label_text)
-                item.setIcon(icon)
-                item.setToolTip(app.get('description', ''))
-                item.setData(Qt.ItemDataRole.UserRole, dict(app, kind='app'))
+                item = app_item(app, favorites, self.shell.colors)
                 self.list.addItem(item)
                 if app['id'] == selected_id:
                     self.list.setCurrentItem(item)
@@ -288,20 +308,7 @@ class ApplicationBrowser(QDialog):
             apps = [app for app in self.service.catalogue if all(t in searchable(' '.join([app['name'], app.get('description', ''), *app.get('keywords', [])])) for t in terms)]
             from .appearance import symbol_icon
             for app in sorted(apps, key=lambda a: (a['id'] not in favorites, searchable(a['name']))):
-                icon_str = app.get('icon', '')
-                if icon_str:
-                    icon = QIcon.fromTheme(icon_str)
-                    if icon.isNull():
-                        icon = symbol_icon('apps', self.shell.colors.accent)
-                else:
-                    icon = symbol_icon('apps', self.shell.colors.accent)
-                label_text = app['name']
-                if app['id'] in favorites:
-                    label_text = '★  ' + label_text
-                item = QListWidgetItem(label_text)
-                item.setIcon(icon)
-                item.setToolTip(app.get('description', ''))
-                item.setData(Qt.ItemDataRole.UserRole, dict(app, kind='app'))
+                item = app_item(app, favorites, self.shell.colors)
                 self.list.addItem(item)
             # Vault paths
             try:

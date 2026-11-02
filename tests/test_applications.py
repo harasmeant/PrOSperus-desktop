@@ -50,3 +50,32 @@ class ApplicationsTests(unittest.TestCase):
                     os.dup2(original, descriptor); os.close(original)
             capture.seek(0)
             self.assertEqual(capture.read(), b'{}\n')
+
+
+class LauncherGridTests(unittest.TestCase):
+    def test_app_item_icons_text_and_tooltip(self):
+        from PySide6.QtWidgets import QApplication
+        from PySide6.QtCore import Qt
+        from prosperus.appearance import Palette
+        from prosperus.launcher import app_item
+
+        app = QApplication.instance() or QApplication([])
+        colors = Palette(120)
+
+        item = app_item({'id': 'a.desktop', 'name': 'Editor', 'description': '', 'icon': 'no-such-icon-xyz'}, set(), colors)
+        self.assertEqual(item.text(), 'Editor')
+        self.assertEqual(item.toolTip(), 'Editor')
+        self.assertFalse(item.icon().isNull())
+
+        item = app_item({'id': 'a.desktop', 'name': 'Editor', 'description': 'Texto', 'icon': '/no/such/file.png'}, {'a.desktop'}, colors)
+        self.assertTrue(item.text().startswith('★'))
+        self.assertEqual(item.toolTip(), 'Texto')
+        self.assertFalse(item.icon().isNull())
+        self.assertEqual(item.data(Qt.ItemDataRole.UserRole)['kind'], 'app')
+
+    def test_sway_keeps_desktop_dialogs_floating(self):
+        from pathlib import Path
+        config = (Path(__file__).parents[1] / 'image/rootfs/etc/sway/prosperus.conf').read_text(encoding='utf-8')
+        # La regla que fija el escritorio no debe alcanzar a sus diálogos (mismo app_id).
+        self.assertNotIn('for_window [app_id="org.prosperus.Desktop"] border none, floating disable', config)
+        self.assertIn('title="^PrOSperus desktop$"] border none, floating disable', config)

@@ -5,6 +5,8 @@ export XDG_CURRENT_DESKTOP=PrOSperus
 export QT_QPA_PLATFORM=wayland
 export WLR_RENDERER=pixman
 export XKB_DEFAULT_LAYOUT=es
+# greetd no lee /etc/profile.d: sin esto los programas de Flathub no salen en Aplicaciones.
+export XDG_DATA_DIRS="${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share:/var/lib/flatpak/exports/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 # En equipos reales el framebuffer provisional (simpledrm) aparece antes que el
 # driver de la gráfica; si Sway lo toma, la pantalla queda negra al cargar amdgpu/i915.
 # Se espera a una gráfica real y se usa la de arranque (boot_vga) en portátiles híbridos.
