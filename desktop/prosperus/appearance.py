@@ -5,7 +5,7 @@ import hashlib
 import math
 
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QIcon, QImage, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import QColor, QIcon, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QWidget
 
 
@@ -29,6 +29,8 @@ class Palette:
         self.accent = colour(65, 177)
         self.text = colour(28, 224)
         self.muted = colour(25, 158)
+        # Velo del prototipo: --pd-shade = hsl(h, s, 5%), teñido, no negro.
+        self.shade = colour(45, 13)
 
     # Devuelve hoja de estilos CSS lista para aplicar
     def css(self):
@@ -135,7 +137,9 @@ def wallpaper_hue(path, modified):
 
 
 # Pinta el fondo: base color, wallpaper escalado y sombra superpuesta
-def paint_wallpaper(painter, rect, path, base, shade=80):
+# shade puede ser un número (velo uniforme) o (arriba, centro, abajo) para un
+# degradado vertical: oscurece solo donde hay texto y deja ver la foto.
+def paint_wallpaper(painter, rect, path, base, shade=80, tint='#000000'):
     painter.fillRect(rect, QColor(base))
     if path:
         try:
@@ -147,7 +151,16 @@ def paint_wallpaper(painter, rect, path, base, shade=80):
             w, h = rect.width() / scale, rect.height() / scale
             source = QRectF((pixmap.width() - w) / 2, (pixmap.height() - h) / 2, w, h)
             painter.drawPixmap(QRectF(rect), pixmap, source)
-    painter.fillRect(rect, QColor(0, 0, 0, shade))
+    if isinstance(shade, tuple):
+        top, middle, bottom = shade
+        veil = QLinearGradient(0, rect.top(), 0, rect.bottom())
+        for stop, alpha in ((0, top), (0.22, middle), (0.70, middle), (1, bottom)):
+            colour = QColor(tint); colour.setAlpha(alpha)
+            veil.setColorAt(stop, colour)
+        painter.fillRect(rect, veil)
+    else:
+        colour = QColor(tint); colour.setAlpha(shade)
+        painter.fillRect(rect, colour)
 
 
 # Dibuja un símbolo vectorial en el rectángulo dado (coordenadas 0-24)
@@ -284,6 +297,6 @@ class Wallpaper(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        paint_wallpaper(painter, self.rect(), self.wallpaper, self.palette.base, 60)
+        paint_wallpaper(painter, self.rect(), self.wallpaper, self.palette.base, (110, 30, 120), self.palette.shade)
 # Iconos minimalistas (referencia estética)
 # Referencia: Numix / Papirus / Breeze minimal

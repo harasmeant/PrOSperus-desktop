@@ -22,7 +22,7 @@ from .model import Vault
 from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
-from .map_layout import concentric_slots, link_order, nearest_in_direction, separate
+from .map_layout import link_order, radial_slots, nearest_in_direction, separate
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
 from .window_manager import WindowManager
@@ -580,11 +580,11 @@ class Surface(QWidget):
         def clamp(x, y, w, h):
             return QRect(round(max(4, min(width - w - 4, x - w / 2))), round(max(4, min(height - h - 4, y - h / 2))), w, h)
 
-        # Rejilla radial: anillos alrededor de la carpeta actual; las notas enlazadas quedan contiguas.
-        self.slots = concentric_slots(len(self.nodes) + 1, width / 2, height / 2, cw, nh + 8, nw, nh, bounds=(4, 4, width - 4, height - 4))
-        if len(self.slots) < len(self.nodes):
-            # shortcut: sin sitio, las tarjetas sobrantes se apilan en el último hueco; pocas notas por página lo evitan.
-            self.slots += [self.slots[-1] if self.slots else (width / 2, height / 2)] * (len(self.nodes) - len(self.slots))
+        # Radios equiespaciados (3, 4, … hasta PAGE_SIZE por página, como en el prototipo).
+        # Los enlaces solo deciden el orden: las notas más enlazadas caen en radios vecinos.
+        rx = max(cw / 2 + nw / 2 + 24, width * .34)
+        ry = max(nh + 30, height * .36)
+        self.slots = radial_slots(len(self.nodes), width / 2, height / 2, rx, ry)
         manual = self.manual.setdefault(self.shell.folder, {})
         self.slot_of, used = {}, set()
         for widget in self.nodes:

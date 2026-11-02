@@ -220,6 +220,12 @@ def force_layout(points, weights, cx, cy, rx, ry, iterations=150):
     return [(x, y) for x, y in pts]
 
 
+def radial_slots(count, cx, cy, rx, ry):
+    """Radios equiespaciados como en el prototipo: el primero arriba y en sentido horario."""
+    return [(cx + rx * math.cos(-math.pi / 2 + i * 2 * math.pi / count),
+             cy + ry * math.sin(-math.pi / 2 + i * 2 * math.pi / count)) for i in range(count)]
+
+
 def concentric_slots(count, cx, cy, center_w, center_h, cell_w, cell_h, gap=22, bounds=None):
     """Huecos en anillos elípticos concéntricos alrededor del centro, de dentro afuera, sin solaparse ni salirse."""
     left, top, right, bottom = bounds or (cx - 4000, cy - 4000, cx + 4000, cy + 4000)
