@@ -227,7 +227,7 @@ def map_metrics(width, height):
     nh = max(80, min(108, int(height * .21)))
     cw = max(166, min(226, int(width * .2)))
     fw, fh = max(130, min(176, int(width * .14))), 42
-    lw, lh = max(104, min(150, int(width * .11))), 26
+    lw, lh = max(120, min(150, int(width * .11))), 26
     ry = max(nh + 30, height * .36)
     rx = max(cw / 2 + nw / 2 + 24, min(width * .34, ry * 2.3))
     return {'nw': nw, 'nh': nh, 'cw': cw, 'fw': fw, 'fh': fh, 'lw': lw, 'lh': lh, 'rx': rx, 'ry': ry}

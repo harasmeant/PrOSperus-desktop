@@ -11,7 +11,7 @@ from pathlib import Path
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
-                               QListWidget, QListWidgetItem, QMenu, QMessageBox, QPushButton, QSlider, QSpinBox,
+                               QListWidget, QListWidgetItem, QMenu, QMessageBox, QPushButton, QScrollArea, QSlider, QSpinBox,
                                QVBoxLayout, QWidget)
 
 from . import branch_style
@@ -112,7 +112,9 @@ class BranchSettings(QWidget):
         super().__init__()
         self.folder = Path(folder or Path.cwd())
         self.setWindowTitle('Ramas')
-        self.resize(1000, 760)
+        screen = QApplication.primaryScreen()
+        available = screen.availableGeometry().height() if screen else 760
+        self.resize(1000, max(560, min(820, available - 40)))
         self.wallpaper = find_wallpaper(self.folder)
         self.auto_traits = {}
         hue = None
@@ -150,8 +152,14 @@ class BranchSettings(QWidget):
         saved = branch_style.raw(self.folder)
         self.auto = QCheckBox('Automático: el estilo sale del fondo')
         self.auto.setChecked(saved.get('auto', True))
-        layout.addWidget(self.auto)
-        columns = QHBoxLayout(); layout.addLayout(columns)
+        # Los controles van en una zona con desplazamiento: la ventana cabe en pantallas bajas (850 px)
+        # aunque estén abiertos los dos gradientes.
+        controls = QWidget(); body = QVBoxLayout(controls); body.setContentsMargins(0, 0, 8, 0)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True); scroll.setWidget(controls)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        layout.addWidget(scroll, 1)
+        body.addWidget(self.auto)
+        columns = QHBoxLayout(); body.addLayout(columns)
         form = QFormLayout(); columns.addLayout(form, 1)
         self.sliders = {}
         for key, label in STYLE_LABELS:
@@ -177,7 +185,7 @@ class BranchSettings(QWidget):
         self.branch_gradient.toggled.connect(self.update_preview)
         columns.addLayout(self.build_ornaments(saved), 1)
         self.measured = QLabel(); self.measured.setObjectName('muted')
-        layout.addWidget(self.measured)
+        body.addWidget(self.measured); body.addStretch(1)
 
         buttons = QHBoxLayout(); buttons.addStretch(1)
         for text, callback in (('Volver a automático', self.reset), ('Guardar en esta carpeta', self.save), ('Cerrar', self.close)):
