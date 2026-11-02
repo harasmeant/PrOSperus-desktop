@@ -13,7 +13,7 @@ truncate -s 0 "$work/root/etc/machine-id"
 # rd.live.ram would copy the entire image and unnecessarily increase RAM usage.
 ukify build --linux="$work/root/boot/vmlinuz-prosperus" \
     --initrd="$work/root/boot/initramfs-prosperus.img" \
-    --cmdline='root=live:CDLABEL=PROSPERUS_LIVE rd.live.image rd.live.overlay.overlayfs=1 rw console=tty0 console=ttyS0,115200 selinux=0 systemd.show_status=1' \
+    --cmdline='root=live:CDLABEL=PROSPERUS_LIVE rd.live.image rd.live.overlay.overlayfs=1 rw console=tty0 console=ttyS0,115200 selinux=0 systemd.show_status=1 modprobe.blacklist=nouveau rd.driver.blacklist=nouveau' \
     --os-release="@$work/root/etc/os-release" --output="$work/BOOTX64.EFI"
 truncate -s 128M "$work/tree/EFI/efiboot.img"
 mkfs.vfat -F 32 -n PROSPERUS "$work/tree/EFI/efiboot.img"

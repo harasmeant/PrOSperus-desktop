@@ -369,3 +369,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Segunda prueba: la persistencia funciona (registro guardado en `PROSPERUS_DATA/journal`), pero teclado y ratón no respondían.
 - El registro termina a los 20 s, justo al abrir la sesión: journald solo escribía en disco cada 5 min y el apagado fue forzado, así que se perdió lo de Sway. El kernel sí detecta teclado interno, touchpad ELAN y los periféricos USB; amdgpu y nouveau cargan (nouveau sin firmware).
 - `SyncIntervalSec=5s` en el registro del USB y volcado de `swaymsg -t get_inputs/get_outputs` al registro (`prosperus-diag`) para el siguiente intento.
+- El escritorio se ve pero no responde a nada: lo más probable es que Sway se cuelgue con la NVIDIA (nouveau sin firmware). La ISO arranca ahora con `modprobe.blacklist=nouveau`; la pantalla interna va por la AMD. Pendiente de confirmar en el portátil.
