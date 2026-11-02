@@ -377,7 +377,7 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - «Tus proyectos» muestra los escritorios en cuadrícula (antes, tarjetero apilado): tarjetas con su fondo, nombre, notas y carpetas, marca «En uso» y realce al pasar el ratón. Flechas en las cuatro direcciones, Intro o clic abre; Super+Tab sigue recorriéndolos. El panel se ensancha a 660 px y las columnas se ajustan al ancho.
 - Controles de ventana: en reposo, puntos grises discretos que toman su color al desplegarse; anillo sobre el botón señalado; estado pulsado; el clic solo actúa si se suelta sobre el mismo botón; «Ampliar» pasa a «Restaurar» (icono de dos ventanas) en notas, ventanas propias y la píldora de aplicaciones; descripción emergente por botón. La píldora lleva un borde fino y olvida la geometría guardada de las ventanas que cierra.
 - OpenRouter devolvió 429; el código lo escribió Claude. 117 pruebas correctas.
-- La píldora de las aplicaciones se coloca encima de la ventana (antes tapaba sus primeras líneas) y solo entra dentro si la ventana está pegada arriba. Sway imponía 75×50 a las flotantes: `floating_minimum_size 24 x 24` deja la píldora en 100×32. Comprobado en Sway sin pantalla (contenedor window-tests) con foot. 118 pruebas correctas.
+- La píldora de las aplicaciones se coloca encima de la ventana (antes tapaba sus primeras líneas) y solo entra dentro si la ventana está pegada arriba. Sway imponía 75×50 a las flotantes: `floating_minimum_size 24 x 24` deja la píldora en 100×32. Comprobado en Sway sin pantalla (contenedor window-tests) con foot. 117 pruebas correctas.
 
 ## 2 de noviembre de 2026 · Estética: fondo y radios del mapa
 
