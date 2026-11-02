@@ -25,6 +25,8 @@ class ApplicationService(QObject):
             self.favorites = []
         self.catalogue = []
         self.action = ''
+        # Carpeta del proyecto actual: las aplicaciones heredan este directorio.
+        self.working_directory = ''
         self.process = QProcess(self)
         self.process.finished.connect(self.finished)
         self.process.errorOccurred.connect(self.process_error)
@@ -36,6 +38,7 @@ class ApplicationService(QObject):
         arguments = [str(Path(__file__).with_name('applications.py')), action]
         if desktop_id is not None:
             arguments.append(desktop_id)
+        self.process.setWorkingDirectory(self.working_directory)
         self.process.start(sys.executable, arguments)
 
     def process_error(self, error):

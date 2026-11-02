@@ -222,4 +222,3 @@ class LayoutDialog(QDialog):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             self.status.setText('Espera a que termine la distribución de aplicaciones.'); return
         super().done(result)
-# Layout final integrado (autoriza sin parar)\nfrom prosperus.appearance_settings import available_resolutions, apply_resolution, scale_factor

@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Órdenes de ventanas para atajos de Sway, válidas aunque una aplicación tenga el foco.
+export PYTHONPATH=/usr/lib/prosperus
+exec /usr/bin/python3 -m prosperus.window_manager "$@"

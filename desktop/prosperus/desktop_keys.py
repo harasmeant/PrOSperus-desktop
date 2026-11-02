@@ -23,7 +23,8 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 - **Ctrl+S:** guardar la nota enfocada. **Ctrl+W:** cerrar la nota enfocada.
 - **Esc:** recoger el tarjetero o cerrar la nota enfocada; en un diálogo, cerrarlo.
 - **Ctrl+Tab / Ctrl+Mayús+Tab:** siguiente/anterior nota abierta del proyecto.
-- **Tab / Mayús+Tab:** siguiente/anterior control; **Espacio** activa el botón enfocado.
+- **Tab / Mayús+Tab:** en el mapa, siguiente/anterior carpeta en sentido horario/antihorario; en otros controles, siguiente/anterior control. **Espacio** activa el botón enfocado.
+- **Super+Tab / Super+Mayús+Tab:** abrir el selector de proyectos y bajar/subir; al soltar Super se abre el proyecto elegido.
 - **Mayús+F10 / Menú:** menú contextual del mapa o de la lista de archivos.
 - **F1:** esta ayuda. **F5 / Ctrl+R:** actualizar. **F11:** pantalla completa.
 - **Alt+F4:** cerrar la ventana, con confirmación si hay notas sin guardar.
@@ -32,7 +33,7 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 ## Aplicaciones y controles
 - **Windows / Super:** abrir o cerrar Aplicaciones, cuando el sistema entrega esa tecla a PrOSperus.
 - **Ctrl+Espacio / Alt+F2:** Aplicaciones (Alt+F2 puede estar reservado por el sistema).
-- **Super+E:** explorador. **Super+D:** ocultar/restaurar las notas. **Super+I:** controles.
+- **Super+E:** explorador. **Super+D:** ocultar/restaurar notas y aplicaciones del proyecto. **Super+F:** pantalla completa de la aplicación. **Super+Q:** cerrar la aplicación. **Super+Esc:** volver al escritorio. **Super+I:** controles.
 - Las teclas de volumen, brillo y reproducción se atienden en la sesión propia PrOSperus cuando están disponibles.
 
 ## Texto y accesibilidad
@@ -54,6 +55,7 @@ class DesktopKeys(QObject):
         super().__init__(shell)
         self.shell = shell
         self.super_pressed = False
+        self.cycling = False
         self.super_combination = False
         QApplication.instance().installEventFilter(self)
         shell.destroyed.connect(self.detach)
@@ -91,11 +93,23 @@ class DesktopKeys(QObject):
                 self.super_pressed = True; self.super_combination = False
             elif self.super_pressed:
                 self.super_pressed = False
-                if not self.super_combination and QApplication.activeModalWidget() is None:
+                if self.cycling:
+                    # Como Alt+Tab: al soltar Super se abre el proyecto elegido.
+                    self.cycling = False
+                    QTimer.singleShot(0, self.shell.drawer.open_current)
+                elif not self.super_combination and QApplication.activeModalWidget() is None:
                     QTimer.singleShot(0, self.shell.toggle_applications)
             return True
         if event.type() != QEvent.Type.KeyPress:
             return False
+        if key in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab) and event.modifiers() & Qt.KeyboardModifier.MetaModifier:
+            # Super+Tab baja por los proyectos; Super+Mayús+Tab sube.
+            drawer = self.shell.drawer
+            if not drawer.isVisible():
+                drawer.reveal()
+            drawer.step(-1 if key == Qt.Key.Key_Backtab or event.modifiers() & Qt.KeyboardModifier.ShiftModifier else 1)
+            self.cycling = True
+            return True
         # GNOME/KDE remain responsible for global hardware keys in window mode.
         if self.shell.system_session and self.shell.controls.handle_key(key):
             return True
@@ -127,12 +141,3 @@ class DesktopKeys(QObject):
         if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Backspace:
             go_up(); return True
         return False
-
-# Windows / Super key: open scrollable side panel (autorizado sin parar)
-from PySide6.QtWidgets import QScrollArea, QWidget, QVBoxLayout
-# Panel lateral recordado por super; se activa por evento de teclado
-def open_scrollable_panel():
-    # Placeholder integrado en sesión: lista de ventanas abiertas
-    pass
-# Super (Win) -> abrir panel lateral con scroll
-# Tecla física: Qt.Key_Meta (Super)

@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Aplicaciones de trabajo, aparcadas: no las construye ningún script.
+# Uso futuro: podman build -f image/Containerfile.apps -t localhost/prosperus-base:dev .
+FROM localhost/prosperus-base:dev
+RUN dnf -y --setopt=install_weak_deps=False install flatpak && dnf clean all
+
+# Aplicaciones de trabajo disponibles en Fedora: ingeniería, juegos y oficina.
+RUN dnf -y --setopt=install_weak_deps=False install \
+    blender freecad lutris \
+    && dnf clean all
+
+# VSCodium: repositorio oficial del proyecto (no está en Fedora).
+RUN rpmkeys --import https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/-/raw/master/pub.gpg \
+    && printf '%s\n' '[vscodium]' 'name=VSCodium' \
+       'baseurl=https://download.vscodium.com/rpms/' 'enabled=1' 'gpgcheck=1' 'repo_gpgcheck=1' \
+       'gpgkey=https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/-/raw/master/pub.gpg' \
+       'metadata_expire=1h' > /etc/yum.repos.d/vscodium.repo \
+    && dnf -y --setopt=install_weak_deps=False install codium \
+    && dnf clean all
+
+# Steam: RPM Fusion nonfree (incluye dependencias de 32 bits).
+RUN dnf -y install \
+       "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
+       "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm" \
+    && dnf -y --setopt=install_weak_deps=False install steam \
+    && dnf clean all
+
+# Zen Browser: solo se distribuye oficialmente como Flatpak (Flathub).
+RUN flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+    && flatpak install --system --noninteractive flathub app.zen_browser.zen

@@ -5,4 +5,5 @@ export XDG_CURRENT_DESKTOP=PrOSperus
 export QT_QPA_PLATFORM=wayland
 export WLR_RENDERER=pixman
 export XKB_DEFAULT_LAYOUT=es
-exec dbus-run-session -- cage -s -- /usr/libexec/prosperus-client
+# Sway sustituye a Cage: permite varias ventanas sobre el mapa de proyectos.
+exec dbus-run-session -- sway --config /etc/sway/prosperus.conf

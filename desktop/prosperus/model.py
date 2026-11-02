@@ -41,13 +41,17 @@ class Vault:
                 continue
             try:
                 path = self.checked(candidate)
-                if path.is_dir() or path.suffix.lower() == '.md':
+                # El fondo de la carpeta es configuración, no un documento del mapa.
+                if path.is_dir() or path.stem.lower() != 'wallpaper':
                     entries.append(path)
             except (OSError, ValueError):
                 continue
         return sorted(set(entries), key=lambda p: (not p.is_dir(), searchable(p.name)))
 
     def notes(self, folder=None):
+        return (path for path in self.files(folder) if path.suffix.lower() == '.md')
+
+    def files(self, folder=None):
         # Do not follow directory symlinks or descend hidden directories.
         pending = [self.checked(folder or self.root)]
         seen = set()
@@ -76,12 +80,14 @@ class Vault:
         """
         terms = searchable(query).split()
         by_name, by_content = [], []
-        for path in self.notes(folder):
+        for path in self.files(folder):
             name = searchable(path.relative_to(self.root))
             missing = [term for term in terms if term not in name]
             if not missing:
                 by_name.append(path)
                 continue
+            if path.suffix.lower() != '.md':
+                continue  # Otros archivos solo coinciden por nombre.
             try:
                 content = searchable(self.read(path))
             except (OSError, ValueError, UnicodeError):

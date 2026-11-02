@@ -308,3 +308,14 @@ Usuario confirma espiral Fibonacci. Añadidos motor geométrico compartido, perf
 Captura Qt real inspeccionada. El guion posterior espera el mapeado de la ventana antes de abrir el diálogo modal; su repetición quedó bloqueada por agotamiento de cuota de revisión automática de permisos, no por un rechazo de seguridad. La ISO publicada no se cambia. Integración completa de sesión y nueva ISO pendientes. Detalles: WINDOW-LAYOUTS.md.
 
 Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, SHA-256 ce947ca7e2fe548c8a08d2794981a71555abd051340ea7481b01331cbcd3f4a3. Extraído y comparado: 16 fuentes idénticas; arranque desde /tmp y captura correctos. No se ha publicado esta revisión ni reconstruido la ISO. Obsidian actualizado en notas 21, 22 e índice.
+
+## 2 de noviembre de 2026 · Escritorio interactivo con Sway
+
+- Sesión: Cage sustituido por Sway (`/etc/sway/prosperus.conf`). PrOSperus es la única ventana en mosaico (fondo); las aplicaciones flotan encima.
+- `window_manager.py`: escucha eventos de Sway y coloca cada aplicación nueva en Fibonacci o pantalla completa (botón en la barra). Los diálogos no se tocan.
+- Cada proyecto es un espacio de Sway; «General» es el escritorio con todos los proyectos y es el de inicio. Las aplicaciones arrancan en la carpeta del proyecto.
+- Super+D oculta/restaura las aplicaciones del proyecto; Super+F, Super+Q, Super+Esc, Alt+Tab en Sway.
+- Mapa: muestra todos los archivos (no solo .md); los que no son notas se abren con su aplicación. Carpetas compactas con su contenido en ramas (4 + «+N más»), animación de expansión al entrar.
+- Tab / Mayús+Tab recorren las carpetas del mapa en sentido horario/antihorario. Super+Tab / Super+Mayús+Tab recorren el selector de proyectos; al soltar Super se abre.
+- Apps de trabajo aparcadas en `image/Containerfile.apps` (sin construir). Restaurados ISO-LIVE.md y ARQUITECTURA-DISTRO.md, dañados por ediciones automáticas.
+- Verificado: 77 pruebas; laboratorio Sway sin pantalla (contenedor window-tests, sin red, 768 MiB) con dos terminales: Fibonacci automático, cambio de proyecto, ocultar/restaurar y pantalla completa. Pendiente: reconstruir imagen/ISO y probar en la VM con ratón real.

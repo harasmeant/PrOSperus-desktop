@@ -45,3 +45,4 @@ Según `README.md` y la demo (`demo-system/`, `prototype/`):
 4. Instalar/asegurar paquetes de aplicaciones en el contenedor base (`Containerfile.base` / `Containerfile`): `gimp`, `gedit`, `firefox`, `libreoffice`, `vscodium` (opcional pero documentado).
 5. Añadir `networkmanager` y `wireless-tools` para red real.
 6. Validar comportamiento en Boxes con UEFI confirmada.
+- [~] Red básica (NM + wireless) en Containerfile.base

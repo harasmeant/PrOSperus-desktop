@@ -1,12 +1,13 @@
 """Project desktop following the accepted Obsidian visual reference."""
 # SPDX-License-Identifier: GPL-3.0-only
 import argparse
+import os
 import math
 from pathlib import Path
 import subprocess
 import sys
 
-from PySide6.QtCore import QPointF, QRectF, QSettings, Qt, QTimer, QUrl
+from PySide6.QtCore import QEasingCurve, QEvent, QPointF, QPropertyAnimation, QRect, QRectF, QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QFont, QKeySequence, QPainter, QPainterPath, QPen, QShortcut, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDialog, QFrame, QHBoxLayout, QInputDialog,
     QLabel, QLayout, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
@@ -19,6 +20,8 @@ from .appearance import (Palette, Wallpaper, draw_symbol, paint_wallpaper,
 from .model import Vault
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
+from .window_manager import WindowManager
+from .window_layouts import LayoutOptions, screen_profile
 from .file_actions import FileActions, local_paths
 from .desktop_keys import DesktopKeys, SHORTCUT_HELP
 from .controls import ControlsDialog, SessionControls
@@ -227,6 +230,9 @@ class MapNode(QPushButton):
         if not center:
             self.setToolTip(str(path.relative_to(surface.shell.vault.root)))
 
+    def compact(self):
+        return not self.center and self.path.is_dir() and not self.surface.expanding
+
     def mousePressEvent(self, event):
         if not self.center and event.button() == Qt.MouseButton.LeftButton:
             self.surface.select(self.path, bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier))
@@ -235,7 +241,7 @@ class MapNode(QPushButton):
     def mouseDoubleClickEvent(self, event):
         if not self.center and event.button() == Qt.MouseButton.LeftButton:
             if not self.surface.shell.accessibility.single_click:
-                self.surface.shell.activate(self.path)
+                self.surface.open_node(self)
             event.accept()
         else:
             super().mouseDoubleClickEvent(event)
@@ -247,17 +253,23 @@ class MapNode(QPushButton):
                      and self.surface.shell.accessibility.single_click)
         super().mouseReleaseEvent(event)
         if open_path:
-            self.surface.shell.activate(self.path)
+            self.surface.open_node(self)
 
     def keyPressEvent(self, event):
         if not self.center and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-            self.surface.shell.activate(self.path)
+            self.surface.open_node(self)
         elif not self.center and event.key() == Qt.Key.Key_Space:
             self.surface.select(self.path, bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier))
         elif event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down):
             self.surface.focus_next(self.path, -1 if event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Up) else 1)
         else:
             super().keyPressEvent(event)
+
+    def event(self, event):
+        # Tab salta entre carpetas del mapa antes de que Qt mueva el foco.
+        if self.surface.handle_tab(event, self.path):
+            return True
+        return super().event(event)
 
     def contextMenuEvent(self, event):
         if self.path and self.path not in self.surface.selection:
@@ -273,6 +285,14 @@ class MapNode(QPushButton):
         rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         p.setBrush(fill); p.setPen(QPen(QColor(colors.accent if selected or self.hasFocus() else colors.border), 2.5 if selected else 1.2))
         p.drawRoundedRect(rect, 13, 13)
+        if self.compact():
+            # Carpeta del mapa: solo el nombre; su contenido sale en ramas.
+            draw_symbol(p, QRectF(12, self.height() / 2 - 9, 18, 18), 'folder', colors.accent)
+            p.setPen(QColor(colors.text))
+            p.setFont(QFont('DejaVu Sans', self.surface.shell.accessibility.font_size(10), QFont.Weight.Bold))
+            text = p.fontMetrics().elidedText(self.title, Qt.TextElideMode.ElideRight, self.width() - 46)
+            p.drawText(QRectF(36, 0, self.width() - 44, self.height()), Qt.AlignmentFlag.AlignVCenter, text)
+            return
         kind = 'folder' if self.center or self.path.is_dir() else 'note'
         draw_symbol(p, QRectF(self.width() / 2 - 10, 10, 20, 20), kind, colors.accent)
         p.setPen(QColor(colors.text))
@@ -284,7 +304,39 @@ class MapNode(QPushButton):
         p.drawText(QRectF(8, self.height() - 22, self.width() - 16, 17), Qt.AlignmentFlag.AlignCenter, self.subtitle)
 
 
+class LeafNode(QPushButton):
+    """Archivo o subcarpeta que sale de una carpeta del mapa."""
+    def __init__(self, surface, parent_node, path=None, more=0):
+        super().__init__(surface)
+        self.surface, self.parent_node, self.path = surface, parent_node, path
+        self.text_value = f'+{more} más' if path is None else (path.name if path.is_dir() or path.suffix.lower() != '.md' else path.stem)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip(self.text_value if path is None else str(path.relative_to(surface.shell.vault.root)))
+        self.setAccessibleName(self.text_value)
+        self.clicked.connect(self.open)
+
+    def open(self):
+        # «+N más» entra en la carpeta; el resto abre el archivo o la subcarpeta.
+        self.surface.open_node(self.parent_node) if self.path is None else self.surface.shell.activate(self.path)
+
+    def paintEvent(self, event):
+        p = QPainter(self); p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        colors = self.surface.shell.colors
+        fill = QColor(colors.hover if self.underMouse() else colors.card); fill.setAlpha(200)
+        p.setBrush(fill); p.setPen(QPen(QColor(colors.border), 1))
+        p.drawRoundedRect(QRectF(self.rect()).adjusted(.5, .5, -.5, -.5), self.height() / 2, self.height() / 2)
+        if self.path is not None:
+            draw_symbol(p, QRectF(8, self.height() / 2 - 7, 14, 14), 'folder' if self.path.is_dir() else 'note', colors.accent)
+        p.setPen(QColor(colors.text if self.path is not None else colors.muted))
+        p.setFont(QFont('DejaVu Sans', self.surface.shell.accessibility.font_size(8)))
+        left = 26 if self.path is not None else 10
+        text = p.fontMetrics().elidedText(self.text_value, Qt.TextElideMode.ElideRight, self.width() - left - 8)
+        p.drawText(QRectF(left, 0, self.width() - left - 6, self.height()), Qt.AlignmentFlag.AlignVCenter, text)
+
+
 class Surface(QWidget):
+    LEAVES = 4
     def __init__(self, shell):
         super().__init__()
         self.shell = shell
@@ -293,8 +345,71 @@ class Surface(QWidget):
         self.setAcceptDrops(True)
         self.setMinimumSize(640, 340)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.leaves = []
+        self.expanding = None
         self.center = MapNode(self, center=True)
         self.center.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
+    def build_leaves(self):
+        """Crea las ramas de contenido de cada carpeta visible en el mapa."""
+        for leaf in self.leaves:
+            leaf.hide(); leaf.deleteLater()
+        self.leaves = []
+        for node in self.nodes:
+            if not node.path.is_dir():
+                continue
+            try:
+                inside = self.shell.vault.entries(node.path)
+            except (OSError, ValueError):
+                continue
+            shown = inside[:self.LEAVES]
+            for path in shown:
+                self.leaves.append(LeafNode(self, node, path))
+            if len(inside) > len(shown):
+                self.leaves.append(LeafNode(self, node, more=len(inside) - len(shown)))
+        for leaf in self.leaves:
+            leaf.show()
+
+    def open_node(self, node):
+        """Abre un nodo; las carpetas se expanden hasta ocupar el mapa."""
+        if self.expanding is not None:
+            return
+        if not node.path.is_dir():
+            self.shell.activate(node.path); return
+        self.expanding = node
+        for leaf in self.leaves:
+            leaf.hide()
+        node.raise_()
+        animation = QPropertyAnimation(node, b'geometry', self)
+        animation.setDuration(280); animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        animation.setStartValue(node.geometry()); animation.setEndValue(QRect(self.rect()))
+        animation.valueChanged.connect(lambda *_: self.update())
+
+        def finished():
+            self.expanding = None
+            self.shell.navigate(node.path)
+        animation.finished.connect(finished)
+        animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+
+    def handle_tab(self, event, path=None):
+        if event.type() != QEvent.Type.KeyPress or event.key() not in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab):
+            return False
+        if event.modifiers() & ~Qt.KeyboardModifier.ShiftModifier:
+            return False  # Ctrl+Tab y Super+Tab tienen otros usos.
+        # Los nodos se colocan desde arriba en sentido horario: +1 es horario.
+        step = -1 if event.key() == Qt.Key.Key_Backtab else 1
+        folders = [n for n in self.nodes if n.path.is_dir()] or self.nodes
+        if not folders:
+            return False
+        index = next((i for i, n in enumerate(folders) if n.path == path), -1 if step == 1 else 0)
+        node = folders[(index + step) % len(folders)]
+        self.select(node.path); node.setFocus()
+        return True
+
+    def event(self, event):
+        if self.handle_tab(event):
+            return True
+        return super().event(event)
 
     def select(self, path, toggle=False):
         if toggle:
@@ -360,12 +475,32 @@ class Surface(QWidget):
         nh = max(80, min(108, int(height * .21)))
         cw = max(166, min(226, int(width * .2)))
         self.center.setGeometry((width - cw) // 2, (height - nh - 8) // 2, cw, nh + 8)
-        rx, ry = max(180, width * .36), max(110, height * .37)
+        rx, ry = max(200, width * .31), max(120, height * .31)
+        fw, fh = max(130, min(176, int(width * .14))), 42
+        lw, lh = max(104, min(150, int(width * .11))), 26
+
+        def clamp(x, y, w, h):
+            return QRect(round(max(4, min(width - w - 4, x - w / 2))), round(max(4, min(height - h - 4, y - h / 2))), w, h)
         for index, widget in enumerate(self.nodes):
             angle = -math.pi / 2 + index * 2 * math.pi / max(1, len(self.nodes))
             cx = width / 2 + math.cos(angle) * rx
             cy = height / 2 + math.sin(angle) * ry
-            widget.setGeometry(round(cx - nw / 2), round(cy - nh / 2), nw, nh)
+            if widget is self.expanding:
+                continue
+            widget.setGeometry(clamp(cx, cy, fw, fh) if widget.path.is_dir() else clamp(cx, cy, nw, nh))
+            # Ramas del contenido: abanico hacia fuera, más allá de la carpeta.
+            leaves = [leaf for leaf in self.leaves if leaf.parent_node is widget]
+            # Separación en píxeles perpendicular a la rama: arriba/abajo se
+            # reparten en horizontal y a los lados en vertical, sin solaparse.
+            dx, dy = math.cos(angle), math.sin(angle)
+            horizontal = abs(dx) > abs(dy)
+            gap = lh + 8 if horizontal else lw + 10
+            distance = (fw / 2 + lw / 2 + 50) if horizontal else (fh / 2 + lh / 2 + 56)
+            for j, leaf in enumerate(leaves):
+                offset = (j - (len(leaves) - 1) / 2) * gap
+                lx = cx + dx * distance + (0 if horizontal else offset)
+                ly = cy + dy * distance + (offset if horizontal else 0)
+                leaf.setGeometry(clamp(lx, ly, lw, lh))
         for panel in self.shell.panels.values():
             panel.resize(min(panel.width(), width), min(panel.height(), height))
             panel.move(max(0, min(panel.x(), width - panel.width())), max(0, min(panel.y(), height - panel.height())))
@@ -379,10 +514,19 @@ class Surface(QWidget):
         color = QColor(self.shell.colors.accent); color.setAlpha(130)
         p.setPen(QPen(color, 1.2))
         origin = QPointF(self.width() / 2, self.height() / 2)
+        if self.expanding is not None:
+            return
         for widget in self.nodes:
             end = QPointF(widget.geometry().center())
             path = QPainterPath(origin)
             path.cubicTo(QPointF((origin.x() + end.x()) / 2, origin.y()), QPointF(end.x(), (origin.y() + end.y()) / 2), end)
+            p.drawPath(path)
+        color.setAlpha(90); p.setPen(QPen(color, 1))
+        for leaf in self.leaves:
+            start, end = QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center())
+            path = QPainterPath(start)
+            middle = QPointF((start.x() + end.x()) / 2, (start.y() + end.y()) / 2)
+            path.quadTo(QPointF(middle.x(), start.y()), end)
             p.drawPath(path)
 
 
@@ -474,7 +618,7 @@ class Explorer(QDialog):
         if path.is_dir():
             self.go(path)
         else:
-            self.shell.navigate(self.folder); self.shell.open_note(path); self.accept()
+            self.shell.navigate(self.folder); self.shell.activate(path); self.accept()
 
     def show_map(self):
         self.shell.navigate(self.folder); self.accept()
@@ -518,6 +662,13 @@ class Desktop(QMainWindow):
         self.apps = ApplicationService(self)
         self.apps.failed.connect(lambda error: self.status.setText(error))
         self.apps.favorites_changed.connect(self.update_dock)
+        self.apps.working_directory = str(self.folder)
+        # Con Sway, las aplicaciones flotan sobre el mapa: pantalla completa o
+        # Fibonacci, y cada proyecto es un espacio propio.
+        self.windows = WindowManager(self, self.layout_options)
+        self.windows.message.connect(lambda text: self.status.setText(text))
+        self.app_windows = []
+        self.windows.windows_changed.connect(self.set_app_windows)
         self.project_paths = []
         self.setWindowTitle('PrOSperus desktop')
         self.resize(1360, 850)
@@ -739,7 +890,30 @@ class Desktop(QMainWindow):
     def toggle_fullscreen(self):
         self.showNormal() if self.isFullScreen() and not self.kiosk else self.showFullScreen()
 
+    def layout_options(self):
+        # Mismo perfil guardado en «Distribución» para la pantalla estándar.
+        screen = QApplication.primaryScreen()
+        size = screen.availableGeometry() if screen else None
+        profile = screen_profile(size.width(), size.height()) if size else 'standard'
+        prefix = 'layouts/profiles/' + profile + '/'
+        try:
+            options = LayoutOptions(str(self.settings.value(prefix + 'mode', 'spiral')),
+                                    *[int(self.settings.value(prefix + key, default))
+                                      for key, default in [('gap', 12), ('ratio', 50), ('max_width', 0)]])
+            options.validate(); return options
+        except (TypeError, ValueError):
+            return LayoutOptions()
+
+    def toggle_app_mode(self):
+        self.windows.set_mode('fullscreen' if self.windows.mode == 'fibonacci' else 'fibonacci')
+        self.update_dock()
+
+    def set_app_windows(self, windows):
+        if windows != self.app_windows:
+            self.app_windows = windows; self.update_dock()
+
     def toggle_desktop(self):
+        self.windows.show_desktop()
         visible = [panel.path for panel in self.panels.values() if panel.isVisible()]
         if visible:
             self.desktop_hidden = visible
@@ -775,6 +949,9 @@ class Desktop(QMainWindow):
                 self.history = self.history[:self.history_index + 1] + [folder]
                 self.history_index = len(self.history) - 1
             self.folder = folder; self.page = 0
+            self.apps.working_directory = str(folder)
+            parts = folder.relative_to(self.vault.root).parts
+            self.windows.switch_workspace(parts[0] if parts else 'General')
             self.search.blockSignals(True); self.search.clear(); self.search.blockSignals(False)
             self.apply_appearance(); self.render()
             for panel in self.panels.values():
@@ -813,21 +990,27 @@ class Desktop(QMainWindow):
         self.surface.selection = []
         for path in entries[self.page * self.PAGE_SIZE:(self.page + 1) * self.PAGE_SIZE]:
             item = MapNode(self.surface, path)
-            item.title = path.name if path.is_dir() else path.stem
+            item.title = path.name if path.is_dir() or path.suffix.lower() != '.md' else path.stem
             item.setText(item.title)
-            item.subtitle = 'Carpeta · Doble clic' if path.is_dir() else 'Nota · Doble clic'
+            item.subtitle = ('Carpeta · Doble clic' if path.is_dir() else 'Nota · Doble clic'
+                             if path.suffix.lower() == '.md' else 'Archivo · Abrir con su aplicación')
             item.show(); self.surface.nodes.append(item)
         self.surface.center.title = self.title.text()
         self.surface.center.subtitle = f'{len(entries)} archivos y carpetas' if entries else 'Crea tu primera nota'
         self.page_label.setText(f'{self.page + 1} / {max(1, math.ceil(len(entries) / self.PAGE_SIZE))}')
         self.previous.setEnabled(self.page > 0); self.next.setEnabled((self.page + 1) * self.PAGE_SIZE < len(entries))
-        self.surface.arrange()
+        self.surface.build_leaves(); self.surface.arrange()
         for panel in self.panels.values():
             if panel.isVisible():
                 panel.raise_()
 
     def activate(self, path):
-        self.navigate(path) if path.is_dir() else self.open_note(path)
+        if path.is_dir():
+            self.navigate(path)
+        elif path.suffix.lower() == '.md':
+            self.open_note(path)
+        else:
+            self.status.setText('Abriendo ' + path.name + '…'); self.apps.run('open', str(path))
 
     def open_note(self, path, edit=False):
         try:
@@ -920,6 +1103,15 @@ class Desktop(QMainWindow):
             item.setAccessibleName(full_text)
             item.setFixedWidth(max(110, item.fontMetrics().horizontalAdvance(item.text()) + 34 + icon_width))
         add_access(button('Aplicaciones', self.open_applications))
+        if self.windows.available:
+            mode = button('Fibonacci' if self.windows.mode == 'fibonacci' else 'Pantalla completa', self.toggle_app_mode)
+            mode.setToolTip('Cómo se abren las aplicaciones. Pulsa para cambiar.'); add_access(mode)
+            for window in self.app_windows:
+                item = button(window['name'], lambda checked=False, w=window: self.windows.focus(w['id'], w['hidden']))
+                item.setIcon(symbol_icon('window', self.colors.accent))
+                item.setObjectName('minimized' if window['hidden'] else 'openNote')
+                item.setToolTip(('Recuperar: ' if window['hidden'] else 'Enfocar: ') + window['name'])
+                add_access(item)
         for app in self.apps.favorites:
             item = button('★ ' + app['name'], lambda checked=False, a=app: self.apps.run('launch', a['id']))
             item.setToolTip(app['name']); add_access(item)
@@ -995,7 +1187,10 @@ def main():
         desktop = Desktop(args.root, args.kiosk, args.system_session)
     except (OSError, ValueError) as error:
         parser.exit(1, str(error) + '\n')
-    desktop.showFullScreen() if args.kiosk else desktop.show()
+    # Bajo Sway el escritorio es la ventana de mosaico y ya ocupa la pantalla;
+    # en pantalla completa taparía las aplicaciones flotantes.
+    desktop.showFullScreen() if args.kiosk and not os.environ.get('SWAYSOCK') else desktop.show()
+    desktop.windows.start()
     if args.screenshot:
         def capture():
             desktop.grab().save(str(args.screenshot)); app.quit()
