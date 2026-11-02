@@ -7,6 +7,9 @@ COPY image/rootfs/ /
 RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/libexec/prosperus-session /usr/libexec/prosperus-client \
     && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
     && passwd --lock root \
+    && usermod -aG wheel prosperus \
+    && chmod 0440 /etc/sudoers.d/prosperus-vm \
+    && systemctl enable NetworkManager.service \
     && systemctl enable greetd.service \
     && systemctl set-default graphical.target \
     && systemctl mask getty@tty1.service \

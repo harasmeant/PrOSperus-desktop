@@ -12,6 +12,6 @@ qemu-system-x86_64 -machine q35,accel=kvm -cpu host -smp 2 -m 2048 \
     -drive file=out/prosperus.qcow2,format=qcow2,if=virtio,snapshot=on \
     -vga virtio -usb -device usb-tablet -device virtio-keyboard-pci \
     -netdev user,id=net0 \
-    -device e1000,netdev=net0 \
+    -device virtio-net-pci,netdev=net0 \
     -display gtk \
     -serial file:out/vm/serial.log

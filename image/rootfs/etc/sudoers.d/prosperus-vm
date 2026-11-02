@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Solo imagen de desarrollo/VM (como el usuario Live de Fedora): instalar con
+# «sudo dnf install …» sin contraseña. Una instalación real debe pedir contraseña.
+prosperus ALL=(ALL) NOPASSWD: ALL

@@ -10,6 +10,7 @@ import os
 import socket
 import struct
 import threading
+import time
 from PySide6.QtCore import QObject, Signal
 
 from .window_session import request, walk, DESKTOP_ID, apply
@@ -81,10 +82,25 @@ class WindowManager(QObject):
         if not self.available:
             return
         self._stopping = False
-        self.switch_workspace(self.workspace)
         threading.Thread(target=self._run, daemon=True).start()
 
+    def _place_desktop(self):
+        # La orden de mover solo afecta a ventanas ya mapeadas: esperar a que
+        # el escritorio exista en el árbol antes de llevarlo a su espacio.
+        deadline = time.monotonic() + 20
+        while not self._stopping and time.monotonic() < deadline:
+            try:
+                if any(n.get('app_id') == DESKTOP_ID for n in walk(request(4))):
+                    self.switch_workspace(self.workspace)
+                    if self._placed:
+                        return
+            except (OSError, ValueError):
+                pass
+            time.sleep(.2)
+        self.message.emit('No se pudo colocar el escritorio en su espacio de trabajo.')
+
     def _run(self):
+        self._place_desktop()
         while not self._stopping:
             try:
                 for event in subscribe(['window']):
@@ -188,8 +204,9 @@ class WindowManager(QObject):
         self.workspace = name
         target = self._quoted(name)
         try:
-            request(0, f'[app_id="{DESKTOP_ID}"] move container to workspace {target}; workspace {target}')
-            self._placed = True
+            replies = request(0, f'[app_id="{DESKTOP_ID}"] move container to workspace {target}; workspace {target}')
+            # Sin ventana que coincida, Sway cambiaría de espacio sin el escritorio.
+            self._placed = all(reply.get('success') for reply in replies)
         except (OSError, ValueError) as e:
             self.message.emit(f'No se pudo cambiar de escritorio: {e}')
         self.refresh()

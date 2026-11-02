@@ -9,5 +9,7 @@ RUN dnf -y --setopt=install_weak_deps=False install \
     mesa-dri-drivers mesa-libEGL mesa-libGL \
     dbus-daemon polkit kbd dejavu-sans-fonts glibc-langpack-es \
     python3-evdev \
-    NetworkManager xterm gimp libreoffice-writer \
+    NetworkManager NetworkManager-wifi iputils curl \
+    foot sudo git nano python3-pip \
+    gimp libreoffice-writer \
     && dnf clean all

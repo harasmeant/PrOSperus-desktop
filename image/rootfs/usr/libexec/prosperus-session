@@ -6,4 +6,4 @@ export QT_QPA_PLATFORM=wayland
 export WLR_RENDERER=pixman
 export XKB_DEFAULT_LAYOUT=es
 # Sway sustituye a Cage: permite varias ventanas sobre el mapa de proyectos.
-exec dbus-run-session -- sway --config /etc/sway/prosperus.conf
+exec dbus-run-session -- systemd-cat --identifier=prosperus-session sway --config /etc/sway/prosperus.conf

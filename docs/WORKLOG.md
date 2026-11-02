@@ -319,3 +319,6 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Tab / Mayús+Tab recorren las carpetas del mapa en sentido horario/antihorario. Super+Tab / Super+Mayús+Tab recorren el selector de proyectos; al soltar Super se abre.
 - Apps de trabajo aparcadas en `image/Containerfile.apps` (sin construir). Restaurados ISO-LIVE.md y ARQUITECTURA-DISTRO.md, dañados por ediciones automáticas.
 - Verificado: 77 pruebas; laboratorio Sway sin pantalla (contenedor window-tests, sin red, 768 MiB) con dos terminales: Fibonacci automático, cambio de proyecto, ocultar/restaurar y pantalla completa. Pendiente: reconstruir imagen/ISO y probar en la VM con ratón real.
+- Arranque real de la imagen (QEMU/KVM, 2 GiB, snapshot): escritorio visible, dos terminales foot (Super+Intro) en Fibonacci sobre el mapa, red por NetworkManager (ping a fedoraproject.org), Python 3.14.8 y pip 26.0.1.
+- Corregida carrera de arranque: el escritorio se movía a «General» antes de existir y quedaba oculto en el espacio «1». Ahora se espera a la ventana y se comprueba la respuesta de Sway. La salida de la sesión va al diario (`journalctl -t prosperus-session`).
+- Añadidos foot, sudo (sin contraseña solo en la imagen de desarrollo), git, nano, curl, pip y NetworkManager habilitado. Guía: docs/TERMINAL-RED-PYTHON.md.
