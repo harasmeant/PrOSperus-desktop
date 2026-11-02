@@ -14,6 +14,7 @@ import time
 from .window_layouts import LayoutOptions, Rect, arrange
 
 DESKTOP_ID = 'org.prosperus.Desktop'
+HANDLE_ID = 'org.prosperus.Handle'
 
 
 @dataclass(frozen=True)
@@ -63,7 +64,7 @@ def targets(tree, workspaces, output, options):
     if node is None:
         raise ValueError('El espacio de trabajo ha cambiado; vuelve a intentarlo.')
     windows = [n for n in walk(node) if (n.get('app_id') or n.get('window'))
-               and n.get('app_id') != DESKTOP_ID
+               and n.get('app_id') not in (DESKTOP_ID, HANDLE_ID)
                and (n.get('window_properties') or {}).get('class') != DESKTOP_ID]
     windows.sort(key=lambda n: n['id'])
     if not windows:

@@ -2,7 +2,8 @@
 """Encabezado de ventana personalizado para entornos Wayland (Sway)."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QWidget, QLabel, QPushButton, QHBoxLayout
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout
+from .window_controls import HoverControls
 
 class WindowHeader(QWidget):
     def __init__(self, title: str, window: QWidget):
@@ -23,17 +24,11 @@ class WindowHeader(QWidget):
         # Espacio derecho de desplazamiento para el botón
         layout.addStretch()
 
-        # Botón de cierre con símbolo universal
-        self.close_btn = QPushButton("✕")
-        # Nombre de objeto para estilizar el botón
-        self.close_btn.setObjectName("headerClose")
-        # Tamaño fijo del botón
-        self.close_btn.setFixedSize(30, 30)
-        # Asistente textual para el botón
-        self.close_btn.setToolTip("Cerrar")
-        # Conexión de acción al cierre de la ventana destino
-        self.close_btn.clicked.connect(window.close)
-        layout.addWidget(self.close_btn)
+        # Puntos de ventana (ampliar y cerrar) que crecen al pasar el ratón por la ventana.
+        # Sin minimizar: Sway no lo implementa y estas ventanas pertenecen al escritorio.
+        self.controls = HoverControls(self, watch=window, actions=('maximize', 'close'))
+        self.controls.triggered.connect(self.trigger)
+        layout.addWidget(self.controls)
 
         # Altura fija para evitar cambios de layout
         self.setFixedHeight(46)
@@ -44,12 +39,6 @@ class WindowHeader(QWidget):
         self.setStyleSheet("""
             QWidget { background: transparent; }
             QLabel#headerTitle { font-weight: bold; font-size: 16px; }
-            QPushButton#headerClose {
-                border: none;
-                border-radius: 15px;
-                font-size: 15px;
-            }
-            QPushButton#headerClose:hover { background: rgba(255, 255, 255, 0.12); }
         """)
 
     def mousePressEvent(self, event):
@@ -58,11 +47,14 @@ class WindowHeader(QWidget):
             self.target.windowHandle().startSystemMove()
             event.accept()
 
+    def toggle_maximized(self):
+        self.target.showNormal() if self.target.isMaximized() else self.target.showMaximized()
+
+    def trigger(self, action):
+        self.target.close() if action == 'close' else self.toggle_maximized()
+
     def mouseDoubleClickEvent(self, event):
         # Alternar maximizado al doble clic
         if event.button() == Qt.MouseButton.LeftButton:
-            if self.target.isMaximized():
-                self.target.showNormal()
-            else:
-                self.target.showMaximized()
+            self.toggle_maximized()
             event.accept()

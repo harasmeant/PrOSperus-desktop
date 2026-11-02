@@ -26,6 +26,7 @@ from .map_layout import concentric_slots, link_order, nearest_in_direction, sepa
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
 from .window_manager import WindowManager
+from .window_controls import HoverControls
 from .window_layouts import LayoutOptions, Rect, arrange, screen_profile
 from .file_actions import FileActions, local_paths
 from .desktop_keys import DesktopKeys, SHORTCUT_HELP
@@ -141,11 +142,11 @@ class NotePanel(QFrame):
         self.save_button.hide()
         top.addWidget(self.save_button)
         self.normal_geometry = None
-        self.maximize_button = button('□ Ampliar', self.toggle_maximized); self.maximize_button.setAccessibleName('Ampliar nota')
-        top.addWidget(self.maximize_button)
-        minimize = button('— Minimizar', self.minimize); minimize.setAccessibleName('Minimizar nota')
-        close = button('× Cerrar', self.close_note); close.setAccessibleName('Cerrar nota')
-        top.addWidget(minimize); top.addWidget(close)
+        # Puntos de ventana: crecen al pasar el ratón por la nota.
+        self.controls = HoverControls(self, watch=self)
+        self.controls.triggered.connect(lambda action: {'minimize': self.minimize, 'maximize': self.toggle_maximized,
+                                                         'close': self.close_note}[action]())
+        top.addWidget(self.controls)
         layout.addLayout(top)
         self.pages = QStackedWidget()
         self.reader = SafeReader()
@@ -245,7 +246,6 @@ class NotePanel(QFrame):
             self.setGeometry(self.shell.surface.rect())
         elif self.normal_geometry is not None:
             self.setGeometry(self.normal_geometry); self.normal_geometry = None
-        self.maximize_button.setText('❐ Restaurar' if self.normal_geometry is not None else '□ Ampliar')
         self.raise_()
 
     def minimize(self):
@@ -1407,7 +1407,7 @@ class Desktop(QMainWindow):
             # Sin espacio para todas: se deja la posición que tenían.
             self.status.setText(str(error)); return
         for panel, box in zip(panels, boxes):
-            panel.normal_geometry = None; panel.maximize_button.setText('□ Ampliar')
+            panel.normal_geometry = None
             panel.setGeometry(box.x, box.y, box.width, box.height)
 
     def new_note(self, checked=False, folder=None):

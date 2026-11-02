@@ -13,7 +13,7 @@ import threading
 import time
 from PySide6.QtCore import QObject, Signal
 
-from .window_session import request, walk, DESKTOP_ID, apply
+from .window_session import request, walk, DESKTOP_ID, HANDLE_ID, apply
 from .window_layouts import LayoutOptions
 
 SUBSCRIBE_TYPE = 2
@@ -123,7 +123,7 @@ class WindowManager(QObject):
                 return
         change = e.get('change')
         c = e.get('container', {})
-        if c.get('app_id') == DESKTOP_ID:
+        if c.get('app_id') in (DESKTOP_ID, HANDLE_ID):
             return
         if (c.get('window_properties') or {}).get('class') == DESKTOP_ID:
             return
@@ -193,7 +193,7 @@ class WindowManager(QObject):
                 continue
             for n in walk(ws):
                 if (n.get('type') in ('con', 'floating_con') and (n.get('app_id') or n.get('window'))
-                        and n.get('app_id') != DESKTOP_ID
+                        and n.get('app_id') not in (DESKTOP_ID, HANDLE_ID)
                         and (n.get('window_properties') or {}).get('class') != DESKTOP_ID):
                     found.append((n, ws.get('name') == self._hidden()))
         return found

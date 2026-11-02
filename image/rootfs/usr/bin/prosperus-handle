@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Controles de ventana para aplicaciones externas (ver prosperus/window_handle.py).
+export PYTHONPATH=/usr/lib/prosperus
+exec /usr/bin/python3 -m prosperus.window_handle "$@"
