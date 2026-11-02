@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 FROM localhost/prosperus-base:dev
+# Duplicar pantallas: Sway no tiene modo espejo propio.
+RUN dnf -y --setopt=install_weak_deps=False install wl-mirror && dnf clean all
 COPY desktop/prosperus /usr/lib/prosperus/prosperus
 COPY demo-system /usr/share/prosperus/demo
 COPY LICENSE /usr/share/licenses/prosperus/LICENSE

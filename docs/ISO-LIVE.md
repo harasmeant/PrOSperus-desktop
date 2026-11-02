@@ -52,6 +52,22 @@ pide escribir `SI`: borra todo el USB. Después:
 3. Si el USB se graba con otra herramienta (Fedora Media Writer, `dd`), arranca
    igual pero sin persistencia: todo queda en RAM.
 
+## Varios monitores
+
+Sway detecta todos los monitores conectados y por defecto **extiende** el
+escritorio hacia la derecha. En Sistema → Controles → «Monitores (extender,
+duplicar)…» se elige:
+
+- **Extender escritorio**, con la pantalla principal y el lado donde van las demás.
+- **Duplicar pantalla principal** (usa `wl-mirror`).
+- **Solo la pantalla principal** (apaga las demás).
+
+La elección se guarda en `~/.config/prosperus/displays.json` (persistente con
+`PROSPERUS_DATA`) y se aplica al iniciar la sesión. Con monitores conectados
+después del arranque, pulsa «Detectar de nuevo» y «Aplicar».
+Super+Mayús+flecha lleva la ventana activa al monitor de ese lado y
+Super+Ctrl+flecha mueve el foco entre monitores.
+
 ## Asistente Claude
 
 Claude Code viene instalado. Ábrelo con **Super+C**, desde Aplicaciones

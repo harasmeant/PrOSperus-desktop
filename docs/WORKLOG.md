@@ -348,3 +348,10 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Claude Code instalado para el usuario `prosperus` (instalador oficial). Super+C o «Asistente Claude» lo abren en `~/Proyectos`; con persistencia se conservan el inicio de sesión y las actualizaciones.
 - Firmware Wi-Fi/gráficas (Intel, Realtek, Atheros, Broadcom, MediaTek, AMD) y controladores USB/NVMe en el initramfs para equipos reales.
 - Comprobado: tabla GPT de la ISO, `write-usb.sh` sobre un archivo de 6 GiB (partición 4 ext4 `PROSPERUS_DATA`) y el contenido de la imagen. Aún sin probar en un equipo físico. No se ha usado OpenRouter: devolvía 429.
+
+## 2 de noviembre de 2026 · Varios monitores
+
+- `display_settings.py`: diálogo «Monitores» (Sistema → Controles) para extender (principal y lado), duplicar con `wl-mirror` o usar solo la principal. Se guarda en `~/.config/prosperus/displays.json` y Sway lo aplica al iniciar.
+- Sway: Super+Mayús+flecha mueve la ventana a otro monitor; Super+Ctrl+flecha cambia el foco.
+- Imagen: paquete `wl-mirror`. 107 pruebas correctas. OpenRouter devolvió 429; el código lo escribió Claude.
+- Notas: siguen el botón «Fibonacci / Pantalla completa» del dock (antes solo afectaba a aplicaciones). En Fibonacci se reparten sin solaparse al abrir, cerrar o cambiar de modo; en Pantalla completa la nota ocupa todo el escritorio. Botón «□ Ampliar / ❐ Restaurar» en cada nota. 110 pruebas correctas.

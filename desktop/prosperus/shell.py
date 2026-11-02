@@ -26,7 +26,7 @@ from .map_layout import concentric_slots, link_order, nearest_in_direction, sepa
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
 from .window_manager import WindowManager
-from .window_layouts import LayoutOptions, screen_profile
+from .window_layouts import LayoutOptions, Rect, arrange, screen_profile
 from .file_actions import FileActions, local_paths
 from .desktop_keys import DesktopKeys, SHORTCUT_HELP
 from .controls import ControlsDialog, SessionControls
@@ -140,6 +140,9 @@ class NotePanel(QFrame):
         self.save_button = button('Guardar', self.save)
         self.save_button.hide()
         top.addWidget(self.save_button)
+        self.normal_geometry = None
+        self.maximize_button = button('□ Ampliar', self.toggle_maximized); self.maximize_button.setAccessibleName('Ampliar nota')
+        top.addWidget(self.maximize_button)
         minimize = button('— Minimizar', self.minimize); minimize.setAccessibleName('Minimizar nota')
         close = button('× Cerrar', self.close_note); close.setAccessibleName('Cerrar nota')
         top.addWidget(minimize); top.addWidget(close)
@@ -233,6 +236,18 @@ class NotePanel(QFrame):
             QMessageBox.StandardButton.Save)
         return self.save() if answer == QMessageBox.StandardButton.Save else answer == QMessageBox.StandardButton.Discard
 
+    def toggle_maximized(self, checked=False, maximized=None):
+        """Ocupa todo el escritorio o vuelve al tamaño anterior."""
+        maximized = self.normal_geometry is None if maximized is None else maximized
+        if maximized:
+            if self.normal_geometry is None:
+                self.normal_geometry = self.geometry()
+            self.setGeometry(self.shell.surface.rect())
+        elif self.normal_geometry is not None:
+            self.setGeometry(self.normal_geometry); self.normal_geometry = None
+        self.maximize_button.setText('❐ Restaurar' if self.normal_geometry is not None else '□ Ampliar')
+        self.raise_()
+
     def minimize(self):
         self.minimized = True
         self.hide()
@@ -249,6 +264,8 @@ class NotePanel(QFrame):
             return
         self.shell.panels.pop(self.path, None)
         self.hide(); self.deleteLater()
+        if self.shell.windows.mode == 'fibonacci':
+            self.shell.arrange_notes()
         self.shell.update_dock()
         self.shell.surface.setFocus()
 
@@ -1133,6 +1150,10 @@ class Desktop(QMainWindow):
     def open_layout_settings(self):
         dialog = LayoutDialog(self); dialog.exec(); dialog.deleteLater()
 
+    def open_display_settings(self):
+        from .display_settings import DisplayDialog
+        dialog = DisplayDialog(self); dialog.exec(); dialog.deleteLater()
+
     def open_accessibility(self):
         dialog = AccessibilityDialog(self); dialog.exec(); dialog.deleteLater()
 
@@ -1209,6 +1230,8 @@ class Desktop(QMainWindow):
 
     def toggle_app_mode(self):
         self.windows.set_mode('fullscreen' if self.windows.mode == 'fibonacci' else 'fibonacci')
+        if self.windows.mode == 'fibonacci':
+            self.arrange_notes()
         self.update_dock()
 
     def set_app_windows(self, windows):
@@ -1358,11 +1381,34 @@ class Desktop(QMainWindow):
                 panel.resize(min(660, self.surface.width()), min(470, self.surface.height()))
                 panel.move(max(0, self.surface.width() - panel.width() - 24), min(24 * (len(self.panels) % 4), max(0, self.surface.height() - panel.height())))
             panel.restore()
+            self.place_note(panel)
             if edit and panel.pages.currentWidget() != panel.editor:
                 panel.toggle_edit(); panel.editor.moveCursor(QTextCursor.MoveOperation.End)
             self.status.setText(str(path.relative_to(self.vault.root)))
         except (OSError, ValueError, UnicodeError) as error:
             self.status.setText(str(error))
+
+    def place_note(self, panel):
+        """Las notas siguen el modo del dock: Fibonacci las reparte, Pantalla completa amplía la nueva."""
+        if self.windows.mode == 'fullscreen':
+            panel.toggle_maximized(maximized=True)
+        else:
+            self.arrange_notes()
+
+    def arrange_notes(self):
+        panels = [p for p in self.panels.values() if p.project == self.folder and p.isVisible() and not p.minimized]
+        if not panels:
+            return
+        area = self.surface.rect()
+        try:
+            boxes = arrange(Rect(0, 0, area.width(), area.height()), len(panels), self.layout_options(),
+                            (max(p.minimumWidth() for p in panels), max(p.minimumHeight() for p in panels)))
+        except ValueError as error:
+            # Sin espacio para todas: se deja la posición que tenían.
+            self.status.setText(str(error)); return
+        for panel, box in zip(panels, boxes):
+            panel.normal_geometry = None; panel.maximize_button.setText('□ Ampliar')
+            panel.setGeometry(box.x, box.y, box.width, box.height)
 
     def new_note(self, checked=False, folder=None):
         place = ask_place(self, self.vault, 'Nueva nota', folder or self.folder)
@@ -1461,9 +1507,10 @@ class Desktop(QMainWindow):
             item.setAccessibleName(full_text)
             item.setFixedWidth(max(110, item.fontMetrics().horizontalAdvance(item.text()) + 34 + icon_width))
         add_access(button('Aplicaciones', lambda: self.open_applications()))
+        mode = button('Fibonacci' if self.windows.mode == 'fibonacci' else 'Pantalla completa', self.toggle_app_mode)
+        mode.setToolTip('Cómo se abren notas y aplicaciones: Fibonacci las reparte, Pantalla completa ocupa todo. Pulsa para cambiar.')
+        add_access(mode)
         if self.windows.available:
-            mode = button('Fibonacci' if self.windows.mode == 'fibonacci' else 'Pantalla completa', self.toggle_app_mode)
-            mode.setToolTip('Cómo se abren las aplicaciones. Pulsa para cambiar.'); add_access(mode)
             for window in self.app_windows:
                 item = button(window['name'], lambda checked=False, w=window: self.windows.toggle(w['id'], w['hidden']))
                 item.setIcon(symbol_icon('window', self.colors.accent))

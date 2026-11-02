@@ -92,6 +92,9 @@ class ControlsDialog(QDialog):
         distribution = QPushButton('Pantallas y distribución…')
         distribution.clicked.connect(shell.open_layout_settings)
         layout.addWidget(distribution)
+        monitors = QPushButton('Monitores (extender, duplicar)…')
+        monitors.clicked.connect(shell.open_display_settings)
+        layout.addWidget(monitors)
 
         # Botones para abrir ajustes generales del sistema (accesibilidad y drivers).
         for title, action in [('Accesibilidad y botones…', shell.open_accessibility),
