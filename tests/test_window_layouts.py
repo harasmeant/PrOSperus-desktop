@@ -101,3 +101,16 @@ class SwayPlanningTests(unittest.TestCase):
                 [{'success': True}, {'success': False, 'error': 'Ventana cerrada'}]]):
             with self.assertRaisesRegex(ValueError, 'Aplicación parcial: Ventana cerrada'):
                 apply('DP-1', LayoutOptions())
+
+
+class WindowToggleTests(unittest.TestCase):
+    def test_dock_click_minimizes_focused_and_focuses_others(self):
+        from unittest.mock import patch
+        from prosperus.window_manager import WindowManager
+        tree = {'id': 1, 'nodes': [], 'floating_nodes': [{'id': 7, 'focused': True}, {'id': 8, 'focused': False}]}
+        manager = WindowManager()
+        with patch('prosperus.window_manager.request', return_value=tree), \
+                patch.object(manager, 'minimize') as minimize, patch.object(manager, 'focus') as focus:
+            manager.toggle(7, False); minimize.assert_called_once_with(7)
+            manager.toggle(8, False); focus.assert_called_once_with(8, False)
+            manager.toggle(7, True); focus.assert_called_with(7, True)

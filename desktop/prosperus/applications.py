@@ -13,7 +13,9 @@ def catalogue():
     return sorted([
         {'id': app.get_id(), 'name': app.get_display_name(),
          'description': app.get_description() or '',
-         'keywords': list(app.get_keywords() or []) if hasattr(app, 'get_keywords') else []}
+         'keywords': list(app.get_keywords() or []) if hasattr(app, 'get_keywords') else [],
+         'icon': (app.get_icon().to_string() if app.get_icon() else '')
+        }
         for app in Gio.AppInfo.get_all() if app.get_id() and app.should_show()
     ], key=lambda app: app['name'].casefold())
 

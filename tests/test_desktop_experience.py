@@ -40,6 +40,23 @@ class DesktopExperienceTests(unittest.TestCase):
             panel.editor.setPlainText(panel.original)
         self.window.close(); self.window.deleteLater(); self.app.processEvents()
 
+    def test_dropping_a_card_on_another_swaps_their_slots(self):
+        surface = self.window.surface
+        a, b = surface.nodes[0], surface.nodes[1]
+        slot_a, slot_b = surface.slot_of[a], surface.slot_of[b]
+        a.move(b.geometry().center() - a.rect().center())
+        surface.drop(a)
+        self.assertEqual((surface.slot_of[a], surface.slot_of[b]), (slot_b, slot_a))
+
+    def test_dropping_a_note_on_a_folder_moves_it_inside(self):
+        self.window.navigate(self.root / 'Laboratorio')
+        surface = self.window.surface
+        note = next(n for n in surface.nodes if n.path.suffix == '.md')
+        folder = next(n for n in surface.nodes if n.path.is_dir())
+        note.move(folder.geometry().center() - note.rect().center())
+        surface.drop(note)
+        self.assertTrue((folder.path / note.path.name).exists())
+
     def test_browsing_covers_does_not_navigate_until_opened(self):
         self.window.navigate(self.root / 'Bienvenida')
         self.window.drawer.reveal()
@@ -75,9 +92,14 @@ class DesktopExperienceTests(unittest.TestCase):
 
     def test_dock_scrolls_instead_of_compressing_long_names(self):
         folder = self.root / 'Cuaderno'
-        for index in range(15):
-            (folder / f'Una nota de prueba bastante larga {index}.md').write_text('# Ejemplo')
-        self.window.resize(900, 650); self.window.navigate(folder); self.app.processEvents()
+        self.window.resize(900, 650); self.window.navigate(folder)
+        # El dock solo muestra lo abierto: abrir notas de nombre largo.
+        for index in range(8):
+            note = folder / f'Una nota de prueba bastante larga {index}.md'; note.write_text('# Ejemplo')
+            self.window.open_note(note)
+        self.window.update_dock(); self.app.processEvents()
+        names = [b.accessibleName() for b in self.window.dock_content.findChildren(QPushButton) if not b.isHidden()]
+        self.assertNotIn('Nota', names)  # las notas cerradas de la carpeta ya no salen
         self.assertGreater(self.window.dock_content.width(), self.window.dock_scroll.viewport().width())
         self.assertGreater(self.window.dock_scroll.horizontalScrollBar().maximum(), 0)
         for item in self.window.dock_content.findChildren(QPushButton):
@@ -138,8 +160,11 @@ class DesktopExperienceTests(unittest.TestCase):
         self.assertTrue(self.window.surface.rect().contains(panel.geometry()))
 
     def test_new_note_dialog_and_explorer_navigation(self):
-        with patch('prosperus.shell.QInputDialog.getText', return_value=('Idea nueva', True)):
-            self.window.new_note(folder=self.root / 'Cuaderno')
+        start = self.window.folder
+        with patch('prosperus.shell.ask_place', return_value=('Idea nueva', self.root / 'Cuaderno')) as ask:
+            self.window.new_note()
+        # El diálogo propone la carpeta actual como destino.
+        self.assertEqual(ask.call_args.args[3], start)
         note = self.root / 'Cuaderno/Idea nueva.md'
         self.assertTrue(note.exists())
         panel = self.window.panels[note]
@@ -150,6 +175,31 @@ class DesktopExperienceTests(unittest.TestCase):
         explorer.activate(explorer.items.item(0))
         self.assertIn(self.root / 'Laboratorio/Apuntes/Hipótesis.md', self.window.panels)
         explorer.deleteLater()
+
+    def test_move_note_to_another_project_refuses_open_notes(self):
+        note = self.root / 'Cuaderno/Nota.md'
+        target = self.root / 'Laboratorio/Apuntes'
+        self.window.open_note(note)
+        with patch('prosperus.shell.ask_place', return_value=('', target)) as ask:
+            self.window.move_to([note])
+        ask.assert_not_called(); self.assertTrue(note.exists())
+        self.window.panels[note].close_note()
+        with patch('prosperus.shell.ask_place', return_value=('', target)):
+            self.window.move_to([note])
+        self.assertFalse(note.exists()); self.assertTrue((target / 'Nota.md').is_file())
+
+    def test_open_and_close_folder_animate_and_navigate(self):
+        surface = self.window.surface
+        node = next(n for n in surface.nodes if n.path == self.root / 'Laboratorio')
+        surface.open_node(node)
+        self.assertEqual(self.window.folder, self.root / 'Laboratorio')
+        self.assertIsNotNone(surface.morph)
+        surface.morph.setCurrentTime(surface.morph.duration()); self.app.processEvents()
+        self.assertIsNone(surface.morph)
+        surface.close_node()
+        self.assertEqual(self.window.folder, self.root)
+        surface.morph.setCurrentTime(surface.morph.duration()); self.app.processEvents()
+        self.assertIsNone(surface.morph)
 
     def test_body_search_in_map_explorer_and_project_drawer(self):
         project = self.root / 'Cursos 3D'

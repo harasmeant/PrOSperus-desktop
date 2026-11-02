@@ -146,3 +146,110 @@ class VaultTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class VaultMoveTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / 'vault'
+        (self.root / 'Proyecto/Apuntes').mkdir(parents=True)
+        (self.root / 'Proyecto/Apuntes/Árbol.md').write_text('# Árbol')
+        (self.root / 'Proyecto/Inicio.md').write_text('# Inicio')
+        (self.root / 'Otro').mkdir()
+        (self.root / '.oculta').mkdir()
+        self.vault = Vault(self.root)
+
+    def test_folders_root_first_without_hidden(self):
+        names = [str(p.relative_to(self.root)) for p in self.vault.folders()]
+        self.assertEqual(names, ['.', 'Otro', 'Proyecto', 'Proyecto/Apuntes'])
+
+    def test_move_note_and_folder(self):
+        note = self.vault.move(self.root / 'Proyecto/Inicio.md', self.root / 'Otro')
+        self.assertEqual(note.read_text(), '# Inicio')
+        folder = self.vault.move(self.root / 'Proyecto/Apuntes', self.root / 'Otro')
+        self.assertTrue((folder / 'Árbol.md').is_file())
+        self.assertFalse((self.root / 'Proyecto/Apuntes').exists())
+
+    def test_rejected_moves_change_nothing(self):
+        (self.root / 'Otro/Inicio.md').write_text('otra')
+        with self.assertRaises(FileExistsError):
+            self.vault.move(self.root / 'Proyecto/Inicio.md', self.root / 'Otro')
+        with self.assertRaisesRegex(ValueError, 'sí misma'):
+            self.vault.move(self.root / 'Proyecto', self.root / 'Proyecto/Apuntes')
+        with self.assertRaisesRegex(ValueError, 'Ya está'):
+            self.vault.move(self.root / 'Proyecto/Inicio.md', self.root / 'Proyecto')
+        with self.assertRaises(ValueError):
+            self.vault.move(self.root, self.root / 'Otro')
+        self.assertEqual((self.root / 'Proyecto/Inicio.md').read_text(), '# Inicio')
+        self.assertEqual((self.root / 'Otro/Inicio.md').read_text(), 'otra')
+
+
+class WallpaperTests(unittest.TestCase):
+    def test_apply_wallpaper_keeps_previous_and_hue_follows_image(self):
+        from PySide6.QtGui import QColor, QImage
+        from prosperus.appearance import wallpaper_hue
+        from prosperus.wallpaper_picker import apply_wallpaper
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / 'Proyecto'; folder.mkdir()
+            (folder / 'wallpaper.png').write_bytes(b'antes')
+            source = Path(temp) / 'azul.jpg'
+            image = QImage(8, 8, QImage.Format.Format_RGB32); image.fill(QColor.fromHsv(220, 200, 200)); image.save(str(source))
+            target = apply_wallpaper(source, folder)
+            self.assertEqual(target.name, 'wallpaper.jpg')
+            self.assertEqual((folder / '.wallpaper-anterior.png').read_bytes(), b'antes')
+            self.assertFalse((folder / 'wallpaper.png').exists())
+            self.assertAlmostEqual(wallpaper_hue(target, 0), 220, delta=4)
+            with self.assertRaises(ValueError):
+                apply_wallpaper(source, Path.home())
+
+
+class QuickSettingsTests(unittest.TestCase):
+    def test_parsers_read_system_tools_output(self):
+        from prosperus.quick_settings import parse_brightness, parse_powered, parse_volume
+        self.assertEqual(parse_volume('Volume: 0.29 [MUTED]'), (29, True))
+        self.assertEqual(parse_volume('Volume: 1.00'), (100, False))
+        self.assertIsNone(parse_volume(None))
+        self.assertEqual(parse_brightness('intel_backlight,backlight,120,40%,300'), 40)
+        self.assertIsNone(parse_brightness(''))
+        self.assertTrue(parse_powered('Controller 00:11 (public)\n\tPowered: yes\n'))
+        self.assertIsNone(parse_powered('No default controller available'))
+
+
+class LinkLayoutTests(unittest.TestCase):
+    def test_concentric_slots_do_not_overlap_and_links_stay_adjacent(self):
+        from prosperus.map_layout import concentric_slots, link_order
+        slots = concentric_slots(12, 640, 300, 226, 116, 190, 108)
+        self.assertGreaterEqual(len(slots), 12)
+        for i, a in enumerate(slots):
+            for b in slots[i + 1:]:
+                self.assertTrue(abs(a[0] - b[0]) >= 190 or abs(a[1] - b[1]) >= 108, (a, b))
+        order = link_order(5, {(0, 3): 2, (3, 4): 1})
+        self.assertEqual(order[:3], [3, 0, 4])
+
+    def test_links_skip_code_and_force_pulls_linked_nodes_together(self):
+        from prosperus.map_layout import ellipse_points, force_layout
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / 'v'; (root / 'A').mkdir(parents=True); (root / 'B').mkdir()
+            (root / 'A/uno.md').write_text('Ver [[dos]] y [tres](../B/tres.md) `[[nada]]` [web](https://x.org)')
+            (root / 'A/dos.md').write_text('# dos'); (root / 'B/tres.md').write_text('# tres')
+            vault = Vault(root)
+            self.assertEqual(vault.links(root / 'A/uno.md'), {root / 'A/dos.md', root / 'B/tres.md'})
+        points = ellipse_points(4, 0, 0, 300, 200)
+        moved = force_layout(points, {(0, 2): 5}, 0, 0, 300, 200)
+        dist = lambda p, q: ((p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2) ** .5
+        self.assertLess(dist(moved[0], moved[2]), dist(points[0], points[2]))
+        self.assertEqual(force_layout(points, {}, 0, 0, 300, 200), points)
+
+
+class InstallerTests(unittest.TestCase):
+    def test_commands_parsing_and_rejections(self):
+        from prosperus.installer import install_command, parse_dnf, parse_flatpak, search_commands
+        self.assertEqual(search_commands('rm -rf; ls'), [])
+        self.assertEqual([s for s, _ in search_commands('blender')], ['fedora', 'flathub'])
+        self.assertEqual(parse_dnf('blender\t3D\nblender\t3D\n\n')[0]['id'], 'blender')
+        self.assertEqual(len(parse_dnf('blender\t3D\nblender\t3D\n')), 1)
+        self.assertEqual(parse_flatpak('org.blender.Blender\tBlender\t3D\nNo matches found\n')[0]['id'], 'org.blender.Blender')
+        self.assertEqual(install_command({'source': 'file', 'id': '/tmp/x.rpm'})[-1], '/tmp/x.rpm')
+        with self.assertRaises(ValueError):
+            install_command({'source': 'file', 'id': '/tmp/x.sh'})

@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from functools import lru_cache
 import hashlib
+import math
 
-from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor, QIcon, QImage, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QWidget
 
 
@@ -55,6 +56,15 @@ class Palette:
 
 def palette_for(vault, folder):
     folder = vault.checked(folder)
+    wallpaper = wallpaper_for(vault, folder)
+    if wallpaper:
+        try:
+            modified = wallpaper.stat().st_mtime_ns
+        except OSError:
+            modified = None
+        hue = wallpaper_hue(wallpaper, modified)
+        if hue is not None:
+            return Palette(hue)
     relative = folder.relative_to(vault.root)
     name = relative.parts[0] if relative.parts else ''
     hue = HUES.get(name, int(hashlib.sha256(name.encode()).hexdigest()[:4], 16) % 360 if name else 145)
@@ -81,6 +91,39 @@ def wallpaper_for(vault, folder):
 @lru_cache(maxsize=12)
 def wallpaper_pixmap(path, modified):
     return QPixmap(str(path))
+
+
+@lru_cache(maxsize=32)
+def wallpaper_hue(path, modified):
+    """Devuelve el tono circular promedio del wallpaper."""
+    image = QImage(str(path))
+    if image.isNull():
+        return None
+    image = image.scaled(48, 48, Qt.IgnoreAspectRatio, Qt.FastTransformation)
+    total_weight = 0.0
+    weighted_x = 0.0
+    weighted_y = 0.0
+    for y in range(image.height()):
+        for x in range(image.width()):
+            color = QColor(image.pixel(x, y))
+            hue = color.hue()
+            if hue == -1:   # píxel inválido
+                continue
+            saturation = color.saturation()
+            value = color.value()
+            weight = saturation * value
+            if weight <= 0:
+                continue
+            rad = math.radians(hue)
+            weighted_x += weight * math.cos(rad)
+            weighted_y += weight * math.sin(rad)
+            total_weight += weight
+    if total_weight < 1:
+        return None
+    hue_deg = math.degrees(math.atan2(weighted_y, weighted_x))
+    if hue_deg < 0:
+        hue_deg += 360
+    return int(round(hue_deg))
 
 
 def paint_wallpaper(painter, rect, path, base, shade=80):
@@ -113,6 +156,92 @@ def draw_symbol(painter, rect, kind, color):
     elif kind == 'window':
         painter.drawRoundedRect(QRectF(3, 4, 18, 16), 2, 2)
         painter.drawLine(3, 9, 21, 9)
+    elif kind == 'folders':
+        # Dos carpetas desplazadas
+        p1 = QPainterPath()
+        p1.moveTo(3, 7); p1.lineTo(3, 4); p1.lineTo(10, 4); p1.lineTo(13, 7); p1.lineTo(21, 7)
+        p1.lineTo(21, 19); p1.lineTo(3, 19); p1.closeSubpath()
+        painter.drawPath(p1)
+        p2 = QPainterPath()
+        p2.moveTo(7, 11); p2.lineTo(7, 8); p2.lineTo(14, 8); p2.lineTo(17, 11); p2.lineTo(21, 11)
+        p2.lineTo(21, 23); p2.lineTo(7, 23); p2.closeSubpath()
+        painter.drawPath(p2)
+    elif kind == 'search':
+        # Círculo r=6 en (10,10) + mango a (20,20)
+        painter.drawEllipse(QPointF(10, 10), 6, 6)
+        painter.drawLine(14, 14, 20, 20)
+    elif kind == 'note-plus':
+        # Nota más pequeña + '+' en esquina inferior derecha
+        p = QPainterPath()
+        p.moveTo(8, 5); p.lineTo(14, 5); p.lineTo(17, 8); p.lineTo(17, 19)
+        p.lineTo(8, 19); p.closeSubpath()
+        painter.drawPath(p)
+        painter.drawLine(14, 5, 14, 8); painter.drawLine(14, 8, 17, 8)
+        # signo +
+        painter.drawLine(14, 15, 18, 15)
+        painter.drawLine(16, 13, 16, 17)
+    elif kind == 'folder-plus':
+        # Contorno de carpeta + '+' centrado
+        p = QPainterPath()
+        p.moveTo(3, 7); p.lineTo(3, 4); p.lineTo(10, 4); p.lineTo(13, 7); p.lineTo(21, 7)
+        p.lineTo(21, 19); p.lineTo(3, 19); p.closeSubpath()
+        painter.drawPath(p)
+        # signo + en centro (12,13)
+        painter.drawLine(9, 13, 15, 13)
+        painter.drawLine(12, 10, 12, 16)
+    elif kind == 'apps':
+        # 2x2 cuadrados redondeados 7x7, gap 2, desde (4,4)
+        for i in range(2):
+            for j in range(2):
+                x = 4 + j * 9
+                y = 4 + i * 9
+                painter.drawRoundedRect(QRectF(x, y, 7, 7), 1, 1)
+    elif kind == 'sliders':
+        # 3 líneas horizontales con perillas circulares en x distintas
+        for i, (y, knob_x) in enumerate([(6, 8), (12, 12), (18, 16)]):
+            painter.drawLine(4, y, 20, y)
+            painter.drawEllipse(QPointF(knob_x, y), 3, 3)
+    elif kind == 'help':
+        # Círculo r=9 centrado + '?' (arco y punto)
+        painter.drawEllipse(QPointF(12, 12), 9, 9)
+        qp = QPainterPath()
+        qp.moveTo(12, 7)
+        qp.arcTo(QRectF(9, 7, 6, 6), 0, -180)
+        qp.lineTo(12, 13)
+        qp.lineTo(12, 15)
+        painter.drawPath(qp)
+        painter.drawEllipse(QPointF(12, 17), 1, 1)
+    elif kind == 'refresh':
+        # Arco circular abierto ~300° r=7 + flecha
+        p = QPainterPath()
+        p.arcMoveTo(QRectF(5, 5, 14, 14), 30)
+        p.arcTo(QRectF(5, 5, 14, 14), 30, -300)
+        painter.drawPath(p)
+        painter.drawLine(11, 17, 12, 19)
+        painter.drawLine(13, 17, 12, 19)
+    elif kind == 'save':
+        # Marca de verificación
+        painter.drawLine(7, 12, 11, 16)
+        painter.drawLine(11, 16, 17, 8)
+    elif kind == 'close':
+        # X
+        painter.drawLine(7, 7, 17, 17)
+        painter.drawLine(17, 7, 7, 17)
+    elif kind == 'power':
+        # Arco abierto arriba + línea vertical
+        p = QPainterPath()
+        p.arcMoveTo(QRectF(5, 5, 14, 14), 45)
+        p.arcTo(QRectF(5, 5, 14, 14), 45, 270)
+        painter.drawPath(p)
+        painter.drawLine(12, 8, 12, 16)
+    elif kind == 'restart':
+        # Arco circular + flecha, espejo de refresh
+        p = QPainterPath()
+        p.arcMoveTo(QRectF(5, 5, 14, 14), 150)
+        p.arcTo(QRectF(5, 5, 14, 14), 150, 300)
+        painter.drawPath(p)
+        painter.drawLine(11, 7, 12, 5)
+        painter.drawLine(13, 7, 12, 5)
     else:
         path.moveTo(6, 3); path.lineTo(14, 3); path.lineTo(19, 8); path.lineTo(19, 21)
         path.lineTo(6, 21); path.closeSubpath()

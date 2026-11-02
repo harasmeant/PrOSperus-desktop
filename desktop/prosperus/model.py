@@ -139,6 +139,32 @@ class Vault:
         path.mkdir()
         return path
 
+    def folders(self):
+        """Todas las carpetas visibles, la raíz primero; destinos para crear o mover."""
+        found = [self.root]
+        for current, names, _ in os.walk(self.root):
+            names[:] = sorted((n for n in names if not n.startswith('.')), key=str.lower)
+            found += [Path(current) / n for n in names]
+        return sorted(found, key=lambda p: str(p.relative_to(self.root)).lower() if p != self.root else '')
+
+    def move(self, path, folder):
+        """Mueve una nota o carpeta a otra carpeta conservando el nombre; nunca sobrescribe."""
+        path, folder = self.checked(path), self.checked(folder)
+        if path == self.root:
+            raise ValueError('No se puede mover la carpeta de proyectos.')
+        if not folder.is_dir():
+            raise ValueError('El destino debe ser una carpeta.')
+        if path.parent == folder:
+            raise ValueError('Ya está en esa carpeta.')
+        if folder.is_relative_to(path):
+            raise ValueError('No se puede mover una carpeta dentro de sí misma.')
+        target = folder / path.name
+        if target.exists() or target.is_symlink():
+            raise FileExistsError('Ya existe un elemento con ese nombre en el destino.')
+        # Mismo sistema de archivos: rename es atómico y no deja copias a medias.
+        os.rename(path, target)
+        return target
+
     def save_note(self, path, text, expected):
         path = self.checked(path)
         if self.read(path) != expected:
@@ -208,3 +234,23 @@ class Vault:
         chunks = re.split(r'(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)', text)
         return ''.join(chunk if i % 2 else re.sub(r'\[\[([^\]\n]+)\]\]', replace, chunk)
                        for i, chunk in enumerate(chunks))
+
+    def links(self, path):
+        """Notas a las que enlaza `path` (wikilinks y enlaces Markdown locales)."""
+        # shortcut: un wikilink por nombre recorre todas las notas; añadir índice si la bóveda crece.
+        text = self.read(path)
+        chunks = re.split(r'(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)', text)
+        targets = set()
+        for chunk in chunks[::2]:
+            found = re.findall(r'\[\[([^\]\n|#]+)', chunk) + re.findall(r'\]\(([^)\s#]+)', chunk)
+            for target in found:
+                target = target.strip()
+                if re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', target):
+                    continue  # enlace con esquema: no es una nota local
+                try:
+                    resolved = self.resolve_note(target, path)
+                except (OSError, ValueError):
+                    continue
+                if resolved != path:
+                    targets.add(resolved)
+        return targets

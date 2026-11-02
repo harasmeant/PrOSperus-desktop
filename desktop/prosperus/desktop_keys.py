@@ -23,8 +23,8 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 - **Ctrl+S:** guardar la nota enfocada. **Ctrl+W:** cerrar la nota enfocada.
 - **Esc:** recoger el tarjetero o cerrar la nota enfocada; en un diálogo, cerrarlo.
 - **Ctrl+Tab / Ctrl+Mayús+Tab:** siguiente/anterior nota abierta del proyecto.
-- **Tab / Mayús+Tab:** en el mapa, siguiente/anterior carpeta en sentido horario/antihorario; en otros controles, siguiente/anterior control. **Espacio** activa el botón enfocado.
-- **Super+Tab / Super+Mayús+Tab:** abrir el selector de proyectos y bajar/subir; al soltar Super se abre el proyecto elegido.
+- **Flechas:** en el mapa, seleccionar la carpeta o nota más cercana en esa dirección. **Intro** abre. **Tab / Mayús+Tab:** siguiente/anterior control. **Espacio** activa el botón enfocado.
+- **Super+Tab / Super+Mayús+Tab:** pasar al proyecto siguiente/anterior, también con una aplicación delante.
 - **Mayús+F10 / Menú:** menú contextual del mapa o de la lista de archivos.
 - **F1:** esta ayuda. **F5 / Ctrl+R:** actualizar. **F11:** pantalla completa.
 - **Alt+F4:** cerrar la ventana, con confirmación si hay notas sin guardar.

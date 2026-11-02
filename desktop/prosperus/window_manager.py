@@ -67,6 +67,7 @@ def subscribe(events):
 class WindowManager(QObject):
     windows_changed = Signal(list)
     message = Signal(str)
+    project_step = Signal(int)
 
     def __init__(self, parent=None, options_provider=None):
         super().__init__(parent)
@@ -103,7 +104,7 @@ class WindowManager(QObject):
         self._place_desktop()
         while not self._stopping:
             try:
-                for event in subscribe(['window']):
+                for event in subscribe(['window', 'binding']):
                     if self._stopping:
                         break
                     self._handle_event(event)
@@ -112,6 +113,14 @@ class WindowManager(QObject):
                 threading.Event().wait(2)
 
     def _handle_event(self, e):
+        if 'binding' in e:
+            cmd = e['binding'].get('command', '')
+            if cmd.endswith('prosperus-project next'):
+                self.project_step.emit(1)
+                return
+            elif cmd.endswith('prosperus-project prev'):
+                self.project_step.emit(-1)
+                return
         change = e.get('change')
         c = e.get('container', {})
         if c.get('app_id') == DESKTOP_ID:
@@ -221,6 +230,25 @@ class WindowManager(QObject):
             self.message.emit(f'No se pudo mostrar la aplicación: {e}')
         self.refresh()
 
+    def minimize(self, con_id):
+        """Sway no implementa minimizar: se lleva la ventana al espacio de ocultas del proyecto."""
+        try:
+            request(0, f'[con_id={con_id}] move container to workspace {self._quoted(self._hidden())}')
+        except (OSError, ValueError) as e:
+            self.message.emit(f'No se pudo minimizar: {e}')
+        self.refresh()
+
+    def toggle(self, con_id, hidden):
+        """Clic en la barra: recupera una ventana oculta, minimiza la enfocada y enfoca las demás."""
+        try:
+            focused = any(n['id'] == con_id and n.get('focused') for n in walk(request(4)))
+        except (OSError, ValueError):
+            focused = False
+        if focused and not hidden:
+            self.minimize(con_id)
+        else:
+            self.focus(con_id, hidden)
+
     def show_desktop(self):
         """Oculta las aplicaciones del proyecto actual para ver el mapa."""
         try:
@@ -250,11 +278,20 @@ def main(argv=None):
     """Órdenes para atajos de Sway: actúan sobre el proyecto del espacio enfocado."""
     import sys
     args = sys.argv[1:] if argv is None else argv
-    if args != ['show-desktop']:
-        print('Uso: prosperus-windows show-desktop', file=sys.stderr); return 2
+    if args not in (['show-desktop'], ['minimize']):
+        print('Uso: prosperus-windows show-desktop|minimize', file=sys.stderr); return 2
     manager = WindowManager()
     try:
         current = next(w['name'] for w in request(1) if w.get('focused'))
+        if args == ['minimize']:
+            if current.endswith(' · ocultas'):
+                return 0
+            manager.workspace = current
+            window = next((n for n in walk(request(4)) if n.get('focused') and n.get('type') in ('con', 'floating_con')
+                           and n.get('app_id') != DESKTOP_ID), None)
+            if window:
+                manager.minimize(window['id'])
+            return 0
     except (OSError, ValueError, KeyError, StopIteration) as error:
         print(error, file=sys.stderr); return 1
     # Desde el espacio de ocultas, el atajo devuelve las aplicaciones.

@@ -125,6 +125,8 @@ class FileActions(QObject):
         paste = menu.addAction('Pegar aquí\tCtrl+V', lambda: self.paste(destination))
         mime = QApplication.clipboard().mimeData()
         paste.setEnabled(mime is not None and mime.hasUrls() and not self.busy)
+        move = menu.addAction('Mover a otro proyecto…', lambda: self.shell.move_to(paths))
+        move.setEnabled(bool(paths) and not self.busy)
         if len(paths) == 1 and paths[0].is_dir():
             menu.addAction('Pegar dentro de esta carpeta', lambda: self.paste(paths[0]))
         menu.addSeparator()

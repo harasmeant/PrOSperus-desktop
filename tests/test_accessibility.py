@@ -94,7 +94,11 @@ class AccessibilityTests(unittest.TestCase):
     def test_search_shortcuts_and_note_switching_preserve_text_keys(self):
         self.window.surface.setFocus()
         QTest.keyClick(self.window.surface, Qt.Key.Key_F, Qt.KeyboardModifier.ControlModifier)
-        self.assertIs(self.app.focusWidget(), self.window.search)
+        browser = self.window.app_browser
+        self.assertEqual(browser.mode, 'files')
+        browser.search.setText('Idea'); self.app.processEvents()
+        self.assertTrue(any(browser.list.item(i).data(Qt.ItemDataRole.UserRole)['kind'] == 'path' for i in range(browser.list.count())))
+        browser.reject(); self.app.processEvents()
         self.window.open_note(self.note, edit=True)
         second = self.project / 'Otra.md'; second.write_text('# Otra')
         self.window.open_note(second, edit=True)
