@@ -122,6 +122,10 @@ class DragTitle(QLabel):
         self.offset = None
 
 
+# Opacidad del fondo de las notas (a petición: 40 % de transparencia).
+NOTE_OPACITY = .6
+
+
 class NotePanel(QFrame):
     def __init__(self, shell, path):
         super().__init__(shell.surface)
@@ -278,7 +282,10 @@ class NotePanel(QFrame):
         p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
         rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         clip = QPainterPath(); clip.addRoundedRect(rect, 12, 12); p.setClipPath(clip)
-        paint_wallpaper(p, rect, self.wallpaper, self.colors.panel, 155)
+        # Fondo al 60 % (40 % de transparencia): se ve el escritorio de detrás. Opaco en alto contraste.
+        glass = QColor(self.colors.panel)
+        glass.setAlphaF(1.0 if self.shell.accessibility.high_contrast else NOTE_OPACITY)
+        p.fillRect(rect, glass)
         if not self.minimized and not self.shell.accessibility.high_contrast:
             # Remate floral bajo el título, en el estilo de las ramas del fondo de la nota.
             vine = QColor(self.colors.text); vine.setAlphaF(.28)

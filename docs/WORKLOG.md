@@ -405,3 +405,5 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
   - Los programas de Flathub no aparecían porque greetd no lee `/etc/profile.d`; la sesión ya exporta sus rutas en `XDG_DATA_DIRS`.
   - Comprobado: el catálogo muestra los 7 programas y «Abrir» lanza Foot, que el gestor coloca flotando.
   - `app_item` y su prueba los escribió qwen2.5-coder:7b en local (Ollama), con una ronda de correcciones. 125 pruebas correctas.
+- Notas translúcidas: fondo del color del panel al 60 % (40 % de transparencia), sin la copia del fondo de pantalla, para que se vea el escritorio de detrás. En alto contraste siguen opacas.
+- Consola Foot translúcida: el fondo entero, incluida la barra de título, al 60 %, con una paleta suave a juego (colores propuestos por qwen2.5-coder; el gris claro se corrigió porque no se leía). Se valoró Konsole a petición, pero se descartó porque arrastra unos 120 paquetes de KDE.
