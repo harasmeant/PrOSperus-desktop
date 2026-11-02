@@ -2,7 +2,9 @@
 """Encabezado de ventana personalizado para entornos Wayland (Sway)."""
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainter, QPalette
 from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout
+from .branches import flourish
 from .window_controls import HoverControls
 
 class WindowHeader(QWidget):
@@ -14,7 +16,7 @@ class WindowHeader(QWidget):
         # Layout horizontal para alinear título y botón de cierre
         layout = QHBoxLayout(self)
         # Espaciado respecto a los bordes de la ventana
-        layout.setContentsMargins(14, 8, 8, 8)
+        layout.setContentsMargins(18, 10, 10, 20)
 
         # Etiqueta mostrando el título de la ventana
         self.title_label = QLabel(title)
@@ -31,15 +33,22 @@ class WindowHeader(QWidget):
         layout.addWidget(self.controls)
 
         # Altura fija para evitar cambios de layout
-        self.setFixedHeight(46)
+        self.setFixedHeight(64)
         # Cursor de mano para indicar que es arrastrable
         self.setCursor(Qt.CursorShape.OpenHandCursor)
 
         # Estilo visual personalizado por nombre de objeto
         self.setStyleSheet("""
             QWidget { background: transparent; }
-            QLabel#headerTitle { font-weight: bold; font-size: 16px; }
+            QLabel#headerTitle { font-weight: 600; font-size: 17px; letter-spacing: .3px; }
         """)
+
+    def paintEvent(self, event):
+        # Remate floral bajo el título (tema de las ventanas de PrOSperus).
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        color = self.palette().color(QPalette.ColorRole.WindowText); color.setAlphaF(.3)
+        flourish(painter, 18, self.width() - 18, self.height() - 10, color, len(self.title_label.text()))
 
     def mousePressEvent(self, event):
         # Wayland requiere startSystemMove para mover ventanas

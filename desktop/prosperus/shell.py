@@ -22,7 +22,7 @@ from .model import Vault
 from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
-from .branches import branch
+from .branches import branch, flourish
 from . import branch_style
 from .map_layout import link_order, map_metrics, radial_slots, nearest_in_direction, separate
 from .projects import ProjectDrawer, ProjectEdge
@@ -150,6 +150,7 @@ class NotePanel(QFrame):
                                                          'close': self.close_note}[action]())
         top.addWidget(self.controls)
         layout.addLayout(top)
+        layout.addSpacing(12)  # sitio para el remate floral bajo el título
         self.pages = QStackedWidget()
         self.reader = SafeReader()
         self.reader.setOpenLinks(False)
@@ -278,6 +279,17 @@ class NotePanel(QFrame):
         rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         clip = QPainterPath(); clip.addRoundedRect(rect, 12, 12); p.setClipPath(clip)
         paint_wallpaper(p, rect, self.wallpaper, self.colors.panel, 155)
+        if not self.minimized and not self.shell.accessibility.high_contrast:
+            # Remate floral bajo el título, en el estilo de las ramas del fondo de la nota.
+            vine = QColor(self.colors.text); vine.setAlphaF(.28)
+            traits = None
+            if self.wallpaper:
+                try:
+                    traits = wallpaper_traits(self.wallpaper, self.wallpaper.stat().st_mtime_ns)
+                except OSError:
+                    pass
+            flourish(p, rect.left() + 18, rect.right() - 18, self.pages.geometry().top() - 9, vine,
+                     len(self.path.stem), traits)
         p.setPen(QPen(QColor(self.colors.border), 1.5)); p.drawRoundedRect(rect, 12, 12)
 
 

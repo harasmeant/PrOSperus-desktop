@@ -53,6 +53,18 @@ def screen_ratio():
     return (size.width() / size.height()) if size and size.height() else 16 / 9
 
 
+def section(text):
+    """Título de sección (estilo QLabel#section de la paleta)."""
+    title = QLabel(text.upper()); title.setObjectName('section')
+    return title
+
+
+def airy(form):
+    """Formularios con aire: filas separadas y etiquetas alineadas."""
+    form.setVerticalSpacing(12); form.setHorizontalSpacing(18)
+    form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+
 class Preview(QWidget):
     """El escritorio entero a escala, con la proporción de la pantalla elegida y las mismas medidas
     que el mapa real (map_metrics): lo que se ve aquí es lo que saldrá."""
@@ -134,7 +146,7 @@ class BranchSettings(QWidget):
         QSlider::handle:horizontal:disabled, QSlider::sub-page:horizontal:disabled {{ background: {c.border}; }}
         ''')
 
-        layout = QVBoxLayout(self); layout.setContentsMargins(10, 10, 10, 10)
+        layout = QVBoxLayout(self); layout.setContentsMargins(18, 12, 18, 18); layout.setSpacing(12)
         layout.addWidget(WindowHeader('Ramas para: {}'.format(self.folder.name), self))
         self.preview = Preview(self.wallpaper, self.colors)
         layout.addWidget(self.preview, 1)
@@ -154,13 +166,15 @@ class BranchSettings(QWidget):
         self.auto.setChecked(saved.get('auto', True))
         # Los controles van en una zona con desplazamiento: la ventana cabe en pantallas bajas (850 px)
         # aunque estén abiertos los dos gradientes.
-        controls = QWidget(); body = QVBoxLayout(controls); body.setContentsMargins(0, 0, 8, 0)
+        controls = QWidget(); body = QVBoxLayout(controls); body.setContentsMargins(4, 4, 14, 4); body.setSpacing(14)
         scroll = QScrollArea(); scroll.setWidgetResizable(True); scroll.setWidget(controls)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         layout.addWidget(scroll, 1)
         body.addWidget(self.auto)
-        columns = QHBoxLayout(); body.addLayout(columns)
-        form = QFormLayout(); columns.addLayout(form, 1)
+        columns = QHBoxLayout(); columns.setSpacing(32); body.addLayout(columns)
+        style_box = QVBoxLayout(); style_box.setSpacing(10); columns.addLayout(style_box, 1)
+        style_box.addWidget(section('Estilo de la rama'))
+        form = QFormLayout(); airy(form); style_box.addLayout(form); style_box.addStretch(1)
         self.sliders = {}
         for key, label in STYLE_LABELS:
             value = saved.get(key, self.auto_traits.get(key, .4 if key == 'detail' else 0))
@@ -196,8 +210,8 @@ class BranchSettings(QWidget):
 
     def build_ornaments(self, saved):
         """Lista de adornos: cada uno con su frecuencia, sitio, tamaño y tinte."""
-        box = QVBoxLayout()
-        box.addWidget(QLabel('Adornos'))
+        box = QVBoxLayout(); box.setSpacing(10)
+        box.addWidget(section('Adornos'))
         self.ornaments = []
         source = branch_style.settings_file(self.folder)
         for item in branch_style.clean({'ornaments': saved.get('ornaments', [])}, source.parent if source else None).get('ornaments', []):
@@ -206,7 +220,7 @@ class BranchSettings(QWidget):
         self.ornament_list.currentRowChanged.connect(self.select_ornament)
         box.addWidget(self.ornament_list, 1)
         row = QHBoxLayout()
-        add = QPushButton('Añadir adorno')
+        add = QPushButton('Añadir adorno  ▾')
         menu = QMenu(add)
         for kind, label in BUILTIN_ORNAMENTS.items():
             menu.addAction(label, lambda kind=kind: self.add_ornament({'kind': kind}))
@@ -216,7 +230,7 @@ class BranchSettings(QWidget):
         remove = QPushButton('Quitar'); remove.clicked.connect(self.remove_ornament)
         row.addWidget(add); row.addWidget(remove); row.addStretch(1)
         box.addLayout(row)
-        edit = QFormLayout()
+        edit = QFormLayout(); airy(edit)
         self.bars, self.bars_end = {}, {}
         for key, label, low, high, scale, unit in ORNAMENT_BARS:
             self.bars[key] = self.value_slider(edit, label, low, high, scale, unit)

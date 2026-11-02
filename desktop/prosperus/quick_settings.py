@@ -7,6 +7,8 @@ import threading
 from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
                              QSlider, QPushButton, QWidget)
 from PySide6.QtCore import QProcess, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QPainter
+from .branches import flourish
 
 def run(argv):
     """Ejecuta un comando sin shell y captura la salida (None si falla)."""
@@ -62,51 +64,62 @@ class QuickSettings(QFrame):
     def __init__(self, shell):
         super().__init__()
         self.state_ready.connect(self.apply)
-        self.setMinimumWidth(360)
+        self.setMinimumWidth(420)
         c = shell.colors
         self.setStyleSheet(f'''
             #quickSettings {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 14px; }}
             QLabel {{ color: {c.text}; background: transparent; }}
-            QPushButton {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 8px; padding: 6px 12px; }}
-            QPushButton:checked {{ border: 2px solid {c.accent}; }}
+            QLabel#section {{ color: {c.accent}; font-size: 11px; font-weight: 600; letter-spacing: 1.6px; }}
+            QLabel#value, QLabel#hint {{ color: {c.muted}; }}
+            QPushButton {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 12px;
+                           padding: 10px 16px; min-height: 18px; }}
+            QPushButton:hover {{ background: {c.hover}; }}
+            QPushButton:checked {{ background: {c.hover}; border: 1px solid {c.accent}; }}
             QPushButton:disabled {{ color: {c.border}; }}
-            QSlider::groove:horizontal {{ height: 6px; background: {c.card}; border-radius: 3px; }}
-            QSlider::sub-page:horizontal {{ background: {c.accent}; border-radius: 3px; }}
-            QSlider::handle:horizontal {{ background: {c.text}; width: 16px; margin: -5px 0; border-radius: 8px; }}''')
+            QSlider {{ min-height: 26px; }}
+            QSlider::groove:horizontal {{ height: 8px; background: {c.card}; border-radius: 4px; }}
+            QSlider::sub-page:horizontal {{ background: {c.accent}; border-radius: 4px; }}
+            QSlider::handle:horizontal {{ background: {c.text}; width: 22px; margin: -7px 0; border-radius: 11px; }}''')
         self.shell = shell
         self.setObjectName("quickSettings")
         self.box = QVBoxLayout(self)
+        self.box.setContentsMargins(24, 22, 24, 22)
+        self.box.setSpacing(10)
         
         # 1. Brillo
         self.br_row = QHBoxLayout()
-        self.br_lbl = QLabel("Brillo:")
+        self.br_lbl = self.section("Brillo", first=True)
+        self.br_value = QLabel(objectName="value")
         self.brightness = QSlider(Qt.Horizontal)
         self.brightness.setRange(5, 100)
         # Se aplica al moverla de cualquier forma (arrastrar, clic, rueda, flechas), con un pequeño
         # retardo para no lanzar una orden por cada píxel.
         self.br_timer = QTimer(self, singleShot=True, interval=120, timeout=self._set_br)
         self.brightness.valueChanged.connect(lambda _: self.br_timer.start())
-        self.br_err = QLabel("Esta pantalla no permite cambiar el brillo.")
+        self.brightness.valueChanged.connect(lambda v: self.br_value.setText(f'{v} %'))
+        self.br_err = QLabel("Esta pantalla no permite cambiar el brillo.", objectName="hint", wordWrap=True)
         self.br_err.hide()
-        self.br_row.addWidget(self.br_lbl)
-        self.br_row.addWidget(self.brightness)
+        self.br_row.addWidget(self.brightness, 1)
+        self.br_row.addWidget(self.br_value)
         self.box.addLayout(self.br_row)
         self.box.addWidget(self.br_err)
 
         # 2. Volumen
         self.vol_row = QHBoxLayout()
-        self.vol_lbl = QLabel("Volumen:")
+        self.vol_lbl = self.section("Volumen")
+        self.vol_value = QLabel(objectName="value")
         self.volume = QSlider(Qt.Horizontal)
         self.volume.setRange(0, 100)
         self.vol_timer = QTimer(self, singleShot=True, interval=120, timeout=self._set_vol)
         self.volume.valueChanged.connect(lambda _: self.vol_timer.start())
+        self.volume.valueChanged.connect(lambda v: self.vol_value.setText(f'{v} %'))
         self.mute = QPushButton("Silencio")
         self.mute.setCheckable(True)
         self.mute.clicked.connect(self._set_mute)
-        self.vol_err = QLabel("Sin salida de sonido.")
+        self.vol_err = QLabel("Sin salida de sonido.", objectName="hint", wordWrap=True)
         self.vol_err.hide()
-        self.vol_row.addWidget(self.vol_lbl)
-        self.vol_row.addWidget(self.volume)
+        self.vol_row.addWidget(self.volume, 1)
+        self.vol_row.addWidget(self.vol_value)
         self.vol_row.addWidget(self.mute)
         self.box.addLayout(self.vol_row)
         self.box.addWidget(self.vol_err)
@@ -122,7 +135,9 @@ class QuickSettings(QFrame):
         self.wifi_row.addWidget(self.wifi)
         self.wifi_row.addWidget(self.wifi_conn)
         self.wifi_row.addWidget(self.wifi_btn)
-        self.box.addWidget(QLabel('Wifi'))
+        self.wifi_conn.setObjectName('hint')
+        self.wifi_row.setStretch(1, 1)
+        self.section('Wifi')
         self.box.addLayout(self.wifi_row)
 
         # 4. Bluetooth
@@ -134,7 +149,8 @@ class QuickSettings(QFrame):
         self.bt_btn.clicked.connect(lambda: terminal(['bluetoothctl']))
         self.bt_row.addWidget(self.bluetooth)
         self.bt_row.addWidget(self.bt_btn)
-        self.box.addWidget(QLabel('Bluetooth'))
+        self.bt_row.addStretch(1)
+        self.section('Bluetooth')
         self.box.addLayout(self.bt_row)
 
         # 5. Notificaciones
@@ -149,7 +165,7 @@ class QuickSettings(QFrame):
         self.notif_row.addWidget(self.dnd)
         self.notif_row.addWidget(self.btn_last)
         self.notif_row.addWidget(self.btn_clear)
-        self.box.addWidget(QLabel('Notificaciones'))
+        self.section('Notificaciones')
         self.box.addLayout(self.notif_row)
 
         # 6. Footer
@@ -158,9 +174,27 @@ class QuickSettings(QFrame):
         self.btn_ctrl.clicked.connect(lambda: self.shell.open_controls())
         self.btn_help = QPushButton("Ayuda · F1")
         self.btn_help.clicked.connect(lambda: self.shell.show_help())
+        self.box.addSpacing(26)  # sitio para el remate floral
         self.foot_row.addWidget(self.btn_ctrl)
         self.foot_row.addWidget(self.btn_help)
         self.box.addLayout(self.foot_row)
+
+    def section(self, text, first=False):
+        """Título de sección en versalitas, con aire por encima."""
+        if not first:
+            self.box.addSpacing(10)
+        title = QLabel(text.upper(), objectName='section')
+        self.box.addWidget(title)
+        return title
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        # Remate floral sobre los botones del pie, como las ramas del mapa.
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        color = QColor(self.shell.colors.text); color.setAlphaF(.3)
+        y = self.btn_ctrl.geometry().top() - 22
+        flourish(painter, 30, self.width() - 30, y, color, 3)
 
     def _set_br(self):
         ok, _ = attempt(['brightnessctl', '-q', '-c', 'backlight', 'set', f'{self.brightness.value()}%'])
@@ -186,6 +220,7 @@ class QuickSettings(QFrame):
         self.brightness.setEnabled(val_br is not None); self.br_err.setVisible(val_br is None)
         if val_br is not None:
             self.brightness.blockSignals(True); self.brightness.setValue(val_br); self.brightness.blockSignals(False)
+            self.br_value.setText(f'{val_br} %')
         else:
             self.br_err.setText('Esta pantalla no permite cambiar el brillo.')
         val_vol = state['volume']
@@ -194,6 +229,7 @@ class QuickSettings(QFrame):
         self.vol_err.setVisible(val_vol is None)
         if val_vol is not None:
             self.volume.blockSignals(True); self.volume.setValue(val_vol[0]); self.volume.blockSignals(False)
+            self.vol_value.setText(f'{val_vol[0]} %')
             self.mute.setChecked(val_vol[1])
         else:
             self.vol_err.setText('Sin salida de sonido.')

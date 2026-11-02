@@ -438,3 +438,20 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
 
 
 vine = branch
+
+
+def flourish(painter, left, right, y, color, seed=0, traits=None):
+    """Remate floral de las ventanas: enredadera fina y horizontal que separa el título del
+    contenido, con el mismo estilo que las ramas del mapa (traits del fondo)."""
+    # Centrado y con un ancho máximo: en ventanas anchas es un remate, no una línea de lado a lado.
+    width = min(right - left, 560)
+    if width < 60:
+        return
+    left = (left + right - width) / 2; right = left + width
+    # Dos ramas que nacen del centro y se abren hacia los lados, como una incrustación.
+    middle = QPointF(left + width * .5, y)
+    branch(painter, middle, QPointF(right, y), 1.5, .5, color, seed * 2 + 1, 2, .05, traits)
+    branch(painter, middle, QPointF(left, y), 1.5, .5, color, seed * 2 + 2, 2, .05, traits)
+    dot_color = QColor(color)
+    painter.save(); painter.setPen(Qt.PenStyle.NoPen); painter.setBrush(dot_color)
+    painter.drawEllipse(middle, 2.6, 2.6); painter.restore()
