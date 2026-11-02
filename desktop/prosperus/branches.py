@@ -63,13 +63,6 @@ def _heading(points, i):
     return math.atan2(b.y() - a.y(), b.x() - a.x())
 
 
-def ring(painter, centre, radius, color, hole):
-    """Articulación o tornillo: disco con agujero (o ranura) en el color de fondo."""
-    path = QPainterPath(); path.addEllipse(centre, radius, radius)
-    inner = QPainterPath(); inner.addEllipse(centre, radius * hole, radius * hole)
-    painter.setBrush(color); painter.drawPath(path.subtracted(inner))
-
-
 def sparkle(painter, centre, size, color):
     """Destello de cuatro puntas."""
     path = QPainterPath(centre + QPointF(0, -size))
@@ -93,39 +86,57 @@ def mushroom(painter, base, angle, size, color, spots):
     painter.drawPath(cap)
 
 
-def _arm_points(start, end, side, steps):
-    """Brazo articulado: dos tramos rectos con el codo apartado hacia un lado."""
-    elbow = (start + end) / 2 + side
-    half = steps // 2
-    return ([start + (elbow - start) * (i / half) for i in range(half)] +
-            [elbow + (end - elbow) * (i / (steps - half)) for i in range(steps - half + 1)]), elbow
+def square_spiral_points(base, angle, size, turn):
+    """Greca: espiral cuadrada que gira 90° en cada tramo, cada vez más corto."""
+    points, point, heading = [base], QPointF(base), angle
+    for factor in (1, .75, .75, .5, .5, .3, .3):
+        point = point + QPointF(math.cos(heading), math.sin(heading)) * size * factor * .5
+        points.append(point); heading += turn * math.pi / 2
+    return points
+
+
+def diamond_paths(base, angle, size):
+    """Rombo (hoja geométrica) y su nervio."""
+    direction = QPointF(math.cos(angle), math.sin(angle)); side = QPointF(-direction.y(), direction.x())
+    tip = base + direction * size
+    middle = base + direction * size * .45
+    diamond = QPainterPath(base)
+    for point in (middle + side * size * .3, tip, middle - side * size * .3):
+        diamond.lineTo(point)
+    diamond.closeSubpath()
+    vein = QPainterPath(base + direction * size * .12); vein.lineTo(tip - direction * size * .12)
+    return diamond, vein
+
+
+def dot(painter, centre, radius, color):
+    path = QPainterPath(); path.addEllipse(centre, radius, radius)
+    painter.setBrush(color); painter.drawPath(path)
 
 
 def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3, curl=.18, traits=None):
     """Rama procedural en un solo color. traits (del fondo) mezcla enredadera orgánica y brazo
-    mecánico (straight), regula los brotes (detail) y añade setas y destellos (glow)."""
+    geométrico (straight, filigrana art déco), regula los brotes (detail) y añade setas y destellos (magic)."""
     traits = traits or {}
-    straight, detail, glow = traits.get('straight', 0), traits.get('detail', .4), traits.get('glow', 0)
+    straight, detail, glow = traits.get('straight', 0), traits.get('detail', .4), traits.get('magic', 0)
     rng = random.Random(traits.get('seed', 0) * 7919 + seed)
     direction = end - start
     length = math.hypot(direction.x(), direction.y()) or 1
     side = QPointF(-direction.y(), direction.x()) * (curl * (1 if seed % 2 else -1))
-    # Curva en S (orgánica) y brazo de dos tramos (mecánico), mezclados según la rectitud del fondo.
+    # Curva en S (orgánica) mezclada con un arco de compás (geométrico) según la rectitud.
     curve = cubic_points(start, start + direction * .33 + side, start + direction * .66 - side, end)
-    # Todos los codos giran hacia el mismo lado: brazos vecinos no se cruzan.
-    arm, elbow = _arm_points(start, end, QPointF(-direction.y(), direction.x()) * (curl * .8), len(curve) - 1)
-    points = [c * (1 - straight) + a * straight for c, a in zip(curve, arm)]
-    end_width = end_width + (start_width * .7 - end_width) * straight
+    bow = QPointF(-direction.y(), direction.x()) * (curl * .9)
+    arc = cubic_points(start, start + direction * .3 + bow, start + direction * .7 + bow, end)
+    points = [c * (1 - straight) + a * straight for c, a in zip(curve, arc)]
     painter.setPen(Qt.PenStyle.NoPen)
     painter.setBrush(color)
-    painter.drawPath(tapered(points, start_width, end_width))
+    band = tapered(points, start_width, end_width)
+    if straight > .5:
+        # Doble línea art déco: la banda queda hueca por dentro.
+        band = band.subtracted(tapered(points, start_width * .45, end_width * .3))
+    painter.drawPath(band)
     soft = QColor(color); soft.setAlpha(int(color.alpha() * .8))
     dark = QColor(0, 0, 0, 120)
     size = max(8.0, min(17.0, length * .07))
-    if straight > .5:
-        # Articulaciones en el hombro y el codo.
-        ring(painter, points[0] + direction * (12 / length), start_width * .9, color, .45)
-        ring(painter, points[len(points) // 2], start_width * .85, color, .45)
     count = max(1, round(sprigs * (.6 + .8 * detail)))
     for k in range(count):
         t = .22 + k * (.6 / max(1, count - 1)) if count > 1 else .55
@@ -138,13 +149,20 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
             mushroom(painter, base, heading + turn * 1.2, size * 1.1, soft, True)
             continue
         if roll < straight:
-            # Pieza mecánica: tornillo sobre la rama o pistón corto que acaba en articulación.
-            if rng.random() < .5:
-                ring(painter, base, width * .6, soft, .35)
+            # Brote geométrico: tallo recto, punto de compás y greca o rombo con nervio.
+            stem_angle = heading + turn * .38
+            stem_end = base + QPointF(math.cos(stem_angle), math.sin(stem_angle)) * size * .8
+            painter.setBrush(color); painter.drawPath(tapered([base, stem_end], width * .5, width * .35))
+            dot(painter, base, width * .55, color)
+            if (k + seed) % 2:
+                painter.drawPath(tapered(square_spiral_points(stem_end, stem_angle, size * 1.3, turn), width * .35, width * .3))
             else:
-                tip = base + QPointF(math.cos(heading + turn * .5), math.sin(heading + turn * .5)) * size
-                painter.setBrush(color); painter.drawPath(tapered([base, tip], width * .45, width * .45))
-                ring(painter, tip, width * .5, soft, .4)
+                diamond, vein = diamond_paths(stem_end, stem_angle, size * 1.1)
+                painter.setBrush(soft); painter.drawPath(diamond)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.setPen(QPen(dark, .8)); painter.drawPath(vein); painter.setPen(Qt.PenStyle.NoPen)
+            small, _ = diamond_paths(base, heading - turn * .42, size * .5)
+            painter.setBrush(soft); painter.drawPath(small)
             continue
         # Tallo corto, con poco ángulo, que acaba en zarcillo o en hoja.
         stem_angle = heading + turn * .38
@@ -166,11 +184,14 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
         i = rng.randrange(len(points))
         offset = QPointF(rng.uniform(-1, 1), rng.uniform(-1, 1)) * size * 1.4
         sparkle(painter, points[i] + offset, size * rng.uniform(.25, .5), soft)
+    # Brote final junto al nodo: zarcillo o greca.
+    i = int(.9 * (len(points) - 1))
+    turn = -1 if seed % 2 else 1
+    painter.setBrush(color)
     if straight < .5:
-        # Brote final junto al nodo.
-        i = int(.9 * (len(points) - 1))
-        painter.setBrush(color)
-        painter.drawPath(tapered(spiral_points(points[i], _heading(points, i) + .4, size * .7, -1 if seed % 2 else 1), max(1.0, end_width * .6), .4))
+        painter.drawPath(tapered(spiral_points(points[i], _heading(points, i) + .4, size * .7, turn), max(1.0, end_width * .6), .4))
+    else:
+        painter.drawPath(tapered(square_spiral_points(points[i], _heading(points, i) + .4, size * .8, turn), max(.9, end_width * .4), .8))
 
 
 vine = branch

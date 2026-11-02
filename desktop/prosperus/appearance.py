@@ -303,7 +303,8 @@ class Wallpaper(QWidget):
 
 
 # Rasgos del fondo para las ramas procedurales (0..1): rectitud (objetos fabricados),
-# detalle (textura) y brillo (destellos). Se recalculan solo si cambia el archivo.
+# detalle (textura) y magia (tono ámbar de fantasía, como los fondos de DND: setas y destellos).
+# Se recalculan solo si cambia el archivo.
 @lru_cache(maxsize=32)
 def wallpaper_traits(path, modified):
     image = QImage(str(path))
@@ -311,8 +312,11 @@ def wallpaper_traits(path, modified):
         return None
     w, h = 160, 100
     image = image.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
-    grey = [[QColor(image.pixel(x, y)).lightness() for x in range(w)] for y in range(h)]
-    edges, magnitude_sum, sparks = {}, 0.0, 0
+    colours = [[QColor(image.pixel(x, y)) for x in range(w)] for y in range(h)]
+    grey = [[c.lightness() for c in row] for row in colours]
+    # Ámbar: tono 15-50°, saturado y no negro (madera, velas, pergamino, paisajes de fantasía).
+    amber = sum(15 <= c.hue() <= 50 and c.saturation() > 70 and c.value() > 40 for row in colours for c in row)
+    edges, magnitude_sum = {}, 0.0
     for y in range(1, h - 1):
         for x in range(1, w - 1):
             gx = (grey[y-1][x+1] + 2 * grey[y][x+1] + grey[y+1][x+1]) - (grey[y-1][x-1] + 2 * grey[y][x-1] + grey[y+1][x-1])
@@ -320,9 +324,6 @@ def wallpaper_traits(path, modified):
             magnitude = math.hypot(gx, gy); magnitude_sum += magnitude
             if magnitude > 140:
                 edges[(x, y)] = math.atan2(gy, gx)
-            around = (grey[y-1][x] + grey[y+1][x] + grey[y][x-1] + grey[y][x+1]) / 4
-            if grey[y][x] > 120 and grey[y][x] - around > 25:
-                sparks += 1
     # Borde recto: 5 px antes y después a lo largo del borde siguen con la misma orientación.
     straight = 0
     for (x, y), angle in edges.items():
@@ -338,5 +339,5 @@ def wallpaper_traits(path, modified):
     inner = (w - 2) * (h - 2)
     return {'straight': clamp((straight / len(edges) if edges else 0) / .22),
             'detail': clamp((magnitude_sum / inner - 12) / 24),
-            'glow': clamp(sparks / inner * 40),
+            'magic': clamp((amber / (w * h) - .15) / .25),
             'seed': int(hashlib.sha256(str(path).encode()).hexdigest()[:6], 16)}

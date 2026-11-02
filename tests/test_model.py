@@ -251,6 +251,10 @@ class LinkLayoutTests(unittest.TestCase):
             technical, organic = wallpaper_traits(path, 0), wallpaper_traits(flat, 0)
             self.assertGreater(technical['straight'], .5)
             self.assertEqual(organic['straight'], 0)
+            self.assertEqual(organic['magic'], 0)
+            amber = QImage(160, 100, QImage.Format.Format_RGB32); amber.fill(QColor('#a0601c'))
+            warm = Path(folder) / 'amber.png'; amber.save(str(warm))
+            self.assertGreater(wallpaper_traits(warm, 0)['magic'], .9)
             canvas = QImage(300, 200, QImage.Format.Format_ARGB32); canvas.fill(0)
             painter = QPainter(canvas)
             for traits in (technical, organic, None):
