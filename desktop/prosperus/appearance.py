@@ -275,6 +275,13 @@ def draw_symbol(painter, rect, kind, color):
         # X
         painter.drawLine(7, 7, 17, 17)
         painter.drawLine(17, 7, 7, 17)
+    elif kind == 'trash':
+        # Cubo con tapa
+        painter.drawLine(5, 7, 19, 7)
+        painter.drawLine(10, 7, 10, 5); painter.drawLine(10, 5, 14, 5); painter.drawLine(14, 5, 14, 7)
+        p = QPainterPath(); p.moveTo(7, 7); p.lineTo(8, 20); p.lineTo(16, 20); p.lineTo(17, 7)
+        painter.drawPath(p)
+        painter.drawLine(11, 10, 11, 17); painter.drawLine(13, 10, 13, 17)
     elif kind == 'power':
         # Arco abierto arriba + línea vertical
         p = QPainterPath()

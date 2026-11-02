@@ -425,3 +425,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
   - Foot mostraba sus propios botones de minimizar y maximizar, que Sway ignora (no hacían nada). Se han quitado (`button-width=0`, sin doble clic para maximizar) y la píldora queda como único control: en las pruebas, ampliar, restaurar, minimizar, recuperar desde la barra y cerrar funcionan.
   - En Sway, «Ampliar» de las ventanas propias (Ramas, Fondos, Instalador) no hacía nada (`showMaximized` se ignora). Ahora amplía por IPC como la píldora (900×700 → 1600×900 → 900×700 comprobado).
   - La prueba unitaria de esto la escribió qwen2.5-coder. 128 pruebas correctas.
+- Recuperar desde la papelera: «Crear › Papelera» muestra lo borrado y la carpeta de la que salió (`.papelera/.origen.json`). «Recuperar» o doble clic lo devuelve a su sitio sin sobrescribir (`Nota (2).md`); si esa carpeta ya no existe, va a la raíz. Icono nuevo de papelera. Captura: `docs/images/papelera.png`.

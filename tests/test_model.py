@@ -455,3 +455,26 @@ class RenameTrashTests(unittest.TestCase):
                 vault.trash(root / '.papelera')
             with self.assertRaises(ValueError):
                 vault.rename(root, 'x')
+
+    def test_trash_remembers_origin_and_restores_without_overwriting(self):
+        import tempfile
+        from pathlib import Path
+        from prosperus.model import Vault
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); (root / 'A').mkdir()
+            note = root / 'A' / 'n.md'; note.write_text('uno\n', encoding='utf-8')
+            vault = Vault(root)
+            vault.trash(note)
+            note.write_text('dos\n', encoding='utf-8')  # otra nota con el mismo nombre ocupa su sitio
+            self.assertEqual([origin for _, origin in vault.trashed()], ['A/n.md'])
+            restored = vault.restore('n.md')
+            self.assertEqual(restored, root / 'A' / 'n (2).md')
+            self.assertEqual(restored.read_text(encoding='utf-8'), 'uno\n')
+            self.assertEqual(note.read_text(encoding='utf-8'), 'dos\n')
+            self.assertEqual(vault.trashed(), [])
+            # Si la carpeta de origen ya no existe, vuelve a la raíz.
+            vault.trash(root / 'A' / 'n (2).md'); vault.trash(note)
+            (root / 'A').rmdir()
+            self.assertEqual({vault.restore(p.name).parent for p, _ in vault.trashed()}, {root})
+            with self.assertRaises(FileNotFoundError):
+                vault.restore('../A')

@@ -1,6 +1,7 @@
 """Project files, Markdown links, and explicit edits without an Obsidian dependency."""
 # SPDX-License-Identifier: GPL-3.0-only
 from pathlib import Path
+import json
 import re
 import os
 import stat
@@ -14,6 +15,9 @@ def searchable(value):
     # distinguir mayúsculas, conservando intacto el contenido de los archivos.
     return ''.join(c for c in unicodedata.normalize('NFD', str(value).casefold())
                    if unicodedata.category(c) != 'Mn')
+
+
+ORIGINS = '.origen.json'  # dentro de .papelera: de dónde venía cada elemento
 
 
 # Escrito por qwen2.5-coder (local) con dos correcciones: prefijo de carpeta y sufijo .md.
@@ -231,6 +235,56 @@ class Vault:
         while target.exists() or target.is_symlink():
             target = bin_ / f'{path.stem} ({number}){path.suffix}'; number += 1
         os.rename(path, target)
+        # Se recuerda de dónde venía para poder devolverlo a su sitio.
+        origins = self._origins()
+        origins[target.name] = str(path.relative_to(self.root))
+        self._save_origins(origins)
+        return target
+
+    def _origins(self):
+        try:
+            data = json.loads((self.root / self.TRASH / ORIGINS).read_text(encoding='utf-8'))
+            return {k: v for k, v in data.items() if isinstance(k, str) and isinstance(v, str)} if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _save_origins(self, origins):
+        file = self.root / self.TRASH / ORIGINS
+        temporary = file.with_name(ORIGINS + '.tmp')
+        temporary.write_text(json.dumps(origins, ensure_ascii=False, indent=1), encoding='utf-8')
+        temporary.replace(file)
+
+    def trashed(self):
+        """Elementos de la papelera: [(ruta en la papelera, ruta original relativa o None)], recientes primero."""
+        bin_ = self.root / self.TRASH
+        if not bin_.is_dir():
+            return []
+        origins = self._origins()
+        items = [p for p in bin_.iterdir() if p.name != ORIGINS and not p.name.startswith(ORIGINS) and not p.is_symlink()]
+        items.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        return [(p, origins.get(p.name)) for p in items]
+
+    def restore(self, name):
+        """Devuelve un elemento de la papelera a su carpeta (o a la raíz si ya no existe); nunca sobrescribe."""
+        bin_ = self.root / self.TRASH
+        item = bin_ / Path(name).name
+        if not item.exists() or item.is_symlink() or item.name.startswith(ORIGINS):
+            raise FileNotFoundError('Ya no está en la papelera.')
+        origins = self._origins()
+        original = origins.get(item.name)
+        folder = self.root
+        if original:
+            candidate = (self.root / original).parent
+            if candidate.is_dir() and candidate.resolve().is_relative_to(self.root) and not candidate.resolve().is_relative_to(bin_):
+                folder = candidate.resolve()
+        base = Path(original).name if original else item.name
+        stem, suffix = (Path(base).stem, Path(base).suffix) if item.is_file() else (base, '')
+        target, number = folder / base, 2
+        while target.exists() or target.is_symlink():
+            target = folder / f'{stem} ({number}){suffix}'; number += 1
+        os.rename(item, target)
+        origins.pop(item.name, None)
+        self._save_origins(origins)
         return target
 
     def save_note(self, path, text, expected):

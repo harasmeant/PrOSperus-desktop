@@ -979,7 +979,7 @@ class Explorer(QDialog):
             self.status.setText('Cierra primero las notas abiertas.'); return
         names = ', '.join(p.name for p in paths[:4]) + ('…' if len(paths) > 4 else '')
         if QMessageBox.question(self, 'Mover a la papelera', f'¿Mover a la papelera {names}?\n'
-                                'Se guardan en .papelera dentro de tus proyectos y puedes recuperarlos.') != QMessageBox.StandardButton.Yes:
+                                'Puedes recuperarlos desde Crear › Papelera.') != QMessageBox.StandardButton.Yes:
             return
         moved = []
         for path in paths:
@@ -1060,6 +1060,7 @@ class Desktop(QMainWindow):
             ('Pegar', icon('note'), lambda: self.files.paste(self.folder)), None,
             ('Tus proyectos', icon('folders'), self.toggle_projects),
             ('Explorador', icon('search'), self.open_explorer),
+            ('Papelera', icon('trash'), self.open_trash),
             ('Actualizar', icon('refresh'), self.refresh_projects)])
         heading.addWidget(self.create_menu, 0, Qt.AlignmentFlag.AlignTop)
         identity = QVBoxLayout(); identity.setSpacing(5)
@@ -1528,6 +1529,45 @@ class Desktop(QMainWindow):
             self.surface.selection = []
             self.navigate(self.folder); self.refresh_projects()
             self.status.setText('Movido a ' + place[1].name + ': ' + ', '.join(moved))
+
+    def open_trash(self):
+        """Papelera: lo borrado con Supr, con la carpeta de la que salió; Recuperar lo devuelve."""
+        dialog = QDialog(self); dialog.setWindowTitle('Papelera'); dialog.resize(560, 440)
+        layout = QVBoxLayout(dialog); layout.setContentsMargins(22, 20, 22, 20); layout.setSpacing(12)
+        layout.addWidget(label('PAPELERA', 'section'))
+        layout.addWidget(label('Lo que mueves a la papelera se guarda aquí. Recupéralo a su carpeta cuando quieras.', 'muted'))
+        items = QListWidget(); items.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        layout.addWidget(items, 1)
+        empty = label('La papelera está vacía.', 'muted'); layout.addWidget(empty)
+
+        def fill():
+            items.clear()
+            for path, origin in self.vault.trashed():
+                where = str(Path(origin).parent) if origin else ''
+                text = (path.stem if path.is_file() else path.name) + '   ·   ' + ('en ' + where if where not in ('', '.') else 'en Tus proyectos')
+                item = QListWidgetItem(symbol_icon('folder' if path.is_dir() else 'note', self.colors.accent), text)
+                item.setData(Qt.ItemDataRole.UserRole, path.name); items.addItem(item)
+            empty.setVisible(items.count() == 0)
+            if items.count():
+                items.setCurrentRow(0)
+
+        def restore():
+            restored = []
+            for item in items.selectedItems():
+                try:
+                    restored.append(self.vault.restore(item.data(Qt.ItemDataRole.UserRole)))
+                except (OSError, ValueError) as error:
+                    QMessageBox.warning(dialog, 'No se pudo recuperar', str(error))
+            if restored:
+                self.navigate(self.folder); self.refresh_projects()
+                self.status.setText('Recuperado: ' + ', '.join(p.name for p in restored))
+            fill()
+
+        row = QHBoxLayout(); row.addStretch(1)
+        row.addWidget(button('Recuperar', restore)); row.addWidget(button('Cerrar', dialog.accept))
+        layout.addLayout(row)
+        items.itemActivated.connect(lambda _: restore())
+        fill(); dialog.exec(); dialog.deleteLater()
 
     def new_project(self):
         name, ok = QInputDialog.getText(self, 'Nuevo proyecto', 'Nombre del proyecto:')
