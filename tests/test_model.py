@@ -261,6 +261,72 @@ class LinkLayoutTests(unittest.TestCase):
                 branch(painter, QPointF(20, 100), QPointF(280, 100), 7, 2, QColor('white'), 1, 5, traits=traits)
             painter.end()
 
+    def test_branch_style_saves_inherits_validates_and_resets(self):
+        import tempfile
+        from pathlib import Path
+        from prosperus import branch_style
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root); child = root / 'Proyecto' / 'Sub'; child.mkdir(parents=True)
+            self.assertEqual(branch_style.load(child, root), {})
+            branch_style.save(root / 'Proyecto', {'auto': False, 'straight': 3, 'magic': .5, 'detail': 'x',
+                                                  'curl': 9, 'opacity': .8, 'otra': 1})
+            # La subcarpeta hereda; los valores se recortan a su rango y se ignora lo desconocido.
+            self.assertEqual(branch_style.load(child, root),
+                             {'straight': 1.0, 'magic': .5, 'curl': 2.5, 'opacity': .8})
+            branch_style.save(child, {'auto': True, 'straight': 1, 'width': 2})
+            self.assertEqual(branch_style.load(child, root), {'width': 2.0})  # en automático no fija el estilo
+            merged = branch_style.merge({'straight': .2, 'seed': 4}, branch_style.load(child, root))
+            self.assertEqual(merged, {'straight': .2, 'seed': 4, 'width': 2.0})
+            branch_style.reset(child); branch_style.reset(child)
+            self.assertIn('straight', branch_style.load(child, root))  # vuelve a heredar de arriba
+            with self.assertRaises(ValueError):
+                branch_style.save(root / 'no-existe', {})
+
+    def test_branch_ornaments_images_frequency_and_safety(self):
+        import tempfile
+        from pathlib import Path
+        from PySide6.QtCore import QPointF
+        from PySide6.QtGui import QColor, QImage, QPainter
+        from prosperus import branch_style
+        from prosperus.branches import branch
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root); folder = root / 'Fantasia'; folder.mkdir()
+            picture = root / 'jake.png'
+            image = QImage(32, 32, QImage.Format.Format_ARGB32); image.fill(QColor('orange')); image.save(str(picture))
+            name = branch_style.add_image(folder, picture)
+            self.assertEqual(name, 'jake.png'); self.assertEqual(branch_style.add_image(folder, folder / '.prosperus-adornos' / name), name)
+            self.assertEqual(branch_style.add_image(folder, picture), 'jake-2.png')  # mismo nombre, otra copia
+            with self.assertRaises(ValueError):
+                branch_style.add_image(folder, root / 'nota.md')
+            branch_style.save(folder, {'ornaments': [
+                {'kind': 'seta', 'every': 0, 'place': 'raro', 'size': 9},
+                {'kind': 'imagen', 'file': '../../jake.png', 'every': 2, 'place': 'brote', 'tint': False},
+                {'kind': 'imagen', 'file': 'no-existe.png'}, {'kind': 'bomba'}]})
+            ornaments = branch_style.load(folder, root)['ornaments']
+            # Frecuencia, sitio y tamaño recortados; solo vale el nombre dentro de .prosperus-adornos.
+            self.assertEqual([o['kind'] for o in ornaments], ['seta', 'imagen'])
+            self.assertEqual((ornaments[0]['every'], ornaments[0]['place'], ornaments[0]['size']), (1, 'rama', 3.0))
+            self.assertEqual(ornaments[1]['path'], folder / '.prosperus-adornos' / 'jake.png')
+            self.assertFalse(ornaments[1]['tint'])
+            canvas = QImage(300, 200, QImage.Format.Format_ARGB32); canvas.fill(0)
+            painter = QPainter(canvas)
+            branch(painter, QPointF(20, 100), QPointF(280, 100), 7, 2, QColor('white'), 1, 6, traits={'ornaments': ornaments})
+            painter.end()
+
+    def test_branch_settings_window_builds_preview(self):
+        import os, tempfile
+        from pathlib import Path
+        from PySide6.QtWidgets import QApplication
+        from prosperus.branch_settings import BranchSettings
+        app = QApplication.instance() or QApplication([])
+        with tempfile.TemporaryDirectory() as folder:
+            window = BranchSettings(Path(folder))
+            window.auto.setChecked(False); window.sliders['straight'].setValue(100)
+            self.assertEqual(window.preview.traits['straight'], 1.0)
+            window.grab()
+            window.save()
+            self.assertTrue((Path(folder) / '.prosperus-ramas.json').is_file())
+
     def test_concentric_slots_do_not_overlap_and_links_stay_adjacent(self):
         from prosperus.map_layout import concentric_slots, link_order
         slots = concentric_slots(12, 640, 300, 226, 116, 190, 108)

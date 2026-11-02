@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Ramas
+Comment=Personaliza las ramas del mapa de la carpeta actual (automático según el fondo, art déco, art nouveau…)
+Exec=prosperus-ramas
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=ramas;estilo;mapa;art déco;art nouveau;tema;

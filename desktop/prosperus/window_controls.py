@@ -72,7 +72,8 @@ class HoverControls(QWidget):
         self.progress = float(value); self.update()
 
     def eventFilter(self, obj, event):
-        if obj is self.watched:
+        # Qt puede entregar eventos antes de que __init__ fije watched.
+        if obj is getattr(self, 'watched', None):
             if event.type() in (QEvent.Type.Enter, QEvent.Type.HoverEnter):
                 self.expand(True)
             elif event.type() in (QEvent.Type.Leave, QEvent.Type.HoverLeave):

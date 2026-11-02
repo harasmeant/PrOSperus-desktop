@@ -23,6 +23,7 @@ from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
 from .branches import branch
+from . import branch_style
 from .map_layout import link_order, radial_slots, nearest_in_direction, separate
 from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
@@ -661,6 +662,10 @@ class Surface(QWidget):
             traits = wallpaper_traits(source, source.stat().st_mtime_ns) if source else None
         except OSError:
             traits = None
+        # Ajustes personales de la carpeta (aplicación «Ramas») encima de lo que dice el fondo.
+        traits = branch_style.merge(traits, branch_style.load(self.shell.folder, self.shell.vault.root))
+        opacity = traits.get('opacity', 1)
+        alpha = lambda value: max(0, min(255, round(value * opacity)))
         # Las ramas nacen en el borde de las tarjetas: no se ven a través de ellas.
         visible = QPainterPath(); visible.addRect(QRectF(self.rect()))
         for card in [self.center] + self.nodes + [leaf for leaf in self.leaves if leaf.isVisible()]:
@@ -668,11 +673,11 @@ class Surface(QWidget):
             visible = visible.subtracted(hole)
         p.setClipPath(visible)
         for k, widget in enumerate(self.nodes):
-            pearl.setAlpha(165)
+            pearl.setAlpha(alpha(165))
             branch(p, origin, QPointF(widget.geometry().center()), 7.5, 2.2, pearl, k, 5, traits=traits)
         for k, leaf in enumerate(self.leaves):
             if leaf.isVisible():
-                pearl.setAlpha(120)
+                pearl.setAlpha(alpha(120))
                 branch(p, QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center()), 2.4, .9, pearl, k, 1, .12, traits)
         # Enlaces entre notas: zarcillo fino entre vecinos, más grueso cuanto más enlazadas.
         node_index = {n: i for i, n in enumerate(self.nodes)}
@@ -683,7 +688,7 @@ class Surface(QWidget):
             if wa in node_index and wb in node_index:
                 i, j = node_index[wa], node_index[wb]
                 width = 1.6 + .7 * min(self.link_weights.get((min(i, j), max(i, j)), 1), 5)
-            pearl.setAlpha(140)
+            pearl.setAlpha(alpha(140))
             branch(p, QPointF(wa.geometry().center()), QPointF(wb.geometry().center()), width, width * .6, pearl, k, 2, .25, traits)
 
     def focus_direction(self, path, direction):

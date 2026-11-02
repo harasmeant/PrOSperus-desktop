@@ -5,7 +5,9 @@ import math
 import random
 
 from PySide6.QtCore import QPointF, Qt
-from PySide6.QtGui import QColor, QPainterPath, QPen
+from functools import lru_cache
+
+from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPen
 
 
 def cubic_points(p0, c1, c2, p1, steps=32):
@@ -150,12 +152,89 @@ def _upward(heading, turn):
     return a if math.sin(a) < math.sin(b) else b
 
 
+# Piezas que se pueden elegir como adorno en la aplicación «Ramas» (además de imágenes propias).
+BUILTIN_ORNAMENTS = {'seta': 'Seta', 'lirio': 'Lirio', 'pavo': 'Ojo de pavo real', 'zarcillo': 'Zarcillo',
+                     'hoja': 'Hoja', 'greca': 'Greca', 'rombo': 'Rombo', 'destello': 'Destello'}
+
+
+@lru_cache(maxsize=48)
+def _ornament_image(path, modified, pixels, rgba):
+    """Imagen escalada a `pixels` de alto; teñida del color de las ramas si rgba no es None."""
+    image = QImage(path)
+    if image.isNull():
+        return None
+    image = image.convertToFormat(QImage.Format.Format_ARGB32_Premultiplied)
+    image = image.scaledToHeight(max(4, pixels), Qt.TransformationMode.SmoothTransformation)
+    if rgba is not None:
+        # Silueta monocroma: se conserva la forma (alfa) y se pinta con el color de las ramas.
+        tinter = QPainter(image)
+        tinter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+        tinter.fillRect(image.rect(), QColor.fromRgba(rgba))
+        tinter.end()
+    return image
+
+
+def draw_image(painter, path, anchor, height, color, tint, bottom):
+    """Imagen derecha (sin girar): apoyada en anchor por abajo (bottom) o centrada en él."""
+    try:
+        modified = path.stat().st_mtime_ns
+    except OSError:
+        return
+    image = _ornament_image(str(path), modified, round(height), color.rgba() if tint else None)
+    if image is None:
+        return
+    x = anchor.x() - image.width() / 2
+    y = anchor.y() - (image.height() if bottom else image.height() / 2)
+    painter.drawImage(QPointF(x, y), image)
+
+
+def ornament(painter, item, base, heading, turn, size, width, color, soft):
+    """Adorno elegido por el usuario: sobre la rama («rama») o al final de un tallo propio («brote»)."""
+    scale = item.get('size', 1)
+    kind = item.get('kind')
+    if item.get('place') == 'brote':
+        stem_angle = heading + turn * .5
+        reach = size * 1.6 * max(.6, scale)
+        anchor = base + QPointF(math.cos(stem_angle), math.sin(stem_angle)) * reach
+        bend = QPointF(-math.sin(stem_angle), math.cos(stem_angle)) * reach * .35 * turn
+        stem = cubic_points(base, base + QPointF(math.cos(heading), math.sin(heading)) * reach * .5 + bend,
+                            anchor - bend * .5, anchor, 16)
+        painter.setBrush(color); painter.drawPath(tapered(stem, width * .55, width * .2))
+        angle, bottom = _heading(stem, len(stem) - 1), False
+    else:
+        anchor, angle, bottom = base, _upward(heading, turn), True
+    big = size * scale
+    if kind == 'imagen':
+        draw_image(painter, item['path'], anchor, big * 2.2, soft, item.get('tint', True), bottom)
+        return
+    painter.setBrush(soft)
+    if kind == 'seta':
+        mushroom(painter, anchor, angle if bottom else _upward(heading, turn), big * 1.4, soft, True)
+    elif kind == 'lirio':
+        painter.drawPath(lily_path(anchor, angle, big * 1.05))
+    elif kind == 'pavo':
+        painter.drawPath(peacock_eye(anchor, angle, big * 1.3))
+    elif kind == 'zarcillo':
+        painter.setBrush(color); painter.drawPath(tapered(spiral_points(anchor, angle, big * 2, turn), width * .35, .4))
+    elif kind == 'hoja':
+        leaf, _ = leaf_paths(anchor, angle, big * 1.2); painter.drawPath(leaf)
+    elif kind == 'greca':
+        painter.setBrush(color); painter.drawPath(tapered(square_spiral_points(anchor, angle, big * 1.3, turn), width * .35, width * .3))
+    elif kind == 'rombo':
+        diamond, _ = diamond_paths(anchor, angle, big * 1.1); painter.drawPath(diamond)
+    elif kind == 'destello':
+        sparkle(painter, anchor + QPointF(math.cos(angle), math.sin(angle)) * big * .6, big * .55, soft)
+
+
 def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3, curl=.18, traits=None):
     """Rama procedural en un solo color. traits (del fondo) mezcla enredadera orgánica y
     geométrico (straight, filigrana art déco), regula los brotes (detail) y añade setas y destellos (magic)."""
     traits = traits or {}
     straight, detail, glow = traits.get('straight', 0), traits.get('detail', .4), traits.get('magic', 0)
     rng = random.Random(traits.get('seed', 0) * 7919 + seed)
+    # Retoques personales (aplicación «Ramas»): curvatura y grosor.
+    curl *= traits.get('curl', 1)
+    start_width *= traits.get('width', 1); end_width *= traits.get('width', 1)
     direction = end - start
     length = math.hypot(direction.x(), direction.y()) or 1
     side = QPointF(-direction.y(), direction.x()) * (curl * (1 if seed % 2 else -1))
@@ -188,6 +267,12 @@ def branch(painter, start, end, start_width, end_width, color, seed=0, sprigs=3,
         turn = 1 if (k + seed) % 2 else -1
         width = start_width + (end_width - start_width) * t
         roll = rng.random()
+        # Adornos propios: cada uno sale en 1 de cada `every` brotes (desfasados para no pisarse).
+        chosen = next((item for j, item in enumerate(traits.get('ornaments', ()))
+                       if (seed * 7 + k + j) % item.get('every', 3) == 0), None)
+        if chosen:
+            ornament(painter, chosen, base, heading, turn, size, width, color, soft)
+            continue
         if roll < glow * .75:
             # Brote art nouveau: tallo largo y sinuoso que acaba en seta, lirio, ojo de pavo real o zarcillo.
             kind = (k + seed) % 4
