@@ -39,9 +39,17 @@ def find_target(tree, previous=None):
     return candidates.get(focused, (None, None))
 
 
-def handle_position(rect, width):
-    """Centrada sobre el borde superior de la ventana, sin tapar sus propios botones."""
-    return rect['x'] + (rect['width'] - width) // 2, rect['y'] + 2
+def handle_position(rect, width, height=0, top=None):
+    """Centrada encima de la ventana, sin tapar su contenido.
+
+    Si no cabe por encima (ventana pegada al borde superior del espacio `top`),
+    se coloca dentro, junto al borde superior.
+    """
+    x = rect['x'] + (rect['width'] - width) // 2
+    above = rect['y'] - height - 2
+    if height and top is not None and above >= top:
+        return x, above
+    return x, rect['y'] + 2
 
 
 def maximize_commands(node, workspace, saved):
@@ -75,7 +83,7 @@ def main():
             super().__init__(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowDoesNotAcceptFocus)
             self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
             self.setWindowTitle('Controles de ventana')
-            layout = QHBoxLayout(self); layout.setContentsMargins(8, 3, 8, 3)
+            layout = QHBoxLayout(self); layout.setContentsMargins(6, 0, 6, 0)
             self.controls = HoverControls(self, watch=self)
             self.controls.triggered.connect(self.trigger)
             self.controls.animation.valueChanged.connect(self.update)
@@ -105,7 +113,7 @@ def main():
                 self.position = None; self.hide(); return
             if not self.isVisible():
                 self.show()
-            position = handle_position(node['rect'], self.width())
+            position = handle_position(node['rect'], self.width(), self.height(), ws['rect']['y'])
             if position != self.position:
                 try:
                     replies = request(0, f'[app_id="{HANDLE_ID}"] move absolute position {position[0]} px {position[1]} px')

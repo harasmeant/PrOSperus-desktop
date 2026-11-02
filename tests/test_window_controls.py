@@ -84,6 +84,9 @@ class HandleTests(unittest.TestCase):
 
     def test_position_and_commands(self):
         self.assertEqual(wh.handle_position({'x': 100, 'y': 50, 'width': 800, 'height': 600}, 100), (450, 52))
+        # Con sitio encima, la píldora no tapa la ventana; pegada arriba, va dentro.
+        self.assertEqual(wh.handle_position({'x': 100, 'y': 50, 'width': 800, 'height': 600}, 100, 32, 0), (450, 16))
+        self.assertEqual(wh.handle_position({'x': 100, 'y': 12, 'width': 800, 'height': 600}, 100, 32, 0), (450, 14))
         node = con(2, 'foot', (100, 50, 800, 600)); space = ws('Mi "proy"')
         saved = {}
         self.assertIn('resize set width 1920 px height 1080 px', wh.maximize_commands(node, space, saved))
