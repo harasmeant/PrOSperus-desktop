@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from PySide6.QtCore import QEasingCurve, QEvent, QFileSystemWatcher, QParallelAnimationGroup, QPointF, QPropertyAnimation, QRect, QRectF, QSettings, Qt, QTimer, QUrl
+from PySide6.QtCore import QEasingCurve, QEvent, QFileSystemWatcher, QParallelAnimationGroup, QPoint, QPointF, QPropertyAnimation, QRect, QRectF, QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QFont, QKeySequence, QPainter, QPainterPath, QPen, QShortcut, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame, QHBoxLayout, QInputDialog,
     QLabel, QLayout, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
@@ -22,6 +22,7 @@ from .model import Vault
 from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
+from . import motion
 from .branches import branch, flourish
 from . import branch_style
 from .map_layout import link_order, map_metrics, radial_slots, nearest_in_direction, separate
@@ -524,12 +525,20 @@ class Surface(QWidget):
             for leaf in self.leaves:
                 leaf.show()
             self.arrange()
+            motion.fade_in(self.leaves, 220, 18)
             topmost = min(self.nodes, key=lambda n: n.geometry().y()) if self.nodes else None
             self.select_widget(topmost)
             self.update()
         group.finished.connect(finished)
         self.morph = group
         group.start()
+
+    def slide_page(self, direction):
+        """Cambio de página: las tarjetas entran desde el lado al que se avanza, con fundido."""
+        moving = [w for w in self.nodes + self.leaves if w.isVisible()]
+        for widget in moving:
+            motion.slide_in(widget, QPoint(90 * direction, 0), 300).valueChanged.connect(lambda *_: self.update())
+        motion.fade_in(moving, 240, 14)
 
     def select(self, path, toggle=False):
         if toggle:
@@ -770,6 +779,7 @@ class Surface(QWidget):
             for leaf in self.leaves:
                 leaf.show()
             self.arrange()
+            motion.fade_in(self.leaves, 220, 18)
             for n in self.nodes:
                 if n.path == folder:
                     self.select_widget(n)
@@ -1360,7 +1370,10 @@ class Desktop(QMainWindow):
         self.page = 0; self.render()
 
     def change_page(self, direction):
+        page = self.page
         self.page += direction; self.render()
+        if self.page != page:
+            self.surface.slide_page(direction)
 
     def render(self):
         try:

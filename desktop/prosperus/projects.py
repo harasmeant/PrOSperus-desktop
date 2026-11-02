@@ -1,10 +1,11 @@
 """Cuadrícula de escritorios (proyectos) del panel «Tus proyectos»."""
 # SPDX-License-Identifier: GPL-3.0-only
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QEvent, QPoint, QRectF, Qt, QVariantAnimation
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea,
                                QSizePolicy, QVBoxLayout, QWidget)
 
+from . import motion
 from .appearance import draw_symbol, paint_wallpaper, palette_for, wallpaper_for
 
 MIN_CARD = 200  # ancho mínimo de cada tarjeta
@@ -20,6 +21,10 @@ class Cover(QPushButton):
         super().__init__()
         self.grid, self.path, self.position = grid, path, position
         self.hover = False
+        # Resaltado al pasar el ratón con fundido (0 normal → 1 encima).
+        self.glow = 0.0
+        self.glow_animation = QVariantAnimation(self, duration=160)
+        self.glow_animation.valueChanged.connect(self._set_glow)
         shell = grid.drawer.shell
         self.colors = shell.accessibility.palette(palette_for(shell.vault, path))
         self.wallpaper = None if shell.accessibility.high_contrast else wallpaper_for(shell.vault, path)
@@ -30,9 +35,17 @@ class Cover(QPushButton):
         self.setToolTip(path.name)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumWidth(MIN_CARD)
-        self.setFixedHeight(round(self.HEIGHT * shell.accessibility.text_scale / 100))
+        self.height_ = round(self.HEIGHT * shell.accessibility.text_scale / 100)
+        self.setFixedHeight(self.height_)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.clicked.connect(self.open)
+
+    def event(self, event):
+        # Las hojas de estilo (min-height de los botones) fijan el mínimo al aplicarse: se recupera el alto.
+        result = super().event(event)
+        if event.type() in (QEvent.Type.Polish, QEvent.Type.StyleChange) and self.minimumHeight() != self.height_:
+            self.setFixedHeight(self.height_)
+        return result
 
     def open(self):
         self.grid.drawer.move_to(self.position)
@@ -41,12 +54,21 @@ class Cover(QPushButton):
     def selected(self):
         return self.position == self.grid.drawer.index
 
+    def _set_glow(self, value):
+        self.glow = value; self.update()
+
+    def _fade_hover(self, on):
+        self.hover = on
+        self.glow_animation.stop()
+        self.glow_animation.setStartValue(self.glow); self.glow_animation.setEndValue(1.0 if on else 0.0)
+        self.glow_animation.start()
+
     def enterEvent(self, event):
-        self.hover = True; self.update()
+        self._fade_hover(True)
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        self.hover = False; self.update()
+        self._fade_hover(False)
         super().leaveEvent(event)
 
     def keyPressEvent(self, event):
@@ -62,7 +84,7 @@ class Cover(QPushButton):
         rect = QRectF(self.rect()).adjusted(1.5, 1.5, -1.5, -1.5)
         clip = QPainterPath(); clip.addRoundedRect(rect, 12, 12)
         p.save(); p.setClipPath(clip)
-        paint_wallpaper(p, rect, self.wallpaper, self.colors.base, 40 if self.hover else 70)
+        paint_wallpaper(p, rect, self.wallpaper, self.colors.base, round(70 - 30 * self.glow))
         # Degradado inferior para que el nombre se lea sobre cualquier fondo.
         shade = QLinearGradient(0, rect.bottom() - 70, 0, rect.bottom())
         shade.setColorAt(0, QColor(0, 0, 0, 0)); shade.setColorAt(1, QColor(0, 0, 0, 120))
@@ -215,7 +237,16 @@ class ProjectDrawer(QFrame):
         self.filtered = list(self.shell.project_paths)
         self.index = next((i for i, p in enumerate(self.filtered) if self.shell.folder.is_relative_to(p)), 0)
         self.refresh()
+        entering = not self.isVisible()
         self.show(); self.raise_(); self.stack.setFocus()
+        if entering:
+            # Entra desde el borde izquierdo y las tarjetas aparecen una tras otra.
+            motion.slide_in(self, QPoint(-self.width(), 0), 260)
+            motion.fade_in(self.stack.cards[:12], 220, 28)
+
+    def hide(self):
+        # Sale hacia la izquierda (una imagen del panel): el panel real queda oculto al momento.
+        motion.ghost_out(self, QPoint(-self.width(), 0), 190)
 
     def filter_projects(self):
         try:

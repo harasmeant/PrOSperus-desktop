@@ -39,7 +39,7 @@ class Palette:
         QWidget {{ background: transparent; color: {self.text}; font-family: 'DejaVu Sans'; font-size: 13px; }}
         QMainWindow, QDialog {{ background: {self.base}; }}
         QPushButton {{ background: {self.card}; border: 1px solid {self.border}; border-radius: 12px;
-                       padding: 10px 18px; min-height: 20px; text-align: left; }}
+                       padding: 10px 18px; text-align: left; }}
         QPushButton:hover {{ background: {self.hover}; border-color: {self.accent}; }}
         QPushButton:pressed {{ background: {self.panel}; }}
         QPushButton:focus {{ border: 1px solid {self.accent}; }}

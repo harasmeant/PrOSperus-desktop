@@ -413,3 +413,10 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
   - La papelera es `.papelera` en la raíz de los proyectos: oculta, nada se borra y nunca se sobrescribe (`Nota (2).md`).
   - Con una nota abierta se pide cerrarla antes.
   - `rename_wikilinks` la escribió qwen2.5-coder en local, con un esqueleto guiado y dos correcciones (barra del prefijo y el sufijo `.md`, que era un error de la especificación). 127 pruebas correctas.
+- Animaciones suaves (`motion.py`, borrador de qwen2.5-coder revisado: animaciones que se pisan con clics rápidos y widgets borrados a mitad):
+  - El panel de proyectos entra deslizándose desde la izquierda (260 ms) con las tarjetas apareciendo escalonadas, y sale deslizándose (una imagen del panel, que queda oculto al momento).
+  - El resaltado de las tarjetas al pasar el ratón se funde (160 ms).
+  - En el mapa, las hojas aparecen con fundido al entrar o salir de una carpeta, en vez de saltar.
+  - Al cambiar de página, las tarjetas entran desde el lado hacia el que se avanza, con fundido.
+  - Fotogramas en `docs/images/animaciones-fotogramas.png`.
+- Corregido un fallo de esta noche: el `min-height` general de los botones aplastaba las tarjetas del panel de proyectos a 42 px. Se quitó y las tarjetas recuperan su alto aunque una hoja de estilo (botones grandes) lo cambie. 127 pruebas correctas.
