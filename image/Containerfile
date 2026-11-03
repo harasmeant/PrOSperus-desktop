@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-only
 FROM localhost/prosperus-base:dev
-# Duplicar pantallas: Sway no tiene modo espejo propio.
-RUN dnf -y --setopt=install_weak_deps=False install wl-mirror && dnf clean all
+# Duplicar pantallas: Sway no tiene modo espejo propio. Input Remapper: botones del ratón
+# y teclas reasignados (preajustes en /usr/share/prosperus/input-remapper-2).
+RUN dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper && dnf clean all
 COPY desktop/prosperus /usr/lib/prosperus/prosperus
 COPY demo-system /usr/share/prosperus/demo
 COPY LICENSE /usr/share/licenses/prosperus/LICENSE
@@ -13,6 +14,7 @@ RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-
     && chmod 0440 /etc/sudoers.d/prosperus-vm \
     && systemctl enable NetworkManager.service \
     && systemctl enable greetd.service \
+    && systemctl enable input-remapper.service \
     && systemctl set-default graphical.target \
     && systemctl mask getty@tty1.service \
     && mkdir -p /boot /usr/share/prosperus /var/log/journal \

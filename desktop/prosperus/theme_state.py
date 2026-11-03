@@ -29,7 +29,7 @@ def foot_config(colors, base=FOOT_BASE):
     """foot.ini que parte del del sistema y solo cambia fondo, texto y barra de título."""
     return (f'[main]\ninclude={base}\n\n'
             f'[colors-dark]\nbackground={colors.base[1:]}\nforeground={colors.text[1:]}\n\n'
-            f'[csd]\ncolor=99{colors.panel[1:]}\nbutton-color=ff{colors.text[1:]}\n'
+            f'[csd]\ncolor=cc{colors.panel[1:]}\nbutton-color=ff{colors.text[1:]}\n'
             f'button-minimize-color=ff{colors.card[1:]}\nbutton-maximize-color=ff{colors.card[1:]}\n'
             # Borde en el color de resalte del fondo, como las demás ventanas.
             f'border-width=2\nborder-color=ff{colors.accent[1:]}\n')
