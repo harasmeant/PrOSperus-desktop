@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Historial del portapapeles (Super+V): elige una entrada y vuelve a copiarla.
+config=${XDG_RUNTIME_DIR:-/nonexistent}/prosperus/fuzzel.ini
+set --
+[ -r "$config" ] && set -- --config "$config"
+choice=$(cliphist list | fuzzel "$@" --dmenu --prompt 'Portapapeles ❯ ') || exit 0
+printf '%s' "$choice" | cliphist decode | wl-copy

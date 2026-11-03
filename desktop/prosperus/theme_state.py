@@ -35,6 +35,16 @@ def foot_config(colors, base=FOOT_BASE):
             f'border-width=2\nborder-color=ff{colors.accent[1:]}\n')
 
 
+def fuzzel_config(colors):
+    """Selector de fuzzel (historial del portapapeles) en los colores del proyecto."""
+    c = lambda value, alpha='ff': value.lstrip('#') + alpha
+    return (f"[main]\nfont=DejaVu Sans:size=12\nprompt='❯ '\nwidth=60\nlines=12\nhorizontal-pad=18\n"
+            f"vertical-pad=14\ninner-pad=8\n\n[colors]\nbackground={c(colors.base, 'ee')}\n"
+            f"text={c(colors.text)}\nprompt={c(colors.accent)}\ninput={c(colors.text)}\n"
+            f"match={c(colors.accent)}\nselection={c(colors.card)}\nselection-text={c(colors.text)}\n"
+            f"selection-match={c(colors.accent)}\nborder={c(colors.accent)}\n\n[border]\nwidth=2\nradius=14\n")
+
+
 def mako_config(colors, base_text):
     """mako.conf del sistema con los colores del proyecto."""
     replace = {'background-color': colors.base + 'ee', 'text-color': colors.text,
@@ -62,7 +72,7 @@ def frame_traits(traits):
     return shared
 
 
-def publish(colors, folder, directory=None, traits=None):
+def publish(colors, folder, directory=None, traits=None, wallpaper=None):
     """Guarda paleta (y rasgos de las ramas para las filigranas), carpeta, foot.ini y mako.conf;
     recarga mako si cambió. Nunca falla."""
     directory = directory or state_dir()
@@ -72,9 +82,12 @@ def publish(colors, folder, directory=None, traits=None):
         directory.mkdir(parents=True, exist_ok=True)
         data = {r: getattr(colors, r) for r in ROLES}
         data['traits'] = frame_traits(traits)
+        # Fondo del proyecto: la pantalla de bloqueo lo muestra desenfocado (lock_screen.py).
+        data['wallpaper'] = str(wallpaper) if wallpaper else ''
         _write(directory / 'theme.json', json.dumps(data))
         _write(directory / 'folder', str(folder) + '\n')
         _write(directory / 'foot.ini', foot_config(colors))
+        _write(directory / 'fuzzel.ini', fuzzel_config(colors))
         base = Path(MAKO_BASE)
         if base.is_file() and _write(directory / 'mako.conf', mako_config(colors, base.read_text(encoding='utf-8'))):
             subprocess.run(['makoctl', 'reload'], capture_output=True, timeout=3, check=False)

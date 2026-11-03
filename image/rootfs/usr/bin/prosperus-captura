@@ -1,0 +1,21 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Captura de pantalla (Impr Pant) o de una zona elegida con el ratón (Mayús+Impr Pant, «zona»):
+# se guarda en Imágenes/Capturas y se copia al portapapeles.
+# Base escrita por qwen2.5-coder (local); corregidos la carpeta por defecto, la salida con error y una comilla.
+pictures=$(xdg-user-dir PICTURES 2>/dev/null)
+[ -n "$pictures" ] && [ "$pictures" != "$HOME" ] || pictures=$HOME/Imágenes
+dir=$pictures/Capturas
+mkdir -p "$dir"
+file="$dir/Captura $(date '+%Y-%m-%d %H.%M.%S').png"
+case "$1" in
+    zona) geometry=$(slurp) || exit 0   # Esc: no se captura nada.
+          set -- -g "$geometry" ;;
+    *)    set -- ;;
+esac
+if ! grim "$@" "$file"; then
+    notify-send -a PrOSperus 'Captura' 'No se pudo hacer la captura.'
+    exit 1
+fi
+wl-copy --type image/png < "$file"
+notify-send -a PrOSperus -i "$file" 'Captura guardada' "$(basename "$file") · copiada al portapapeles"

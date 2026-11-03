@@ -23,6 +23,10 @@
 - **Windows / Super:** abrir o cerrar Aplicaciones, cuando el sistema entrega esa tecla a PrOSperus.
 - **Ctrl+Espacio:** alternativa para Aplicaciones dentro de la demo.
 - **Super+E:** explorador. **Super+D:** ocultar/restaurar las notas. **Super+I:** controles.
+- **Super+Intro** o **Ctrl+Alt+T:** consola en la carpeta del proyecto. **Super+C:** asistente Claude.
+- **Super+L:** bloquear (Intro desbloquea si no has puesto contraseña con `passwd`). Se bloquea sola a los 10 minutos sin uso.
+- **Impr Pant:** captura de pantalla. **Mayús+Impr Pant:** captura de una zona. Se guardan en Imágenes/Capturas y se copian al portapapeles.
+- **Super+V:** historial del portapapeles.
 - Las teclas de volumen, brillo y reproducción se atienden en la sesión propia PrOSperus cuando están disponibles.
 
 En esta demo dentro de GNOME, Windows/Super, Alt+Tab y otros atajos globales los gestiona Fedora. F11 no cambia esto. Los controles de brillo requieren hardware compatible; una VM normalmente no lo ofrece. La tecla Fn depende del teclado.

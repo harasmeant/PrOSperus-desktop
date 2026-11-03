@@ -493,3 +493,11 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - ISO de las 21:56, SHA-256 `2615889e185a…`, con todo `main`: probada en QEMU (Ctrl+3 → Laboratorio, Ctrl+Alt+T abre Foot allí con letra monoespaciada, tono azulado y marco del color de resalte).
 - Consola Foot al 80 % (antes 60 %), barra de título incluida: se leía mal sobre el mapa.
 - Input Remapper en la imagen (servicio activado) con el mismo preajuste que en Bazzite: «DosFlechas», el botón lateral 276 (BTN_EXTRA) del Razer Naga Trinity hace de clic izquierdo, cargado solo al entrar. Los preajustes van en `/usr/share/prosperus/input-remapper-2`; la sesión los copia a `~/.config/input-remapper-2` si no existe y lanza `input-remapper-control --command autoload` (registro: `journalctl -t prosperus-remapper`).
+
+## 3 de noviembre de 2026 · Escritorio estilo Arch
+
+- SwayFX (COPR oficial `swayfx/swayfx`, sustituye a Sway con `dnf swap`): desenfoque detrás de las ventanas translúcidas, esquinas de 12 px y sombra; el escritorio queda recto (`smart_corner_radius`) y la píldora sin sombra.
+- Consola: prompt en dos líneas (carpeta, rama de git, ❯ verde o rojo), `ls`/`ll`/`tree` con eza, `cat` con bat y fastfetch al abrir (`/etc/profile.d/prosperus-shell.sh`). btop con los colores de la consola.
+- Super+L bloquea con swaylock sobre el fondo del proyecto desenfocado y oscurecido, anillo en los colores del tema (`lock_screen.py`); swayidle bloquea a los 10 min, apaga la pantalla a los 15 y bloquea antes de suspender. El usuario Live pasa a no tener contraseña (antes bloqueada): Intro desbloquea hasta que se ponga una con `passwd` (sudo ya era sin contraseña).
+- Impr Pant / Mayús+Impr Pant: captura entera o de zona (grim, slurp) en Imágenes/Capturas, copiada al portapapeles y con aviso. Super+V: historial del portapapeles (cliphist) en fuzzel con los colores del proyecto.
+- Código base de la consola, el desenfoque y las capturas: qwen2.5-coder (local), con correcciones (color del ❯, imagen oscurecida sin desenfocar, salida con error en un subshell, una comilla).

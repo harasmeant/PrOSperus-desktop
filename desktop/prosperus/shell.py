@@ -1184,7 +1184,8 @@ class Desktop(QMainWindow):
         self.windows.set_wallpaper(self.background.wallpaper, self.colors.base)
         # La consola, las notificaciones y las ventanas aparte toman el tono y la carpeta del proyecto.
         if self.system_session:
-            publish_theme(self.colors, self.folder, traits=self.frame_traits())
+            publish_theme(self.colors, self.folder, traits=self.frame_traits(),
+                          wallpaper=self.background.wallpaper)
 
     def frame_traits(self):
         """Estilo de las ramas del proyecto actual (fondo + ajustes de «Ramas»): filigranas de los marcos."""
