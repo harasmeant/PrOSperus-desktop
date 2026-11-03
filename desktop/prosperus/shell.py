@@ -1166,6 +1166,8 @@ class Desktop(QMainWindow):
         self.background.palette = self.colors
         self.background.wallpaper = None if self.accessibility.high_contrast else wallpaper_for(self.vault, self.folder)
         self.background.update(); self.surface.update()
+        # Con dos pantallas, la que no tiene el mapa muestra el fondo del proyecto (no un color liso).
+        self.windows.set_wallpaper(self.background.wallpaper, self.colors.base)
 
     def apply_accessibility(self):
         self.apply_appearance()

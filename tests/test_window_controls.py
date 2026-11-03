@@ -150,3 +150,18 @@ class WindowHeaderSwayTests(unittest.TestCase):
         self.assertIn('width 1600 px height 900 px', sent[0])
         self.assertIn('width 900 px height 700 px', sent[1])
         self.assertIn('[con_id=5]', sent[0])
+
+
+class WallpaperOnOtherScreensTests(unittest.TestCase):
+    def test_sway_background_follows_project_once(self):
+        from unittest import mock
+        from prosperus import window_manager
+        manager = window_manager.WindowManager()
+        manager.available = True
+        sent = []
+        with mock.patch.object(window_manager, 'request', side_effect=lambda kind, payload='': sent.append(payload) or [{'success': True}]):
+            manager.set_wallpaper('/fondos/bosque.jpg', '#111111')
+            manager.set_wallpaper('/fondos/bosque.jpg', '#111111')  # sin cambios: no relanza swaybg
+            manager.set_wallpaper(None, '#222222')
+            manager.set_wallpaper('/fondos/mal"o.jpg', '#111111')
+        self.assertEqual(sent, ['output * bg "/fondos/bosque.jpg" fill', 'output * bg "#222222" solid_color'])

@@ -228,6 +228,21 @@ class WindowManager(QObject):
             self.message.emit(f'No se pudo cambiar de escritorio: {e}')
         self.refresh()
 
+    def set_wallpaper(self, path, color):
+        """Fondo de Sway (lo que se ve en las demás pantallas): el del proyecto actual.
+
+        Solo se envía si cambia, porque cada orden vuelve a lanzar swaybg."""
+        value = (str(path), 'fill') if path else (color, 'solid_color')
+        if not self.available or value == getattr(self, '_wallpaper', None):
+            return
+        if '"' in value[0] or '\n' in value[0]:
+            return  # no se puede citar con seguridad en una orden de Sway
+        try:
+            request(0, f'output * bg "{value[0]}" {value[1]}')
+            self._wallpaper = value
+        except (OSError, ValueError) as e:
+            self.message.emit(f'No se pudo poner el fondo en las otras pantallas: {e}')
+
     def focus(self, con_id, hidden):
         try:
             if hidden:
