@@ -6,7 +6,7 @@ FROM localhost/prosperus-base:dev
 # capturas, portapapeles, bloqueo, consola (eza, bat, fastfetch, btop) y selector (fuzzel).
 RUN curl -fsSL -o /etc/yum.repos.d/swayfx.repo \
         https://copr.fedorainfracloud.org/coprs/swayfx/swayfx/repo/fedora-44/swayfx-swayfx-fedora-44.repo \
-    && dnf -y --setopt=install_weak_deps=False swap sway swayfx \
+    && dnf -y --setopt=install_weak_deps=False install --allowerasing swayfx \
     && dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper \
        grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs \
        eza bat fastfetch btop \
