@@ -487,3 +487,5 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
   OBS…), ingeniería, juegos e internet. Ids de Flathub y paquetes de Fedora comprobados.
 - Las ya instaladas llevan ✓. Input Remapper y Piper activan su servicio (`input-remapper`, `ratbagd`) al instalarse.
 - Buscar con el campo vacío o el botón «Recomendadas» vuelve al catálogo.
+- La imagen base instala también los textos en español (`%_install_langs en_US:es_ES:es`): el contenedor de
+  Fedora solo traía inglés y `qtbase_es.qm` no llegaba a la ISO.

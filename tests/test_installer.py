@@ -47,3 +47,11 @@ class RecommendedTests(unittest.TestCase):
         self.assertEqual(after_commands(piper), [['sudo', '-n', 'systemctl', 'enable', '--now', 'ratbagd']])
         self.assertFalse(is_installed(piper, set(), {'piper'}))
         self.assertTrue(is_installed(piper, set(), {'piper', 'libratbag-ratbagd'}))
+
+
+class SpanishImageTests(unittest.TestCase):
+    def test_base_image_keeps_spanish_translations(self):
+        from pathlib import Path
+        text = (Path(__file__).parents[1] / 'image/Containerfile.base').read_text(encoding='utf-8')
+        self.assertIn('qt6-qttranslations', text)
+        self.assertLess(text.index('%_install_langs en_US:es_ES:es'), text.index('dnf -y'))

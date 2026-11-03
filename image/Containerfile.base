@@ -2,6 +2,9 @@
 ARG FEDORA_BASE=registry.fedoraproject.org/fedora@sha256:de3396aa9d2452c5affd4a0b6eff9d3d0a7f3af58e243827790963c30e2d5e2c
 FROM ${FEDORA_BASE}
 
+# El contenedor de Fedora solo instala textos en inglés: añade el español (diálogos de Qt, programas).
+RUN echo '%_install_langs en_US:es_ES:es' > /etc/rpm/macros.image-language-conf
+
 # Sistema mínimo, sesión gráfica y red.
 RUN dnf -y --setopt=install_weak_deps=False install \
     kernel-core kernel-modules-core kernel-modules dracut systemd systemd-udev systemd-pam \
