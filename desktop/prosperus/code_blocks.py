@@ -41,6 +41,13 @@ def highlight_spans(code, language):
     return spans
 
 
+def separate_fences(markdown):
+    """Qt une dos bloques de código seguidos del mismo lenguaje (no marca dónde empieza cada uno):
+    se separan con un párrafo invisible."""
+    import re
+    return re.sub(r'(?m)^(```|~~~)[ \t]*\n[ \t]*\n(?=(?:```|~~~))', '\\1\n\n\u200b\n\n', markdown)
+
+
 def code_groups(document):
     """Bloques de código seguidos con el mismo lenguaje: [(primer bloque, último bloque, lenguaje)]."""
     groups, block = [], document.begin()

@@ -23,7 +23,8 @@ from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
 from . import motion
-from .code_blocks import style_code
+from .charts import insert_charts
+from .code_blocks import separate_fences, style_code
 from .branches import branch, flourish
 from . import branch_style
 from .map_layout import link_order, map_metrics, radial_slots, nearest_in_direction, separate
@@ -189,8 +190,10 @@ class NotePanel(QFrame):
         first, _, rest = markdown.lstrip().partition('\n')
         if first.startswith('# ') and first[2:].strip() == self.path.stem:
             markdown = rest
-        self.reader.setMarkdown(markdown)
-        style_code(self.reader.document(), self.colors)  # ```python, ```java…: colores por lenguaje
+        self.reader.setMarkdown(separate_fences(markdown))
+        # ```grafica: tabla de datos → imagen; después, ```python, ```java…: colores por lenguaje.
+        insert_charts(self.reader.document(), self.colors, max(360, min(720, self.width() - 110)))
+        style_code(self.reader.document(), self.colors)
         block = self.reader.document().begin()
         anchors = []
         while block.isValid():
