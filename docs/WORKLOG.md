@@ -431,3 +431,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Dos pantallas:
   - La pantalla sin el mapa mostraba un color liso; ahora muestra el fondo del proyecto actual (`output * bg … fill`, solo cuando cambia). Probado en Sway con dos salidas virtuales.
   - En el portátil (HP con AMD + GTX 1650), la pantalla externa por HDMI probablemente cuelga de la NVIDIA. Con nouveau bloqueado (colgaba Sway), esa salida no existe hasta instalar el controlador propietario. Para saber qué pasa: `journalctl -t prosperus-diag` muestra las salidas que ve Sway. 131 pruebas correctas.
+- Persistencia: con la partición `PROSPERUS_DATA`, los programas de Flathub (`/var/lib/flatpak`) se guardan en el USB y se conservan entre arranques. El primer arranque copia el catálogo de la imagen. Los de Fedora siguen perdiéndose: el sistema base no se escribe. El instalador avisa de qué se conserva según haya persistencia o no. 132 pruebas correctas.

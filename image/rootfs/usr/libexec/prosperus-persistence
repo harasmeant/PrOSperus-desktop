@@ -56,5 +56,15 @@ fi
 mkdir -p "$nm"
 mount --bind "$data/system-connections" "$nm"
 
+# Programas de Flathub: se instalan en /var/lib/flatpak, que en la sesión en vivo está en RAM.
+# En el USB se conservan entre arranques (los de Fedora no: el sistema base es de solo lectura).
+fp=/var/lib/flatpak
+if [ ! -d "$data/flatpak" ]; then
+    mkdir -p "$data/flatpak"
+    cp -a "$fp/." "$data/flatpak/" 2>/dev/null || true
+fi
+mkdir -p "$fp"
+mount --bind "$data/flatpak" "$fp" || echo 'No se pudo conservar Flathub en el USB.' >&2
+
 touch /run/prosperus-persistent
 echo "Persistencia activa en $dev."

@@ -75,6 +75,13 @@ QPushButton:hover { background: #344030; }
 '''
 
 
+def persistence_note(marker='/run/prosperus-persistent'):
+    """Qué se conserva al apagar según haya persistencia en el USB."""
+    if Path(marker).exists():
+        return 'Con el USB persistente, los programas de Flathub se conservan al apagar; los de Fedora se pierden.'
+    return 'Sesión sin persistencia: lo que instales se perderá al apagar.'
+
+
 class Installer(QWidget):
     # Interfaz gráfica principal que coordina búsquedas, instalación y registro de actividad.
     def __init__(self, path=None):
@@ -86,6 +93,7 @@ class Installer(QWidget):
         self.search = QLineEdit(); self.search.setPlaceholderText('Busca un programa: blender, freecad, zen…')
         self.search.returnPressed.connect(self.run_search); layout.addWidget(self.search)
         self.list = QListWidget(); self.list.itemActivated.connect(lambda _: self.install()); layout.addWidget(self.list)
+        note = QLabel(persistence_note()); note.setObjectName('muted'); note.setWordWrap(True); layout.addWidget(note)
         self.log = QPlainTextEdit(); self.log.setReadOnly(True); self.log.setMaximumHeight(120); layout.addWidget(self.log)
         row = QHBoxLayout(); row.addStretch()
         self.install_button = QPushButton('Instalar'); self.install_button.clicked.connect(lambda: self.install())
