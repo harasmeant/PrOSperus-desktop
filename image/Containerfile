@@ -10,6 +10,7 @@ RUN curl -fsSL -o /etc/yum.repos.d/swayfx.repo \
     && dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper \
        grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy \
        eza bat fastfetch btop papirus-icon-theme \
+       adw-gtk3-theme dconf gsettings-desktop-schemas xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr \
     && dnf clean all
 # Cursor Bibata (no está en Fedora): versión fija comprobada con su SHA-256.
 RUN curl -fsSL -o /tmp/bibata.tar.xz \
@@ -34,6 +35,7 @@ RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-
     && systemctl mask getty@tty1.service \
     && mkdir -p /boot /usr/share/prosperus /var/log/journal \
     && rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort > /usr/share/prosperus/packages.txt \
+    && dconf update \
     && python3 -m compileall -q /usr/lib/prosperus/prosperus \
     && updatedb \
     && kernel_version="$(ls /usr/lib/modules | sort -V | tail -1)" \
