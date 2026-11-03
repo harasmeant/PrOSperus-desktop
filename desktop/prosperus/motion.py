@@ -6,7 +6,8 @@ from PySide6.QtCore import QEasingCurve, QPoint, QPropertyAnimation, QTimer, QAb
 from PySide6.QtWidgets import QGraphicsOpacityEffect, QLabel, QWidget
 
 
-def fade_in(widgets, duration=220, stagger=30):
+def fade_in(widgets, duration=220, stagger=30, on_step=None):
+    """on_step: se llama en cada fotograma (p. ej. para repintar lo que depende de la opacidad)."""
     for i, widget in enumerate(widgets):
         if widget is None:
             continue
@@ -22,6 +23,9 @@ def fade_in(widgets, duration=220, stagger=30):
         animation.setEndValue(1.0)
         animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         animation.finished.connect(lambda w=widget: w.setGraphicsEffect(None))
+        if on_step is not None:
+            animation.valueChanged.connect(lambda *_: on_step())
+            animation.finished.connect(on_step)
         # Con contexto: si el widget desaparece antes de empezar, no se llama.
         QTimer.singleShot(i * stagger, animation, animation.start)
         widget._fade = animation

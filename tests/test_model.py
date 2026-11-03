@@ -478,3 +478,21 @@ class RenameTrashTests(unittest.TestCase):
             self.assertEqual({vault.restore(p.name).parent for p, _ in vault.trashed()}, {root})
             with self.assertRaises(FileNotFoundError):
                 vault.restore('../A')
+
+    def test_rename_updates_markdown_links_for_notes_and_folders(self):
+        import tempfile
+        from pathlib import Path
+        from prosperus.model import Vault, rename_markdown_links
+        self.assertEqual(rename_markdown_links('[a](Plan.md) `[b](Plan.md)` [c](https://x/Plan.md)', '/r', '/r/Plan.md', '/r/Plan 2026.md'),
+                         ('[a](Plan%202026.md) `[b](Plan.md)` [c](https://x/Plan.md)', 1))
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); (root / 'A').mkdir(); (root / 'B').mkdir()
+            (root / 'A' / 'Plan.md').write_text('# Plan\n', encoding='utf-8')
+            (root / 'B' / 'Indice.md').write_text('[plan](../A/Plan.md#fechas) y [[Plan]]\n', encoding='utf-8')
+            vault = Vault(root)
+            vault.rename(root / 'A' / 'Plan.md', 'Plan 2026')
+            self.assertEqual((root / 'B' / 'Indice.md').read_text(encoding='utf-8'),
+                             '[plan](../A/Plan%202026.md#fechas) y [[Plan 2026]]\n')
+            _, updated = vault.rename(root / 'A', 'Planes')
+            self.assertEqual(updated, [root / 'B' / 'Indice.md'])
+            self.assertIn('(../Planes/Plan%202026.md#fechas)', (root / 'B' / 'Indice.md').read_text(encoding='utf-8'))

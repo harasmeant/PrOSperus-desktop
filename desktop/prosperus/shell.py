@@ -10,7 +10,7 @@ import sys
 
 from PySide6.QtCore import QEasingCurve, QEvent, QFileSystemWatcher, QParallelAnimationGroup, QPoint, QPointF, QPropertyAnimation, QRect, QRectF, QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QColor, QFont, QKeySequence, QPainter, QPainterPath, QPen, QShortcut, QTextCharFormat, QTextCursor
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame, QHBoxLayout, QInputDialog,
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame, QGraphicsOpacityEffect, QHBoxLayout, QInputDialog,
     QLabel, QLayout, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPlainTextEdit, QPushButton, QScrollArea, QSizeGrip, QStackedWidget,
     QTextBrowser, QVBoxLayout, QWidget, QStyle)
@@ -525,7 +525,7 @@ class Surface(QWidget):
             for leaf in self.leaves:
                 leaf.show()
             self.arrange()
-            motion.fade_in(self.leaves, 220, 18)
+            motion.fade_in(self.leaves, 220, 18, self.update)
             topmost = min(self.nodes, key=lambda n: n.geometry().y()) if self.nodes else None
             self.select_widget(topmost)
             self.update()
@@ -538,7 +538,7 @@ class Surface(QWidget):
         moving = [w for w in self.nodes + self.leaves if w.isVisible()]
         for widget in moving:
             motion.slide_in(widget, QPoint(90 * direction, 0), 300).valueChanged.connect(lambda *_: self.update())
-        motion.fade_in(moving, 240, 14)
+        motion.fade_in(moving, 240, 14, self.update)
 
     def select(self, path, toggle=False):
         if toggle:
@@ -699,12 +699,17 @@ class Surface(QWidget):
             hole = QPainterPath(); hole.addRoundedRect(QRectF(card.geometry()), 10, 10)
             visible = visible.subtracted(hole)
         p.setClipPath(visible)
+
+        def faded(widget):
+            # Mientras una tarjeta aparece con fundido, su rama la acompaña (no llega antes que ella).
+            effect = widget.graphicsEffect()
+            return effect.opacity() if isinstance(effect, QGraphicsOpacityEffect) else 1.0
         for k, widget in enumerate(self.nodes):
-            pearl.setAlpha(alpha(165))
+            pearl.setAlpha(alpha(165 * faded(widget)))
             branch(p, origin, QPointF(widget.geometry().center()), 7.5, 2.2, pearl, k, 5, traits=traits)
         for k, leaf in enumerate(self.leaves):
             if leaf.isVisible():
-                pearl.setAlpha(alpha(120))
+                pearl.setAlpha(alpha(120 * faded(leaf)))
                 branch(p, QPointF(leaf.parent_node.geometry().center()), QPointF(leaf.geometry().center()), 2.4, .9, pearl, k, 1, .12, traits)
         # Enlaces entre notas: zarcillo fino entre vecinos, más grueso cuanto más enlazadas.
         node_index = {n: i for i, n in enumerate(self.nodes)}
@@ -715,7 +720,7 @@ class Surface(QWidget):
             if wa in node_index and wb in node_index:
                 i, j = node_index[wa], node_index[wb]
                 width = 1.6 + .7 * min(self.link_weights.get((min(i, j), max(i, j)), 1), 5)
-            pearl.setAlpha(alpha(140))
+            pearl.setAlpha(alpha(140 * min(faded(wa), faded(wb))))
             branch(p, QPointF(wa.geometry().center()), QPointF(wb.geometry().center()), width, width * .6, pearl, k, 2, .25, traits)
 
     def focus_direction(self, path, direction):
@@ -779,7 +784,7 @@ class Surface(QWidget):
             for leaf in self.leaves:
                 leaf.show()
             self.arrange()
-            motion.fade_in(self.leaves, 220, 18)
+            motion.fade_in(self.leaves, 220, 18, self.update)
             for n in self.nodes:
                 if n.path == folder:
                     self.select_widget(n)

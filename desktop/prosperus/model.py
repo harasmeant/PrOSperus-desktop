@@ -7,7 +7,7 @@ import os
 import stat
 import tempfile
 import unicodedata
-from urllib.parse import unquote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 
 
 def searchable(value):
@@ -48,6 +48,47 @@ def rename_wikilinks(text, old, new):
     # Apply WIKILINK.sub(replace, chunk) ONLY to chunks with an EVEN index (index 0, 2, 4...); keep odd (code) chunks unchanged.
     new_chunks = [WIKILINK.sub(replace, chunk) if i % 2 == 0 else chunk for i, chunk in enumerate(chunks)]
     return ''.join(new_chunks), count
+
+
+# Borrador de qwen2.5-coder; corregido (lo aplicaba dentro del código) y ampliado a carpetas.
+MDLINK = re.compile(r'(\[[^\]\n]*\]\()(<[^>\n]+>|[^)\s]+)((?:\s+"[^"\n]*")?\))')
+# group(1) = '[label](' ; group(2) = destination, maybe wrapped in <...>, maybe URL-encoded (%20) ; group(3) = optional title and ')'
+
+def rename_markdown_links(text, note_dir, old_path, new_path):
+    """Rewrite relative Markdown links (also links into a renamed folder) in a note located in folder `note_dir` that point to `old_path`
+    so they point to `new_path`. All three are absolute path strings. Returns (new_text, count)."""
+    count = 0
+
+    def replace(match):
+        nonlocal count
+        head, dest, tail = match.group(1), match.group(2), match.group(3)
+        wrapped = dest.startswith('<') and dest.endswith('>')
+        raw = dest[1:-1] if wrapped else dest
+        if '://' in raw or raw.startswith('mailto:') or raw.startswith('#'):
+            return match.group(0)
+        path_part, sep, fragment = raw.partition('#')
+        target = os.path.normpath(os.path.join(note_dir, unquote(path_part)))
+        old = os.path.normpath(old_path)
+        if target == old:
+            moved = new_path
+        elif target.startswith(old + os.sep):  # carpeta renombrada: enlaces a lo que hay dentro
+            moved = os.path.normpath(new_path) + target[len(old):]
+        else:
+            return match.group(0)
+        rel = os.path.relpath(moved, note_dir).replace(os.sep, '/')
+        if wrapped:
+            new_dest = '<' + rel + sep + fragment + '>'
+        else:
+            new_dest = quote(rel, safe='/') + sep + fragment
+        count += 1
+        return head + new_dest + tail
+
+    # Do not touch code: apply MDLINK.sub only to even chunks of
+    # re.split(r'(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)', text)
+    chunks = re.split(r'(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)', text)
+    for i in range(0, len(chunks), 2):
+        chunks[i] = MDLINK.sub(replace, chunks[i])
+    return (''.join(chunks), count)
 
 
 class Vault:
@@ -213,15 +254,17 @@ class Vault:
         target = self.child_path(path.parent, name, note=note)
         os.rename(path, target)
         updated = []
-        if note and target.stem.casefold() != path.stem.casefold():
-            for other in list(self.notes()):
-                try:
-                    text = self.read(other)
-                    changed, count = rename_wikilinks(text, path.stem, target.stem)
-                    if count:
-                        self.save_note(other, changed, text); updated.append(other)
-                except (OSError, ValueError):
-                    continue  # una nota ilegible no impide renombrar
+        for other in list(self.notes()):
+            try:
+                text = self.read(other)
+                changed, count = rename_markdown_links(text, str(other.parent), str(path), str(target))
+                if note and target.stem.casefold() != path.stem.casefold():
+                    changed, more = rename_wikilinks(changed, path.stem, target.stem)
+                    count += more
+                if count:
+                    self.save_note(other, changed, text); updated.append(other)
+            except (OSError, ValueError):
+                continue  # una nota ilegible no impide renombrar
         return target, updated
 
     def trash(self, path):
