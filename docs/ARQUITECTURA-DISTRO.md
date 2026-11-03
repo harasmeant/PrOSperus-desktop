@@ -45,7 +45,7 @@
 ## Recomendaciones inmediatas para que funcione en VM hoy
 1. **UI:** Añadir a `desktop/prosperus/appearance.py` o `layout_settings.py` un selector de resolución (1360×850 / 900×650 / automático) y escala (1.0 / 1.25 / 1.5). Esto resuelve el "zoom" y la división.
 2. **Ratón:** Verificar que `virtio-mouse` esté en `Containerfile.base` o que el evento de Qt capture el mouse en `desktop/prosperus/desktop_keys.py`
-3. **Apps:** Añadir a `Containerfile.base` o `Containerfile`: `python3-pyside6` ya está; faltan `gimp`, `firefox`, `libreoffice-writer`, `vscodium` (o al menos los paquetes mínimos para que `launcher.py` los encuentre vía GIO). No instalar todo en imagen básica; usar repos en primera ejecución.
+3. **Apps:** Añadir a `Containerfile.base` o `Containerfile`: `python3-pyside6` ya está; faltan `firefox`, `libreoffice-writer`, `vscodium` (o al menos los paquetes mínimos para que `launcher.py` los encuentre vía GIO). No instalar todo en imagen básica; usar repos en primera ejecución.
 4. **Instalador:** Crear `scripts/install.sh` que parte `prosperus-uefi.raw` → escribe a `/dev/sda` → instala bootloader → crea usuario.
 5. **Red:** Añadir `NetworkManager` y `wireless-tools`; configurar `systemd-networkd` como fallback.
 6. **Persistencia:** En `image/Containerfile.live` asegurar que `dracut-live` permita overlay temporal; al instalar, quitar `rd.live.ram` y usar disco directo.

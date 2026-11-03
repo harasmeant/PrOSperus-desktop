@@ -468,3 +468,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
   - Foot lleva un borde de 2 px en el color de resalte.
   - Con alto contraste, borde simple sin filigrana.
   - Capturas: `docs/images/marcos-notas.png` (el mismo marco con dos fondos) y `docs/images/marco-ramas.png`. 147 pruebas correctas.
+- GIMP fuera de la imagen base, a petición. Si hace falta, se instala desde Flathub con «Instalar programas» (se conserva con el USB persistente).

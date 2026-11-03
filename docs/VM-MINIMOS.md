@@ -42,7 +42,7 @@ Según `README.md` y la demo (`demo-system/`, `prototype/`):
 1. Añadir selector de resolución/escala al escritorio (`appearance.py` / `layout_settings.py`).
 2. Corregir captura de ratón en QEMU/Boxes (probablemente `virtio-mouse` o evento Qt).
 3. Probar disposición por defecto (sin layout Fibonacci si causa división no deseada).
-4. Instalar/asegurar paquetes de aplicaciones en el contenedor base (`Containerfile.base` / `Containerfile`): `gimp`, `gedit`, `firefox`, `libreoffice`, `vscodium` (opcional pero documentado).
+4. Instalar/asegurar paquetes de aplicaciones en el contenedor base (`Containerfile.base` / `Containerfile`): `gedit`, `firefox`, `libreoffice`, `vscodium` (opcional pero documentado).
 5. Añadir `networkmanager` y `wireless-tools` para red real.
 6. Validar comportamiento en Boxes con UEFI confirmada.
 - [~] Red básica (NM + wireless) en Containerfile.base
