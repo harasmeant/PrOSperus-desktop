@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[Unit]
+Description=PrOSperus: sistema persistente en PROSPERUS_DATA
+DefaultDependencies=no
+ConditionKernelCommandLine=rd.live.image
+# El USB y /run/rootfsbase ya existen al acabar la cola de dracut; la capa se fija
+# antes de que prepare-overlayfs (pre-mount) cree /run/overlayfs en la RAM.
+After=dracut-initqueue.service
+Before=dracut-pre-mount.service sysroot.mount initrd-root-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/prosperus-persist
+StandardOutput=journal+console

@@ -1,32 +1,40 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# Live: si el USB tiene la partición PROSPERUS_DATA, /home/prosperus y las redes
-# Wi-Fi se guardan en ella. Sin partición, la sesión sigue siendo temporal (RAM).
+# Live: si el USB tiene la partición PROSPERUS_DATA, /home/prosperus, las redes
+# Wi-Fi, Flathub y el registro se guardan en ella, aparte de la capa del sistema
+# (dracut prosperus-persist), para que sobrevivan a una ISO nueva.
+# Sin partición, la sesión sigue siendo temporal (RAM).
 # Nunca bloquea el arranque: cualquier fallo deja la sesión temporal.
-dev=
-i=0
-while [ $i -lt 20 ]; do
-    udevadm settle -t 1 2>/dev/null
-    dev=$(blkid -L PROSPERUS_DATA 2>/dev/null) && break
-    sleep 0.5
-    i=$((i + 1))
-done
-if [ -z "$dev" ]; then
-    echo 'Sin partición PROSPERUS_DATA: sesión temporal en RAM.'
-    exit 0
-fi
-# Grabado desde la ISO híbrida, el initramfs monta el disco USB entero (iso9660)
-# y el kernel no deja abrir su partición: se accede a ella por un loop con desplazamiento.
-part=/sys/class/block/$(basename "$dev")
-if [ -e "$part/partition" ]; then
+data=/run/prosperus-data
+# Si el initramfs ya montó PROSPERUS_DATA (sistema persistente), se reutiliza.
+if ! mountpoint -q "$data"; then
+    dev=
+    i=0
+    while [ $i -lt 20 ]; do
+        udevadm settle -t 1 2>/dev/null
+        dev=$(blkid -L PROSPERUS_DATA 2>/dev/null) && break
+        sleep 0.5
+        i=$((i + 1))
+    done
+    if [ -z "$dev" ]; then
+        echo 'Sin partición PROSPERUS_DATA: sesión temporal en RAM.'
+        exit 0
+    fi
+    # Grabado desde la ISO híbrida, el initramfs monta el disco USB entero (iso9660)
+    # y el kernel no deja abrir su partición: se accede a ella por un loop con desplazamiento.
+    part=/sys/class/block/$(basename "$dev")
+    [ -e "$part/partition" ] || { echo "$dev no es una partición: no se usa."; exit 0; }
     parent=$(basename "$(readlink -f "$part/..")")
+    # Solo la partición del propio USB de PrOSperus: nunca un disco interno del equipo.
+    if [ "$(blkid -s LABEL -o value "/dev/$parent" 2>/dev/null)" != PROSPERUS_LIVE ]; then
+        echo "/dev/$parent no es el USB de PrOSperus: no se toca."; exit 0
+    fi
     loop=$(losetup -f --show --offset $(( $(cat "$part/start") * 512 )) \
         --sizelimit $(( $(cat "$part/size") * 512 )) "/dev/$parent" 2>/dev/null) && dev=$loop
+    fsck.ext4 -p "$dev" || true
+    mkdir -p "$data"
+    mount -o noatime "$dev" "$data" || { echo "No se pudo montar $dev." >&2; exit 0; }
 fi
-fsck.ext4 -p "$dev" || true
-data=/run/prosperus-data
-mkdir -p "$data"
-mount -o noatime "$dev" "$data" || { echo "No se pudo montar $dev." >&2; exit 0; }
 
 # Primer arranque: la carpeta personal de la imagen sirve de plantilla
 # (proyectos de ejemplo, configuración y Claude Code).
@@ -56,8 +64,7 @@ fi
 mkdir -p "$nm"
 mount --bind "$data/system-connections" "$nm"
 
-# Programas de Flathub: se instalan en /var/lib/flatpak, que en la sesión en vivo está en RAM.
-# En el USB se conservan entre arranques (los de Fedora no: el sistema base es de solo lectura).
+# Programas de Flathub: en su propia carpeta del USB, así se conservan aunque cambie la ISO.
 fp=/var/lib/flatpak
 if [ ! -d "$data/flatpak" ]; then
     mkdir -p "$data/flatpak"
@@ -67,4 +74,4 @@ mkdir -p "$fp"
 mount --bind "$data/flatpak" "$fp" || echo 'No se pudo conservar Flathub en el USB.' >&2
 
 touch /run/prosperus-persistent
-echo "Persistencia activa en $dev."
+echo "Persistencia activa en PROSPERUS_DATA ($data)."

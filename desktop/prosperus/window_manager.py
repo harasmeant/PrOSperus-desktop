@@ -68,6 +68,8 @@ class WindowManager(QObject):
     windows_changed = Signal(list)
     message = Signal(str)
     project_step = Signal(int)
+    # Super pulsada y soltada sola (Sway: bindsym --release Super_L).
+    search_requested = Signal()
 
     def __init__(self, parent=None, options_provider=None):
         super().__init__(parent)
@@ -120,6 +122,9 @@ class WindowManager(QObject):
                 return
             elif cmd.endswith('prosperus-project prev'):
                 self.project_step.emit(-1)
+                return
+            elif cmd.endswith('prosperus-search'):
+                self.search_requested.emit()
                 return
         change = e.get('change')
         c = e.get('container', {})

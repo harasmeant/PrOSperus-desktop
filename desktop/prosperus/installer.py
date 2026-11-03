@@ -75,8 +75,10 @@ QPushButton:hover { background: #344030; }
 '''
 
 
-def persistence_note(marker='/run/prosperus-persistent'):
-    """Qué se conserva al apagar según haya persistencia en el USB."""
+def persistence_note(marker='/run/prosperus-persistent', system_marker='/run/prosperus-system-persistent'):
+    """Qué se conserva al apagar según haya persistencia en el USB (carpeta personal y, aparte, el sistema)."""
+    if Path(marker).exists() and Path(system_marker).exists():
+        return 'USB persistente: lo que instales, de Fedora o de Flathub, se conserva al apagar.'
     if Path(marker).exists():
         return 'Con el USB persistente, los programas de Flathub se conservan al apagar; los de Fedora se pierden.'
     return 'Sesión sin persistencia: lo que instales se perderá al apagar.'

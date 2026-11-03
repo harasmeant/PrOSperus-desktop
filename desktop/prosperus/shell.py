@@ -1042,6 +1042,7 @@ class Desktop(QMainWindow):
         self.app_windows = []
         self.windows.windows_changed.connect(self.set_app_windows)
         self.windows.project_step.connect(self.step_project)
+        self.windows.search_requested.connect(self.toggle_applications)
         self.project_paths = []
         self.watcher = QFileSystemWatcher(self)
         self.watch_timer = QTimer(self)

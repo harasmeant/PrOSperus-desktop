@@ -105,6 +105,10 @@ class DesktopKeys(QObject):
                     # Como Alt+Tab: al soltar Super se abre el proyecto elegido.
                     self.cycling = False
                     QTimer.singleShot(0, self.shell.drawer.open_current)
+                elif self.shell.system_session:
+                    # En Sway, Super sola la decide Sway (--release): aquí no se sabe si Sway
+                    # se quedó la otra tecla (Super+Intro abría la terminal y además Buscar).
+                    pass
                 elif not self.super_combination and QApplication.activeModalWidget() is None:
                     QTimer.singleShot(0, self.shell.toggle_applications)
             return True

@@ -12,11 +12,16 @@ RUN dnf -y --setopt=install_weak_deps=False install dracut-live systemd-pam \
 # que la partición PROSPERUS_DATA conserva junto con el inicio de sesión.
 RUN runuser -l prosperus -c 'curl -fsSL https://claude.ai/install.sh | bash' \
     && test -x /home/prosperus/.local/bin/claude
+# Versión de la imagen: la capa persistente del sistema (PROSPERUS_DATA/sistema/<versión>)
+# solo se reutiliza con la misma ISO. dnf no instala núcleos: el arranque usa siempre
+# el de la ISO y otro solo ocuparía el USB.
+RUN date -u +%Y%m%d%H%M%S > /usr/share/prosperus/build-id \
+    && printf 'excludepkgs=kernel,kernel-core,kernel-modules,kernel-modules-core,kernel-modules-extra\n' >> /etc/dnf/dnf.conf
 RUN printf '# Live root is mounted by the initramfs.\n' > /etc/fstab \
     && systemctl enable prosperus-persistence.service \
     && kernel_version="$(ls /usr/lib/modules | sort -V | tail -1)" \
     && dracut --force --no-hostonly --no-hostonly-cmdline \
-       --add 'dmsquash-live' \
+       --add 'dmsquash-live prosperus-persist' \
        --add-drivers 'virtio_pci virtio_blk virtio_scsi virtio_gpu sr_mod isofs squashfs overlay loop usb_storage uas xhci_pci ehci_pci sd_mod nvme' \
        /boot/initramfs-prosperus.img "$kernel_version" \
        > /usr/share/prosperus/dracut-live-build.log 2>&1 \

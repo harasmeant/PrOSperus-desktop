@@ -162,6 +162,19 @@ class FileDesktopTests(unittest.TestCase):
             self.window.keys.eventFilter(target, QKeyEvent(QEvent.Type.KeyRelease, Qt.Key.Key_Meta, Qt.KeyboardModifier.NoModifier))
             self.app.processEvents(); toggle.assert_not_called()
 
+    def test_super_alone_in_sway_comes_from_sway_binding(self):
+        # En Sway, Super+Intro llega al escritorio como Super sola (Sway se queda Intro):
+        # la apertura de Buscar la decide el evento de Sway, no la tecla suelta.
+        target = self.window.surface
+        with patch.object(self.window, 'system_session', True), \
+                patch.object(self.window, 'toggle_applications') as toggle:
+            for kind in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease):
+                self.window.keys.eventFilter(target, QKeyEvent(kind, Qt.Key.Key_Meta, Qt.KeyboardModifier.NoModifier))
+            self.app.processEvents(); toggle.assert_not_called()
+        with patch.object(self.window, 'toggle_applications') as toggle:
+            self.window.windows._handle_event({'change': 'run', 'binding': {'command': 'nop prosperus-search'}})
+            self.app.processEvents(); toggle.assert_called_once()
+
     def test_application_fallback_toggle_and_navigation_history(self):
         self.window.apps.catalogue = [{'id': 'test.desktop', 'name': 'Test', 'description': '', 'keywords': []}]
         self.window.surface.setFocus()

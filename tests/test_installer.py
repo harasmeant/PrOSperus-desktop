@@ -14,7 +14,10 @@ class PersistenceNoteTests(unittest.TestCase):
             marker = Path(tmp) / 'persistente'
             self.assertIn('se perderá', persistence_note(marker))
             marker.touch()
-            self.assertIn('Flathub se conservan', persistence_note(marker))
+            system = Path(tmp) / 'sistema'
+            self.assertIn('Flathub se conservan', persistence_note(marker, system))
+            system.touch()
+            self.assertIn('de Fedora o de Flathub, se conserva', persistence_note(marker, system))
         script = (Path(__file__).parents[1] / 'image/rootfs/usr/libexec/prosperus-persistence').read_text(encoding='utf-8')
         self.assertIn('mount --bind "$data/flatpak" "$fp"', script)
         # La marca de persistencia se crea al final, cuando ya está todo montado.
