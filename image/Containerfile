@@ -8,7 +8,7 @@ RUN curl -fsSL -o /etc/yum.repos.d/swayfx.repo \
         https://copr.fedorainfracloud.org/coprs/swayfx/swayfx/repo/fedora-44/swayfx-swayfx-fedora-44.repo \
     && dnf -y --setopt=install_weak_deps=False install --allowerasing swayfx \
     && dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper \
-       grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy \
+       grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy playerctl \
        eza bat fastfetch btop papirus-icon-theme \
        adw-gtk3-theme dconf gsettings-desktop-schemas xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr \
     && dnf clean all

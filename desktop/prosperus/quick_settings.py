@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 import threading
-from PySide6.QtWidgets import (QFrame, QVBoxLayout, QHBoxLayout, QLabel, 
+from PySide6.QtWidgets import (QComboBox, QFrame, QVBoxLayout, QHBoxLayout, QLabel,
                              QSlider, QPushButton, QWidget)
 from PySide6.QtCore import QProcess, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter
@@ -45,6 +45,42 @@ def parse_brightness(text):
     try: return int(text.split(",")[3].replace("%", ""))
     except (ValueError, IndexError): return None
 
+
+def parse_sinks(text):
+    """Salidas de sonido de `wpctl status`: [(id, nombre, es_la_actual)]. Solo la sección Audio.
+    Base de qwen2.5-coder (local); corregido que los títulos llevan delante «├─»."""
+    import re
+    if not text:
+        return []
+    in_audio = in_sinks = False
+    result = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped == 'Audio':
+            in_audio = True
+        elif stripped in ('Video', 'Settings'):
+            in_audio = in_sinks = False
+        elif in_audio and stripped.endswith('Sinks:'):
+            in_sinks = True
+        elif in_audio and stripped.endswith(('Sources:', 'Filters:', 'Streams:', 'Devices:')):
+            in_sinks = False
+        elif in_sinks:
+            match = re.search(r'(\*)?\s+(\d+)\.\s+(.+?)(?:\s+\[vol:.*\])?\s*$', line)
+            if match:
+                star, number, name = match.groups()
+                result.append((int(number), name.strip(), star is not None))
+    return result
+
+
+def parse_track(text):
+    """`playerctl metadata --format '{{status}}|{{artist}}|{{title}}'` -> (sonando, 'Artista · Título')."""
+    if not text or '|' not in text:
+        return None
+    status, artist, title = (text.split('|', 2) + ['', ''])[:3]
+    label = ' · '.join(part for part in (artist.strip(), title.strip()) if part) or 'Sin título'
+    return status.strip() == 'Playing', label
+
+
 def parse_powered(text):
     """Parsea salida de bluetoothctl show."""
     if not text: return None
@@ -76,6 +112,12 @@ class QuickSettings(QFrame):
             QPushButton:hover {{ background: {c.hover}; }}
             QPushButton:checked {{ background: {c.hover}; border: 1px solid {c.accent}; }}
             QPushButton:disabled {{ color: {c.border}; }}
+            QComboBox {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 12px;
+                         padding: 8px 14px; }}
+            QComboBox::drop-down {{ border: none; width: 24px; }}
+            QComboBox QAbstractItemView {{ background: {c.panel}; color: {c.text}; border: 1px solid {c.border};
+                         selection-background-color: {c.hover}; outline: none; padding: 6px; }}
+            QPushButton#media {{ font-size: 16px; padding: 6px 14px; }}
             QSlider {{ min-height: 26px; }}
             QSlider::groove:horizontal {{ height: 8px; background: {c.card}; border-radius: 4px; }}
             QSlider::sub-page:horizontal {{ background: {c.accent}; border-radius: 4px; }}
@@ -123,6 +165,26 @@ class QuickSettings(QFrame):
         self.vol_row.addWidget(self.mute)
         self.box.addLayout(self.vol_row)
         self.box.addWidget(self.vol_err)
+        # Salida de sonido (altavoces, HDMI, auriculares…): la elegida pasa a ser la predeterminada.
+        self.sink = QComboBox()
+        self.sink.activated.connect(self._set_sink)
+        self.box.addWidget(self.sink)
+
+        # Reproducción (playerctl: navegador, Spotify, VLC…): solo se ve si hay algo sonando o en pausa.
+        self.media = QWidget()
+        media_row = QHBoxLayout(self.media); media_row.setContentsMargins(0, 0, 0, 0)
+        self.track = QLabel(objectName='value'); self.track.setWordWrap(True)
+        self.play = QPushButton('⏯')
+        for text, action in (('⏮', 'previous'), (None, 'play-pause'), ('⏭', 'next')):
+            button = self.play if text is None else QPushButton(text)
+            button.setObjectName('media')
+            button.setToolTip({'previous': 'Anterior', 'play-pause': 'Reproducir / pausa', 'next': 'Siguiente'}[action])
+            button.clicked.connect(lambda _=False, a=action: (run(['playerctl', a]), QTimer.singleShot(300, self.refresh)))
+            media_row.addWidget(button)
+        media_row.addWidget(self.track, 1)
+        self.media_title = self.section('Reproduciendo')
+        self.box.addWidget(self.media)
+        self.media_title.hide(); self.media.hide()
 
         # 3. Wifi
         self.wifi_row = QHBoxLayout()
@@ -206,6 +268,11 @@ class QuickSettings(QFrame):
         self.vol_err.setText('No se pudo cambiar el volumen (detalles en el registro).')
         self.vol_err.setVisible(not ok)
 
+    def _set_sink(self, index):
+        sink = self.sink.itemData(index)
+        if sink is not None:
+            run(['wpctl', 'set-default', str(sink)]); self.refresh()
+
     def _set_mute(self): run(['wpctl', 'set-mute', '@DEFAULT_AUDIO_SINK@', '1' if self.mute.isChecked() else '0']); self.refresh()
     def _set_wifi(self): run(['nmcli', 'radio', 'wifi', 'on' if self.wifi.isChecked() else 'off']); self.refresh()
     def _set_bt(self): run(['bluetoothctl', 'power', 'on' if self.bluetooth.isChecked() else 'off']); self.refresh()
@@ -233,6 +300,18 @@ class QuickSettings(QFrame):
             self.mute.setChecked(val_vol[1])
         else:
             self.vol_err.setText('Sin salida de sonido.')
+        sinks = state.get('sinks') or []
+        self.sink.blockSignals(True); self.sink.clear()
+        for number, name, default in sinks:
+            self.sink.addItem('🔊 ' + name, number)
+            if default:
+                self.sink.setCurrentIndex(self.sink.count() - 1)
+        self.sink.blockSignals(False)
+        self.sink.setVisible(len(sinks) > 1)
+        track = state.get('track')
+        self.media.setVisible(track is not None); self.media_title.setVisible(track is not None)
+        if track:
+            self.play.setText('⏸' if track[0] else '▶'); self.track.setText(track[1])
         is_wifi = state['wifi'] == 'enabled'
         self.wifi.setText('Activado' if is_wifi else 'Desactivado'); self.wifi.setChecked(is_wifi)
         names = [n for n in (state['connections'] or '').splitlines() if n != 'lo']
@@ -253,4 +332,15 @@ def collect():
             'wifi': run(['nmcli', 'radio', 'wifi']),
             'connections': run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active']),
             'bluetooth': parse_powered(run(['bluetoothctl', 'show'])) if adapter else None,
-            'mode': run(['makoctl', 'mode'])}
+            'mode': run(['makoctl', 'mode']),
+            'sinks': parse_sinks(run(['wpctl', 'status'])),
+            'track': parse_track(quiet(['playerctl', 'metadata', '--format', '{{status}}|{{artist}}|{{title}}']))}
+
+
+def quiet(argv):
+    """Como run, pero sin anotar el fallo: sin reproductor abierto, playerctl falla siempre."""
+    try:
+        res = subprocess.run(argv, timeout=3, capture_output=True, text=True, check=True)
+        return res.stdout.strip()
+    except (subprocess.SubprocessError, OSError):
+        return None
