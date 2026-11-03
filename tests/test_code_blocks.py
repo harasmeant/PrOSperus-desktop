@@ -21,6 +21,16 @@ class CodeBlockTests(unittest.TestCase):
         cursor = QTextCursor(document); cursor.setPosition(position)
         return cursor.charFormat().foreground().color().name()
 
+    def test_single_quotes_and_acute_accents_open_blocks(self):
+        # Lo que se escribe con el teclado español: ''' o ´´´ en vez de ```.
+        self.assertEqual(code_blocks.loose_fences("'''python\nimport os\n'''"), '```python\nimport os\n```')
+        self.assertEqual(code_blocks.loose_fences('´´´ java\nint x;\n´´´'), '```java\nint x;\n```')
+        # Sin cerrar: el bloque llega hasta el final, como en Markdown.
+        self.assertEqual(code_blocks.loose_fences("'''python\nimport matplotlib"), '```python\nimport matplotlib')
+        # Un docstring dentro de un bloque ``` de verdad no se toca.
+        real = '```python\ndef f():\n    \'\'\'\n    doc\n    \'\'\'\n```'
+        self.assertEqual(code_blocks.loose_fences(real), real)
+
     def test_groups_follow_fences_and_languages(self):
         document = QTextDocument(); document.setMarkdown(MARKDOWN)
         groups = [(first.text(), last.text(), language) for first, last, language in code_blocks.code_groups(document)]

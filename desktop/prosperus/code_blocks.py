@@ -41,10 +41,33 @@ def highlight_spans(code, language):
     return spans
 
 
+def loose_fences(markdown):
+    """En el teclado español la comilla invertida es una tecla muerta: se aceptan también
+    \'\'\'python o ´´´python (comillas simples o tildes) para abrir y cerrar un bloque.
+    Dentro de un bloque ``` de verdad no se toca nada (un docstring \'\'\' sigue siendo código)."""
+    import re
+    loose = re.compile(r"^[ \t]{0,3}(?:'{3,}|´{3,})[ \t]*([\w+#.-]*)[ \t]*$")
+    real = re.compile(r'^[ \t]{0,3}(```|~~~)')
+    lines, inside = markdown.split('\n'), None
+    for i, line in enumerate(lines):
+        if inside in ('```', '~~~'):
+            if line.strip().startswith(inside):
+                inside = None
+            continue
+        match = loose.match(line)
+        if match:
+            lines[i] = '```' + (match.group(1) if inside is None else '')
+            inside = None if inside else 'loose'
+        elif inside is None and real.match(line):
+            inside = real.match(line).group(1)
+    return '\n'.join(lines)
+
+
 def separate_fences(markdown):
     """Qt une dos bloques de código seguidos del mismo lenguaje (no marca dónde empieza cada uno):
     se separan con un párrafo invisible."""
     import re
+    markdown = loose_fences(markdown)
     return re.sub(r'(?m)^(```|~~~)[ \t]*\n[ \t]*\n(?=(?:```|~~~))', '\\1\n\n\u200b\n\n', markdown)
 
 

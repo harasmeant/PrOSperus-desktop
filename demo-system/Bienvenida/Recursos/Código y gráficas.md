@@ -23,6 +23,8 @@ def saludo(nombre):
 ```
 ~~~
 
+También vale escribir `'''python` (tres comillas simples), que es más fácil con el teclado español.
+
 Valen `python`, `java`, `c`, `cpp`, `bash`, `sql`, `rust`, `js`, `matlab`… Sin el nombre del lenguaje, o con uno que no existe, el bloque sale con su fondo y letra de código, pero sin colores.
 
 ## Gráficas
