@@ -6,5 +6,9 @@
     "source": "/usr/share/prosperus/fastfetch-logo.txt",
     "color": { "1": "blue", "2": "magenta" },
     "padding": { "top": 1, "left": 1, "right": 3 }
-  }
+  },
+  // Sin esta lista fastfetch 2.68 solo dibuja el logo.
+  "modules": ["title", "separator", "os", "host", "kernel", "uptime", "packages", "shell", "display",
+              "de", "wm", "terminal", "terminalfont", "cpu", "gpu", "memory", "disk", "locale",
+              "break", "colors"]
 }
