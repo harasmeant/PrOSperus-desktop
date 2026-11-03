@@ -33,6 +33,7 @@ RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-
     && passwd --lock root \
     && passwd --delete prosperus \
     && install -D -o prosperus -g prosperus -m 0644 /usr/share/prosperus/btop.conf /home/prosperus/.config/btop/btop.conf \
+    && chown -R prosperus:prosperus /home/prosperus \
     && usermod -aG wheel,video,audio prosperus \
     && chmod 0440 /etc/sudoers.d/prosperus-vm \
     && systemctl enable NetworkManager.service \

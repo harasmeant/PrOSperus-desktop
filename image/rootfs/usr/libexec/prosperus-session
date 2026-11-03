@@ -12,7 +12,13 @@ cd "$HOME" || true
 # que se ve (incoming.py). Los navegadores (Firefox, Zen…) usan XDG_DOWNLOAD_DIR sin preguntar.
 incoming=$HOME/.local/share/prosperus/entrantes
 mkdir -p "$incoming"
-xdg-user-dirs-update --set DOWNLOAD "$incoming" 2>/dev/null || true
+# GLib (navegadores, también en Flatpak) lee la carpeta de ~/.config/user-dirs.dirs, no la variable.
+dirs=${XDG_CONFIG_HOME:-$HOME/.config}/user-dirs.dirs
+mkdir -p "${dirs%/*}"
+touch "$dirs"
+grep -v '^XDG_DOWNLOAD_DIR=' "$dirs" > "$dirs.tmp"
+echo 'XDG_DOWNLOAD_DIR="$HOME/.local/share/prosperus/entrantes"' >> "$dirs.tmp"
+mv "$dirs.tmp" "$dirs"
 export XDG_DOWNLOAD_DIR=$incoming
 # greetd no lee /etc/profile.d: sin esto los programas de Flathub no salen en Aplicaciones.
 export XDG_DATA_DIRS="${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share:/var/lib/flatpak/exports/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"

@@ -1,0 +1,3 @@
+[Context]
+# PrOSperus: las descargas van a la carpeta de entrada, que el escritorio reparte por proyectos.
+filesystems=~/.local/share/prosperus/entrantes;
