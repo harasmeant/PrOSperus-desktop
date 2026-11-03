@@ -460,3 +460,11 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Ctrl+Alt+T también abre la consola, por si la Super de un teclado programable no llega como Super.
 - Registro del USB: en toda la sesión Foot solo se abrió una vez, la del asistente de controladores (instaló akmod-nvidia). Super+Intro y «Consola (Foot)» no llegaron a lanzarlo: pendiente de saber cómo se intentó.
 - ISO de las 16:36, SHA-256 `2223aaaa42e3…`. Probada en QEMU: Super+Intro y Ctrl+Alt+T abren Foot en la carpeta del proyecto (`~/Proyectos`, `~/Proyectos/Laboratorio` tras Ctrl+3) con su tono (azulado en Laboratorio); la consola responde (`ls`, `pwd`). Una nota con `'''python` sin cerrar se ve con colores.
+- Marcos de ventana a juego con el fondo (`window_frame.py`):
+  - El borde va en el color de resalte de la paleta del fondo, con un degradado más intenso en las esquinas.
+  - Dos esquinas opuestas llevan filigrana con el estilo procedural de las ramas del proyecto (árbol de la vida, art déco o art nouveau, más los ajustes de «Ramas»).
+  - Lo llevan las notas, las ventanas propias (Ramas con la paleta de su carpeta; Fondos e Instalador con la publicada) y todos los diálogos del escritorio (Explorar, Papelera, Atajos, avisos…), que se visten solos al aparecer. El remate bajo el título usa el mismo color.
+  - El escritorio publica también los rasgos de las ramas en `theme.json` (sin imágenes propias), para que los programas aparte dibujen el mismo estilo.
+  - Foot lleva un borde de 2 px en el color de resalte.
+  - Con alto contraste, borde simple sin filigrana.
+  - Capturas: `docs/images/marcos-notas.png` (el mismo marco con dos fondos) y `docs/images/marco-ramas.png`. 147 pruebas correctas.

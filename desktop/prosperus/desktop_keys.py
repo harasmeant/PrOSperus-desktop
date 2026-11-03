@@ -73,6 +73,10 @@ class DesktopKeys(QObject):
             # Al perder el foco se reinicia Super para evitar atajos fantasma.
             self.super_pressed = False
             return False
+        if event.type() == QEvent.Type.Show:
+            # Los diálogos del escritorio se visten con el marco del proyecto al aparecer.
+            self.shell.frame_dialogs(target, event)
+            return False
         if event.type() not in (QEvent.Type.KeyPress, QEvent.Type.KeyRelease, QEvent.Type.ShortcutOverride):
             return False
         if not self.shell.isVisible():

@@ -3,7 +3,7 @@
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPalette
+from PySide6.QtGui import QColor, QPainter, QPalette
 from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout
 from .branches import flourish
 from .window_controls import HoverControls
@@ -33,6 +33,14 @@ class WindowHeader(QWidget):
         self.controls.triggered.connect(self.trigger)
         layout.addWidget(self.controls)
 
+        # Marco de la ventana: borde en el color de resalte del proyecto y filigrana de sus ramas.
+        # Si la ventana tiene paleta propia (Ramas, la de su carpeta) se usa esa; si no, la publicada.
+        from .theme_state import current_palette, current_traits
+        from .window_frame import attach_frame
+        published = current_palette()
+        attach_frame(window, lambda: getattr(window, 'colors', None) or published,
+                     lambda: getattr(window, 'auto_traits', None) or current_traits())
+
         # Altura fija para evitar cambios de layout
         self.setFixedHeight(64)
         # Cursor de mano para indicar que es arrastrable
@@ -48,7 +56,11 @@ class WindowHeader(QWidget):
         # Remate floral bajo el título (tema de las ventanas de PrOSperus).
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        color = self.palette().color(QPalette.ColorRole.WindowText); color.setAlphaF(.3)
+        # Mismo color de resalte que el marco de la ventana.
+        frame = getattr(self.target, '_prosperus_frame', None)
+        colors = frame.colors() if frame is not None else None
+        color = QColor(colors.accent) if colors is not None else self.palette().color(QPalette.ColorRole.WindowText)
+        color.setAlphaF(.45)
         flourish(painter, 18, self.width() - 18, self.height() - 10, color, len(self.title_label.text()))
 
     def mousePressEvent(self, event):

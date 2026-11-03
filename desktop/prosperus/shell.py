@@ -27,6 +27,7 @@ from .charts import insert_charts
 from .code_blocks import separate_fences, style_code
 from .theme_state import publish as publish_theme
 from .branches import branch, flourish
+from .window_frame import attach_frame, paint_frame
 from . import branch_style
 from .map_layout import link_order, map_metrics, radial_slots, nearest_in_direction, separate
 from .projects import ProjectDrawer, ProjectEdge
@@ -304,7 +305,13 @@ class NotePanel(QFrame):
                     pass
             flourish(p, rect.left() + 18, rect.right() - 18, self.pages.geometry().top() - 9, vine,
                      len(self.path.stem), traits)
-        p.setPen(QPen(QColor(self.colors.border), 1.5)); p.drawRoundedRect(rect, 12, 12)
+        p.setClipping(False)
+        if self.shell.accessibility.high_contrast:
+            p.setPen(QPen(QColor(self.colors.border), 1.5)); p.drawRoundedRect(rect, 12, 12)
+        else:
+            # Borde en el color de resalte del fondo y filigrana en dos esquinas (estilo de sus ramas).
+            if not self.minimized:
+                paint_frame(p, rect, self.colors, traits, 12, len(self.path.stem))
 
 
 class MapNode(QPushButton):
@@ -1177,7 +1184,22 @@ class Desktop(QMainWindow):
         self.windows.set_wallpaper(self.background.wallpaper, self.colors.base)
         # La consola, las notificaciones y las ventanas aparte toman el tono y la carpeta del proyecto.
         if self.system_session:
-            publish_theme(self.colors, self.folder)
+            publish_theme(self.colors, self.folder, traits=self.frame_traits())
+
+    def frame_traits(self):
+        """Estilo de las ramas del proyecto actual (fondo + ajustes de «Ramas»): filigranas de los marcos."""
+        source = self.background.wallpaper
+        try:
+            traits = wallpaper_traits(source, source.stat().st_mtime_ns) if source else None
+        except OSError:
+            traits = None
+        return branch_style.merge(traits, branch_style.load(self.folder, self.vault.root))
+
+    def frame_dialogs(self, watched, event):
+        """Todos los diálogos del escritorio (Explorar, Papelera, Atajos, avisos…) llevan el marco del proyecto."""
+        if (event.type() == QEvent.Type.Show and isinstance(watched, QDialog) and watched.isWindow()
+                and not self.accessibility.high_contrast):
+            attach_frame(watched, lambda: self.colors, self.frame_traits)
 
     def apply_accessibility(self):
         self.apply_appearance()

@@ -30,7 +30,9 @@ def foot_config(colors, base=FOOT_BASE):
     return (f'[main]\ninclude={base}\n\n'
             f'[colors-dark]\nbackground={colors.base[1:]}\nforeground={colors.text[1:]}\n\n'
             f'[csd]\ncolor=99{colors.panel[1:]}\nbutton-color=ff{colors.text[1:]}\n'
-            f'button-minimize-color=ff{colors.card[1:]}\nbutton-maximize-color=ff{colors.card[1:]}\n')
+            f'button-minimize-color=ff{colors.card[1:]}\nbutton-maximize-color=ff{colors.card[1:]}\n'
+            # Borde en el color de resalte del fondo, como las demás ventanas.
+            f'border-width=2\nborder-color=ff{colors.accent[1:]}\n')
 
 
 def mako_config(colors, base_text):
@@ -50,14 +52,27 @@ def _write(path, text):
     return True
 
 
-def publish(colors, folder, directory=None):
-    """Guarda paleta, carpeta, foot.ini y mako.conf; recarga mako si cambió. Nunca falla."""
+def frame_traits(traits):
+    """Rasgos de las ramas que se pueden compartir (números y gradiente; sin imágenes propias)."""
+    shared = {k: float(v) for k, v in (traits or {}).items()
+              if isinstance(v, (int, float)) and not isinstance(v, bool)}
+    gradient = (traits or {}).get('branch_gradient')
+    if isinstance(gradient, dict):
+        shared['branch_gradient'] = {k: float(v) for k, v in gradient.items() if isinstance(v, (int, float))}
+    return shared
+
+
+def publish(colors, folder, directory=None, traits=None):
+    """Guarda paleta (y rasgos de las ramas para las filigranas), carpeta, foot.ini y mako.conf;
+    recarga mako si cambió. Nunca falla."""
     directory = directory or state_dir()
     if directory is None:
         return
     try:
         directory.mkdir(parents=True, exist_ok=True)
-        _write(directory / 'theme.json', json.dumps({r: getattr(colors, r) for r in ROLES}))
+        data = {r: getattr(colors, r) for r in ROLES}
+        data['traits'] = frame_traits(traits)
+        _write(directory / 'theme.json', json.dumps(data))
         _write(directory / 'folder', str(folder) + '\n')
         _write(directory / 'foot.ini', foot_config(colors))
         base = Path(MAKO_BASE)
@@ -80,3 +95,14 @@ def current_palette(directory=None):
         if isinstance(value, str) and re.fullmatch(r'#[0-9a-fA-F]{6}', value):
             setattr(palette, role, value)
     return palette
+
+
+def current_traits(directory=None):
+    """Rasgos de las ramas publicados por el escritorio (estilo de las filigranas); None si no hay."""
+    directory = directory or state_dir()
+    try:
+        data = json.loads((directory / 'theme.json').read_text(encoding='utf-8'))
+    except (OSError, TypeError, ValueError):
+        return None
+    traits = data.get('traits') if isinstance(data, dict) else None
+    return frame_traits(traits) if isinstance(traits, dict) else None
