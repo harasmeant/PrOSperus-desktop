@@ -502,3 +502,7 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Impr Pant / Mayús+Impr Pant: captura entera o de zona (grim, slurp) en Imágenes/Capturas, copiada al portapapeles y con aviso. Super+V: historial del portapapeles (cliphist) en fuzzel con los colores del proyecto.
 - Código base de la consola, el desenfoque y las capturas: qwen2.5-coder (local), con correcciones (color del ❯, imagen oscurecida sin desenfocar, salida con error en un subshell, una comilla).
 - SwayFX se instala con `dnf install --allowerasing swayfx` (`dnf swap` chocaba con sway-config-upstream). ISO de las 23:25, SHA-256 `d37ca413f960…`, probada en QEMU: SwayFX 0.6 en marcha (desenfoque detrás de Foot, esquinas, sin barra de errores de configuración); prompt, eza y fastfetch; Impr Pant guarda la captura y avisa; Super+L bloquea con el fondo desenfocado e Intro desbloquea; Super+V muestra el historial (la captura aparece).
+
+## 3-4 de noviembre de 2026 · Mejoras de interfaz aprobadas
+
+- SwayFX atenúa las ventanas sin foco (`default_dim_inactive 0.18`), salvo el escritorio y la píldora.
