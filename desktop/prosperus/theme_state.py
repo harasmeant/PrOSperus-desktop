@@ -54,6 +54,14 @@ def wob_config(colors):
             f'bar_color = {c(colors.text)}\n\n[style.muted]\nbar_color = {c(colors.muted)}\n')
 
 
+def swappy_config(colors, pictures):
+    """Editor de capturas (swappy): guarda en Imágenes/Capturas y dibuja con el resalte del proyecto."""
+    red, green, blue = (int(colors.accent[i:i + 2], 16) for i in (1, 3, 5))
+    return (f'[Default]\nsave_dir={pictures}/Capturas\nsave_filename_format=Captura %Y-%m-%d %H.%M.%S.png\n'
+            'show_panel=true\nline_size=5\ntext_size=20\ntext_font=DejaVu Sans\npaint_mode=arrow\n'
+            f'early_exit=false\nfill_shape=false\ncustom_color=rgba({red},{green},{blue},1)\n')
+
+
 def mako_config(colors, base_text):
     """mako.conf del sistema con los colores del proyecto."""
     replace = {'background-color': colors.base + 'ee', 'text-color': colors.text,
@@ -81,6 +89,16 @@ def frame_traits(traits):
     return shared
 
 
+def _pictures():
+    """Carpeta de imágenes del usuario (xdg-user-dir), Imágenes si no se sabe."""
+    try:
+        out = subprocess.run(['xdg-user-dir', 'PICTURES'], capture_output=True, text=True, timeout=2).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        out = ''
+    home = str(Path.home())
+    return out if out and out != home else home + '/Imágenes'
+
+
 def publish(colors, folder, directory=None, traits=None, wallpaper=None):
     """Guarda paleta (y rasgos de las ramas para las filigranas), carpeta, foot.ini y mako.conf;
     recarga mako si cambió. Nunca falla."""
@@ -97,6 +115,9 @@ def publish(colors, folder, directory=None, traits=None, wallpaper=None):
         _write(directory / 'folder', str(folder) + '\n')
         _write(directory / 'foot.ini', foot_config(colors))
         _write(directory / 'fuzzel.ini', fuzzel_config(colors))
+        swappy = directory / 'xdg' / 'swappy'
+        swappy.mkdir(parents=True, exist_ok=True)
+        _write(swappy / 'config', swappy_config(colors, _pictures()))
         # wob solo lee su configuración al arrancar: se cierra y la sesión lo vuelve a abrir.
         if _write(directory / 'wob.ini', wob_config(colors)):
             subprocess.run(['pkill', '-x', 'wob'], capture_output=True, timeout=3, check=False)

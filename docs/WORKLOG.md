@@ -509,3 +509,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Barra en pantalla para volumen y brillo (wob) con los colores del proyecto, en las teclas multimedia (`prosperus-osd`, escrito por qwen2.5-coder). Si el proyecto cambia de tono, wob se reinicia con su nueva configuración sin perder valores (la tubería queda abierta en la sesión).
 - Iconos Papirus (oscuro) en Aplicaciones y en GTK, y cursor Bibata Modern Classic (descargado con SHA-256 fijo) en Sway, GTK y Qt (`XCURSOR_THEME`).
 - fastfetch con logo propio (centro y ramas del mapa de proyectos, `/usr/share/prosperus/fastfetch-logo.txt`) desde `/etc/xdg/fastfetch/config.jsonc`.
+- Super+Mayús+S (como Spectacle en Bazzite): zona con slurp y editor swappy (flechas, recuadros, texto) con el resalte del proyecto; al cerrarlo se guarda en Imágenes/Capturas y se copia. Satty no está en Fedora; Spectacle arrastra KDE. Impr Pant y Mayús+Impr Pant siguen igual.

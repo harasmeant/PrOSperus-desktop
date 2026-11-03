@@ -8,7 +8,7 @@ RUN curl -fsSL -o /etc/yum.repos.d/swayfx.repo \
         https://copr.fedorainfracloud.org/coprs/swayfx/swayfx/repo/fedora-44/swayfx-swayfx-fedora-44.repo \
     && dnf -y --setopt=install_weak_deps=False install --allowerasing swayfx \
     && dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper \
-       grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob \
+       grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy \
        eza bat fastfetch btop papirus-icon-theme \
     && dnf clean all
 # Cursor Bibata (no está en Fedora): versión fija comprobada con su SHA-256.

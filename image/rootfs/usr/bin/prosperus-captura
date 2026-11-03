@@ -1,13 +1,31 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
 # Captura de pantalla (Impr Pant) o de una zona elegida con el ratón (Mayús+Impr Pant, «zona»):
-# se guarda en Imágenes/Capturas y se copia al portapapeles.
+# se guarda en Imágenes/Capturas y se copia al portapapeles. «editar» (Super+Mayús+S, como Spectacle
+# en Bazzite): zona con el ratón y después swappy para dibujar flechas, recuadros y texto; al cerrar
+# el editor, lo dibujado se guarda y se copia.
 # Base escrita por qwen2.5-coder (local); corregidos la carpeta por defecto, la salida con error y una comilla.
 pictures=$(xdg-user-dir PICTURES 2>/dev/null)
 [ -n "$pictures" ] && [ "$pictures" != "$HOME" ] || pictures=$HOME/Imágenes
 dir=$pictures/Capturas
 mkdir -p "$dir"
 file="$dir/Captura $(date '+%Y-%m-%d %H.%M.%S').png"
+if [ "$1" = editar ]; then
+    geometry=$(slurp) || exit 0
+    # Configuración de swappy con los colores del proyecto (theme_state la publica).
+    state=${XDG_RUNTIME_DIR:-/nonexistent}/prosperus
+    [ -d "$state/xdg/swappy" ] && export XDG_CONFIG_HOME=$state/xdg
+    tmp=$(mktemp --suffix=.png) || exit 1
+    grim -g "$geometry" - | swappy -f - -o - > "$tmp"
+    if [ -s "$tmp" ]; then
+        mv "$tmp" "$file"
+        wl-copy --type image/png < "$file"
+        notify-send -a PrOSperus -i "$file" 'Captura guardada' "$(basename "$file") · copiada al portapapeles"
+    else
+        rm -f "$tmp"
+    fi
+    exit 0
+fi
 case "$1" in
     zona) geometry=$(slurp) || exit 0   # Esc: no se captura nada.
           set -- -g "$geometry" ;;
