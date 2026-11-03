@@ -2,11 +2,14 @@
 """Instalar programas desde Fedora (dnf5) y Flathub (flatpak), o un .rpm/.flatpakref local."""
 from pathlib import Path
 import re
+import subprocess
 import sys
 
 from PySide6.QtCore import QProcess, Qt
+from PySide6.QtGui import QColor, QFont
 from .window_header import WindowHeader
 from .theme_state import current_palette
+from .recommended import is_installed, recommended
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget)
 
@@ -52,7 +55,7 @@ def parse_flatpak(output):
 def install_command(item):
     # Construye la lista de argumentos para la instalación según la fuente ('fedora', 'flathub') o la extensión del archivo local.
     if item['source'] == 'fedora':
-        return ['sudo', '-n', 'dnf5', 'install', '-y', item['id']]
+        return ['sudo', '-n', 'dnf5', 'install', '-y', *item['id'].split()]
     if item['source'] == 'flathub':
         return ['sudo', '-n', 'flatpak', 'install', '-y', '--noninteractive', 'flathub', item['id']]
     path = str(item['id'])
@@ -62,6 +65,22 @@ def install_command(item):
     if path.lower().endswith('.flatpakref'):
         return ['sudo', '-n', 'flatpak', 'install', '-y', '--noninteractive', '--from', path]
     raise ValueError('Solo se instalan archivos .rpm o .flatpakref.')
+
+
+def after_commands(item):
+    """Servicios que activar tras instalar (p. ej. el demonio de Input Remapper)."""
+    return [['sudo', '-n', 'systemctl', 'enable', '--now', name] for name in item.get('after', ())]
+
+
+def installed_names():
+    """(aplicaciones de Flathub, paquetes rpm) ya instalados; vacío si no se puede saber."""
+    def names(argv):
+        try:
+            return set(subprocess.run(argv, capture_output=True, text=True, timeout=10).stdout.split())
+        except (OSError, subprocess.SubprocessError):
+            return set()
+    return (names(['flatpak', 'list', '--app', '--columns=application']),
+            names(['rpm', '-qa', '--queryformat', '%{NAME}\n']))
 
 
 def style(c):
@@ -89,23 +108,30 @@ class Installer(QWidget):
     def __init__(self, path=None):
         super().__init__()
         self.setWindowTitle('Instalar programas'); self.resize(760, 560); self.setStyleSheet(style(current_palette()))
-        self.searches, self.results, self.job = [], {}, None
+        self.searches, self.results, self.job, self.pending = [], {}, None, []
+        self.showing_recommended = False
+        self.colors = current_palette()
         layout = QVBoxLayout(self)
         layout.addWidget(WindowHeader('Instalar programas', self))
-        self.search = QLineEdit(); self.search.setPlaceholderText('Busca un programa: blender, freecad, zen…')
+        self.search = QLineEdit(); self.search.setPlaceholderText('Busca un programa, o mira las recomendadas abajo')
         self.search.returnPressed.connect(self.run_search); layout.addWidget(self.search)
         self.list = QListWidget(); self.list.itemActivated.connect(lambda _: self.install()); layout.addWidget(self.list)
         note = QLabel(persistence_note()); note.setObjectName('muted'); note.setWordWrap(True); layout.addWidget(note)
         self.log = QPlainTextEdit(); self.log.setReadOnly(True); self.log.setMaximumHeight(120); layout.addWidget(self.log)
-        row = QHBoxLayout(); row.addStretch()
+        row = QHBoxLayout()
+        suggested = QPushButton('Recomendadas'); suggested.clicked.connect(self.show_recommended); row.addWidget(suggested)
+        row.addStretch()
         self.install_button = QPushButton('Instalar'); self.install_button.clicked.connect(lambda: self.install())
         close = QPushButton('Cerrar'); close.clicked.connect(self.close)
         row.addWidget(self.install_button); row.addWidget(close); layout.addLayout(row)
         if path:
             self.show_items([{'source': 'file', 'id': str(Path(path).resolve()), 'name': Path(path).name, 'summary': 'Archivo local'}])
+        else:
+            self.show_recommended()
         self.search.setFocus()
 
     def show_items(self, items):
+        self.showing_recommended = False
         # Limpia la lista y muestra los ítems; asigna prefijos visuales (`[Fedora]`, `[Flathub]`, `[Archivo]`) según el origen.
         self.list.clear()
         for item in items:
@@ -115,8 +141,30 @@ class Installer(QWidget):
         if self.list.count():
             self.list.setCurrentRow(0)
 
+    def show_recommended(self):
+        # Catálogo por categorías; las que ya están instaladas llevan ✓.
+        flatpaks, packages = installed_names()
+        self.list.clear(); category = None; self.showing_recommended = True
+        for entry in recommended():
+            if entry['category'] != category:
+                category = entry['category']
+                header = QListWidgetItem(category.upper()); header.setFlags(Qt.ItemFlag.NoItemFlags)
+                font = QFont(); font.setPointSizeF(8.5); font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.5)
+                header.setFont(font); header.setForeground(QColor(self.colors.accent)); self.list.addItem(header)
+            done = is_installed(entry, flatpaks, packages)
+            origin = 'Fedora' if entry['source'] == 'fedora' else 'Flathub'
+            widget = QListWidgetItem(f"{'✓  ' if done else '     '}{entry['name']} — {entry['summary']}   · {origin}")
+            widget.setData(Qt.ItemDataRole.UserRole, dict(entry, installed=done))
+            if done:
+                widget.setForeground(QColor(self.colors.muted))
+            self.list.addItem(widget)
+        self.list.setCurrentRow(1)
+        self.log.setPlainText('Elige un programa y pulsa Instalar (o doble clic). ✓ = ya instalado.')
+
     def run_search(self):
         # Obtiene los comandos válidos y ejecuta ambos procesos en paralelo (Fedora y Flathub).
+        if not self.search.text().strip():
+            self.show_recommended(); return
         commands = search_commands(self.search.text())
         if not commands:
             self.log.setPlainText('Escribe un nombre de programa (letras, números, - _ . +).'); return
@@ -155,6 +203,10 @@ class Installer(QWidget):
         if current is None or self.job is not None:
             return
         item = current.data(Qt.ItemDataRole.UserRole)
+        if item is None:
+            return
+        if item.get('installed'):
+            self.log.setPlainText(item['name'] + ' ya está instalado: búscalo en Aplicaciones.'); return
         try:
             argv = install_command(item)
         except ValueError as error:
@@ -162,6 +214,10 @@ class Installer(QWidget):
         if item['source'] == 'file' and QMessageBox.question(self, 'Instalar', f"¿Instalar {item['name']}?") != QMessageBox.StandardButton.Yes:
             return
         self.log.setPlainText('Instalando ' + item['name'] + '…')
+        self.pending = after_commands(item)
+        self.run_job(argv)
+
+    def run_job(self, argv):
         self.job = QProcess(self); self.job.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self.job.readyReadStandardOutput.connect(lambda: self.log.appendPlainText(bytes(self.job.readAllStandardOutput()).decode(errors='replace').rstrip()))
         self.job.finished.connect(self.install_done)
@@ -170,8 +226,17 @@ class Installer(QWidget):
 
     def install_done(self, code, status):
         # Actualiza el registro de actividad, libera el estado del trabajo y cierra la aplicación si la ventana está oculta.
-        self.log.appendPlainText('Instalado.' if code == 0 and status == QProcess.ExitStatus.NormalExit else f'Error (código {code}).')
-        self.job.deleteLater(); self.job = None; self.install_button.setEnabled(True)
+        ok = code == 0 and status == QProcess.ExitStatus.NormalExit
+        self.job.deleteLater(); self.job = None
+        if ok and self.pending:
+            argv = self.pending.pop(0); self.log.appendPlainText('Activando ' + argv[-1] + '…')
+            self.run_job(argv); return
+        self.pending = []
+        self.log.appendPlainText('Instalado.' if ok else f'Error (código {code}).')
+        self.install_button.setEnabled(True)
+        if ok and self.showing_recommended:
+            row = self.list.currentRow(); log = self.log.toPlainText()
+            self.show_recommended(); self.list.setCurrentRow(row); self.log.setPlainText(log)
         if not self.isVisible():
             QApplication.quit()
 

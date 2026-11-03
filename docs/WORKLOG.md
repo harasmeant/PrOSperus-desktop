@@ -479,3 +479,11 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Deslizadores y botones de herramienta con estilo propio en todo el escritorio.
 - Las ventanas con marco dejan 22 px de margen: la filigrana de las esquinas ya no pisa Cerrar/Instalar.
 - Instalar programas usa el estilo común (botones y buscador como el resto).
+
+## 2026-11-03 — Instalador con recomendadas
+
+- «Instalar programas» abre con un catálogo de recomendadas por categorías (`recommended.py`): utilidades
+  (Input Remapper, Piper, Solaar, OpenRGB, Mission Center, LocalSend, KeePassXC…), multimedia (Jellyfin, VLC,
+  OBS…), ingeniería, juegos e internet. Ids de Flathub y paquetes de Fedora comprobados.
+- Las ya instaladas llevan ✓. Input Remapper y Piper activan su servicio (`input-remapper`, `ratbagd`) al instalarse.
+- Buscar con el campo vacío o el botón «Recomendadas» vuelve al catálogo.
