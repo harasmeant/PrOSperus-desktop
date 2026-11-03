@@ -9,20 +9,41 @@ export XKB_DEFAULT_LAYOUT=es
 export XDG_DATA_DIRS="${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share:/var/lib/flatpak/exports/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 # En equipos reales el framebuffer provisional (simpledrm) aparece antes que el
 # driver de la gráfica; si Sway lo toma, la pantalla queda negra al cargar amdgpu/i915.
-# Se espera a una gráfica real y se usa la de arranque (boot_vga) en portátiles híbridos.
+# Se espera a las gráficas reales y se usan todas, la de arranque (boot_vga) primero:
+# en portátiles híbridos el HDMI suele colgar de la NVIDIA.
+expected=0
+for dev in /sys/bus/pci/devices/*; do
+    case $(cat "$dev/class" 2>/dev/null) in 0x0300*|0x0302*) ;; *) continue ;; esac
+    # NVIDIA solo cuenta con el controlador propietario instalado (nouveau está bloqueado).
+    [ "$(cat "$dev/vendor")" = 0x10de ] && ! modinfo -n nvidia >/dev/null 2>&1 && continue
+    expected=$((expected + 1))
+done
 i=0
 while [ $i -lt 30 ]; do
-    first= boot=
+    boot= rest= count=0
     for card in /sys/class/drm/card[0-9]*; do
         case $card in *-*) continue ;; esac
         driver=$(basename "$(readlink -f "$card/device/driver" 2>/dev/null)")
         case $driver in ''|simple-framebuffer|simpledrm|efi-framebuffer) continue ;; esac
-        [ -n "$first" ] || first=/dev/dri/${card##*/}
-        [ "$(cat "$card/device/boot_vga" 2>/dev/null)" = 1 ] && boot=/dev/dri/${card##*/}
+        count=$((count + 1))
+        if [ -z "$boot" ] && [ "$(cat "$card/device/boot_vga" 2>/dev/null)" = 1 ]; then
+            boot=/dev/dri/${card##*/}
+        else
+            rest=${rest:+$rest:}/dev/dri/${card##*/}
+        fi
     done
-    [ -n "$first" ] && { export WLR_DRM_DEVICES=${boot:-$first}; break; }
+    # Con todas las esperadas (o al agotar la espera con alguna), se arranca.
+    if [ $count -gt 0 ] && { [ $count -ge $expected ] || [ $i -ge 20 ]; }; then
+        export WLR_DRM_DEVICES=${boot:+$boot${rest:+:}}$rest
+        break
+    fi
     sleep 0.5
     i=$((i + 1))
 done
+# Con el controlador propietario de NVIDIA cargado, Sway se niega a arrancar sin
+# --unsupported-gpu (pantalla negra tras instalarlo).
+flags=
+grep -q '^nvidia ' /proc/modules && flags=--unsupported-gpu
+echo "Gráficas para Sway: ${WLR_DRM_DEVICES:-automático} ($count de $expected); ${flags:-sin opciones}" | systemd-cat -t prosperus-diag
 # Sway sustituye a Cage: permite varias ventanas sobre el mapa de proyectos.
-exec dbus-run-session -- systemd-cat --identifier=prosperus-session sway --config /etc/sway/prosperus.conf
+exec dbus-run-session -- systemd-cat --identifier=prosperus-session sway $flags --config /etc/sway/prosperus.conf
