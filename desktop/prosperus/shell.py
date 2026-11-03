@@ -25,6 +25,7 @@ from PySide6.QtWidgets import QWidgetAction
 from . import motion
 from .charts import insert_charts
 from .code_blocks import separate_fences, style_code
+from .theme_state import publish as publish_theme
 from .branches import branch, flourish
 from . import branch_style
 from .map_layout import link_order, map_metrics, radial_slots, nearest_in_direction, separate
@@ -1174,6 +1175,9 @@ class Desktop(QMainWindow):
         self.background.update(); self.surface.update()
         # Con dos pantallas, la que no tiene el mapa muestra el fondo del proyecto (no un color liso).
         self.windows.set_wallpaper(self.background.wallpaper, self.colors.base)
+        # La consola, las notificaciones y las ventanas aparte toman el tono y la carpeta del proyecto.
+        if self.system_session:
+            publish_theme(self.colors, self.folder)
 
     def apply_accessibility(self):
         self.apply_appearance()
@@ -1664,7 +1668,7 @@ class Desktop(QMainWindow):
             item = self.power_row.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        self.power_row.addWidget(label('¿Reiniciar la VM?' if action == 'reboot' else '¿Apagar la VM?'))
+        self.power_row.addWidget(label('¿Reiniciar el equipo?' if action == 'reboot' else '¿Apagar el equipo?'))
         self.power_row.addWidget(button('Cancelar', self.power_box.hide))
         self.power_row.addWidget(button('Confirmar', lambda: self.power(action))); self.power_box.show()
 
@@ -1675,9 +1679,6 @@ class Desktop(QMainWindow):
             self.status.setText('Espera a que termine la copia antes de apagar.'); return
         if not all(panel.can_close() for panel in list(self.panels.values())):
             return
-        check = subprocess.run(['systemd-detect-virt', '--vm', '--quiet'], check=False)
-        if check.returncode:
-            self.status.setText('Estos controles solo están disponibles en la VM PrOSperus.'); return
         result = subprocess.run(['systemctl', action], capture_output=True, text=True, timeout=15)
         if result.returncode:
             self.status.setText(result.stderr.strip() or 'No se pudo completar la acción.')

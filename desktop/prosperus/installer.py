@@ -6,6 +6,7 @@ import sys
 
 from PySide6.QtCore import QProcess, Qt
 from .window_header import WindowHeader
+from .theme_state import current_palette
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget)
 
@@ -63,15 +64,18 @@ def install_command(item):
     raise ValueError('Solo se instalan archivos .rpm o .flatpakref.')
 
 
-STYLE = '''
-QWidget { background: #1d231c; color: #e3e8da; font-family: 'DejaVu Sans'; font-size: 13px; }
-QLabel#title { font-size: 20px; font-weight: bold; }
-QLineEdit, QListWidget, QPlainTextEdit { background: #2a3328; border: 1px solid #4c5a48; border-radius: 10px; padding: 6px; }
-QLineEdit { min-height: 30px; font-size: 15px; }
-QListWidget::item { padding: 6px; border-radius: 8px; }
-QListWidget::item:selected { border: 2px solid #9fc28a; background: #344030; }
-QPushButton { background: #2a3328; border: 1px solid #4c5a48; border-radius: 8px; padding: 6px 14px; }
-QPushButton:hover { background: #344030; }
+def style(c):
+    # Tono del proyecto que se ve en el escritorio (theme_state), no siempre verde.
+    return f'''
+QWidget {{ background: {c.base}; color: {c.text}; font-family: 'DejaVu Sans'; font-size: 13px; }}
+QLabel#title {{ font-size: 20px; font-weight: bold; }}
+QLabel#muted {{ color: {c.muted}; }}
+QLineEdit, QListWidget, QPlainTextEdit {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 10px; padding: 6px; }}
+QLineEdit {{ min-height: 30px; font-size: 15px; }}
+QListWidget::item {{ padding: 6px; border-radius: 8px; }}
+QListWidget::item:selected {{ border: 2px solid {c.accent}; background: {c.card}; }}
+QPushButton {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 8px; padding: 6px 14px; }}
+QPushButton:hover {{ background: {c.card}; }}
 '''
 
 
@@ -88,7 +92,7 @@ class Installer(QWidget):
     # Interfaz gráfica principal que coordina búsquedas, instalación y registro de actividad.
     def __init__(self, path=None):
         super().__init__()
-        self.setWindowTitle('Instalar programas'); self.resize(760, 560); self.setStyleSheet(STYLE)
+        self.setWindowTitle('Instalar programas'); self.resize(760, 560); self.setStyleSheet(style(current_palette()))
         self.searches, self.results, self.job = [], {}, None
         layout = QVBoxLayout(self)
         layout.addWidget(WindowHeader('Instalar programas', self))

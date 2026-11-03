@@ -55,7 +55,7 @@ def parse_powered(text):
 
 def terminal(argv):
     """Abre una herramienta de texto (nmtui, bluetoothctl) en la consola."""
-    QProcess.startDetached('foot', argv)
+    QProcess.startDetached('prosperus-terminal', argv)
 
 
 class QuickSettings(QFrame):

@@ -8,6 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap, QIcon
 from .window_header import WindowHeader
+from .theme_state import current_palette
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QPushButton, QMessageBox,
@@ -44,6 +45,8 @@ class WallpaperPicker(QWidget):
         super().__init__()
         self.setWindowTitle('Fondo de pantalla')
         self.resize(760, 520)
+        # Mismo tono que el proyecto que se ve en el escritorio.
+        self.setStyleSheet(current_palette().css() + 'WallpaperPicker {{ background: {}; }}'.format(current_palette().base))
         self._build_ui()
 
     def _build_ui(self):

@@ -124,7 +124,7 @@ def terminal_command(commands):
     script = ' && '.join(f'echo {shlex.quote("$ " + c)} && {c}' for c in commands)
     script = (f'({script}) && echo && echo "Listo. Reinicia para cargar el controlador." '
               f'|| echo "La instalación se detuvo por un error."; read -r -p "Pulsa Intro para cerrar" _')
-    return ['foot', '--title', 'PrOSperus · Instalar controladores', 'sh', '-c', script]
+    return ['prosperus-terminal', '--title', 'PrOSperus · Instalar controladores', 'sh', '-c', script]
 
 
 class DriverAssistant(QDialog):

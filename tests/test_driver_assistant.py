@@ -118,7 +118,7 @@ class TestDriverAssistant(unittest.TestCase):
     def test_terminal_command(self):
         cmds = ['echo a', 'false']
         result = da.terminal_command(cmds)
-        self.assertEqual(result[0], 'foot')
+        self.assertEqual(result[0], 'prosperus-terminal')
         script = result[-1]
         self.assertIn(' && ', script)
         self.assertIn('Pulsa Intro', script)

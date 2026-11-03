@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Exec=foot
+Exec=/usr/bin/prosperus-terminal
 Icon=foot
 Terminal=false
 Categories=System;TerminalEmulator;
