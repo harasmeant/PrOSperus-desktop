@@ -45,6 +45,15 @@ def fuzzel_config(colors):
             f"selection-match={c(colors.accent)}\nborder={c(colors.accent)}\n\n[border]\nwidth=2\nradius=14\n")
 
 
+def wob_config(colors):
+    """Barra de volumen y brillo (wob) en los colores del proyecto; «muted» la apaga."""
+    c = lambda value, alpha='ff': value.lstrip('#') + alpha
+    return ('timeout = 1200\nmax = 100\nwidth = 360\nheight = 34\nborder_offset = 0\nborder_size = 2\n'
+            'bar_padding = 6\nanchor = bottom\nmargin = 140\noutput_mode = focused\n'
+            f'background_color = {c(colors.base, "dd")}\nborder_color = {c(colors.accent)}\n'
+            f'bar_color = {c(colors.text)}\n\n[style.muted]\nbar_color = {c(colors.muted)}\n')
+
+
 def mako_config(colors, base_text):
     """mako.conf del sistema con los colores del proyecto."""
     replace = {'background-color': colors.base + 'ee', 'text-color': colors.text,
@@ -88,6 +97,9 @@ def publish(colors, folder, directory=None, traits=None, wallpaper=None):
         _write(directory / 'folder', str(folder) + '\n')
         _write(directory / 'foot.ini', foot_config(colors))
         _write(directory / 'fuzzel.ini', fuzzel_config(colors))
+        # wob solo lee su configuración al arrancar: se cierra y la sesión lo vuelve a abrir.
+        if _write(directory / 'wob.ini', wob_config(colors)):
+            subprocess.run(['pkill', '-x', 'wob'], capture_output=True, timeout=3, check=False)
         base = Path(MAKO_BASE)
         if base.is_file() and _write(directory / 'mako.conf', mako_config(colors, base.read_text(encoding='utf-8'))):
             subprocess.run(['makoctl', 'reload'], capture_output=True, timeout=3, check=False)

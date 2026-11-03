@@ -8,14 +8,14 @@ RUN curl -fsSL -o /etc/yum.repos.d/swayfx.repo \
         https://copr.fedorainfracloud.org/coprs/swayfx/swayfx/repo/fedora-44/swayfx-swayfx-fedora-44.repo \
     && dnf -y --setopt=install_weak_deps=False install --allowerasing swayfx \
     && dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper \
-       grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs \
+       grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob \
        eza bat fastfetch btop \
     && dnf clean all
 COPY desktop/prosperus /usr/lib/prosperus/prosperus
 COPY demo-system /usr/share/prosperus/demo
 COPY LICENSE /usr/share/licenses/prosperus/LICENSE
 COPY image/rootfs/ /
-RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-ramas /usr/bin/prosperus-instalar /usr/bin/prosperus-claude /usr/bin/prosperus-terminal /usr/bin/prosperus-bloquear /usr/bin/prosperus-captura /usr/bin/prosperus-portapapeles /usr/bin/prosperus-handle /usr/libexec/prosperus-session /usr/libexec/prosperus-persistence /usr/libexec/prosperus-client \
+RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-ramas /usr/bin/prosperus-instalar /usr/bin/prosperus-claude /usr/bin/prosperus-terminal /usr/bin/prosperus-bloquear /usr/bin/prosperus-captura /usr/bin/prosperus-portapapeles /usr/bin/prosperus-osd /usr/bin/prosperus-handle /usr/libexec/prosperus-session /usr/libexec/prosperus-persistence /usr/libexec/prosperus-client \
     && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
     && passwd --lock root \
     && passwd --delete prosperus \

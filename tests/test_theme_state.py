@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 from prosperus.appearance import Palette
-from prosperus.theme_state import current_palette, foot_config, mako_config, publish
+from prosperus.theme_state import current_palette, foot_config, mako_config, publish, wob_config
 
 
 class ThemeStateTest(unittest.TestCase):
@@ -25,6 +25,12 @@ class ThemeStateTest(unittest.TestCase):
     def test_foot_includes_system_config(self):
         text = foot_config(Palette(30), base='/etc/xdg/foot/foot.ini')
         self.assertTrue(text.startswith('[main]\ninclude=/etc/xdg/foot/foot.ini'))
+
+    def test_wob_uses_palette(self):
+        colors = Palette(207)
+        text = wob_config(colors)
+        self.assertIn('border_color = ' + colors.accent[1:] + 'ff', text)
+        self.assertIn('[style.muted]', text)
 
     def test_mako_keeps_other_lines(self):
         base = 'font=DejaVu Sans 11\nbackground-color=#1d231cee\ntext-color=#e3e8da\nborder-color=#9fc28a\n'

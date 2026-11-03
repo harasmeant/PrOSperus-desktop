@@ -506,3 +506,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 ## 3-4 de noviembre de 2026 · Mejoras de interfaz aprobadas
 
 - SwayFX atenúa las ventanas sin foco (`default_dim_inactive 0.18`), salvo el escritorio y la píldora.
+- Barra en pantalla para volumen y brillo (wob) con los colores del proyecto, en las teclas multimedia (`prosperus-osd`, escrito por qwen2.5-coder). Si el proyecto cambia de tono, wob se reinicia con su nueva configuración sin perder valores (la tubería queda abierta en la sesión).

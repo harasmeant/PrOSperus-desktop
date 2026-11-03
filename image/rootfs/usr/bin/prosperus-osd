@@ -1,0 +1,32 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Usage: prosperus-osd subir|bajar|silenciar|micro|brillo-mas|brillo-menos
+# Teclas multimedia: cambia volumen o brillo y lo enseña en la barra de wob (tubería de la sesión).
+# Escrito por qwen2.5-coder (local), revisado.
+fifo=${XDG_RUNTIME_DIR:-/tmp}/prosperus/wob.fifo
+
+show() {
+    if [ -p "$fifo" ]; then
+        timeout 1 sh -c 'printf "%s\n" "$1" > "$2"' sh "$1" "$fifo" &
+    fi
+}
+
+volume() {
+    output=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
+    percent=$(echo "$output" | awk '{printf "%d", $2 * 100 + 0.5}')
+    if echo "$output" | grep -q "MUTED"; then
+        show "$percent muted"
+    else
+        show "$percent"
+    fi
+}
+
+case "$1" in
+    subir)      wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && volume ;;
+    bajar)      wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && volume ;;
+    silenciar)  wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && volume ;;
+    micro)      wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
+    brillo-mas)   brightnessctl -q -c backlight set 5%+ && show "$(($(brightnessctl -c backlight get) * 100 / $(brightnessctl -c backlight max)))" ;;
+    brillo-menos) brightnessctl -q -c backlight set 5%- && show "$(($(brightnessctl -c backlight get) * 100 / $(brightnessctl -c backlight max)))" ;;
+    *) echo "uso: prosperus-osd subir|bajar|silenciar|micro|brillo-mas|brillo-menos" >&2; exit 2 ;;
+esac
