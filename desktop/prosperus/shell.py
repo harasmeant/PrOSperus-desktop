@@ -1563,6 +1563,37 @@ class Desktop(QMainWindow):
             except (OSError, ValueError) as error:
                 QMessageBox.warning(self, 'No se pudo crear la carpeta', str(error))
 
+    def sort_into_folders(self, paths):
+        """«Mover a Imágenes»/«a su carpeta»: cada archivo a la carpeta de su tipo junto a él."""
+        from .incoming import ask_folder, move_files
+        busy = [p for p in paths if p in self.panels]
+        if busy:
+            self.status.setText('Cierra primero las notas abiertas: ' + ', '.join(p.stem for p in busy)); return
+        choices = []
+        for path in paths:
+            folder = ask_folder(self, path)
+            if folder is None:
+                return
+            choices.append((path, folder))
+        self.report_sorted(*move_files(self, choices, remember=False))
+
+    def sort_loose(self, folder):
+        """«Ordenar archivos sueltos…»: lista con casillas; nada se mueve hasta aceptar."""
+        from .incoming import SortDialog, move_files
+        dialog = SortDialog(self, folder)
+        if not dialog.exec():
+            return
+        # Lo que tenga notas abiertas (la nota o su carpeta) se queda donde está.
+        choices = [(p, f) for p, f in dialog.choices() if not any(q == p or q.is_relative_to(p) for q in self.panels)]
+        self.report_sorted(*move_files(self, choices))
+
+    def report_sorted(self, moved, errors):
+        if errors:
+            self.status.setText('No se pudo mover: ' + '; '.join(errors))
+        elif moved:
+            self.status.setText(f'Ordenados {len(moved)}: ' + ', '.join(sorted({p.parent.name for p in moved})))
+        self.files_changed()
+
     def move_to(self, paths, destination=None):
         """Mueve notas o carpetas a otro proyecto; las notas abiertas deben cerrarse antes."""
         if not paths:

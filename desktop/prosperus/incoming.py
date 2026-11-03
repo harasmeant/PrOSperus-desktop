@@ -126,3 +126,77 @@ class Incoming(QObject):
         self.message.emit(f'Guardado en {Path(project).name} › {target.parent.name}: {target.name}')
         self.arrived.emit(target)
         return True
+
+
+class SortDialog(QDialog):
+    """«Ordenar archivos sueltos»: lista con casillas y el destino de cada uno. No mueve nada hasta
+    Aceptar. Notas (.md) y carpetas salen desmarcadas: se dejan sueltas a propósito en el mapa."""
+    def __init__(self, parent, folder):
+        super().__init__(parent)
+        self.folder = Path(folder)
+        self.setWindowTitle('Ordenar archivos sueltos'); self.resize(620, 480)
+        layout = QVBoxLayout(self)
+        info = QLabel(f'Archivos sueltos de {self.folder.name}. Marca los que quieras guardar en su carpeta; '
+                      'puedes cambiar el destino o escribir uno nuevo.')
+        info.setWordWrap(True); layout.addWidget(info)
+        self.rows = []
+        grid = QVBoxLayout()
+        folders = routing.type_folders(self.folder)
+        from PySide6.QtWidgets import QCheckBox, QScrollArea, QWidget
+        for path, destination, checked in routing.sort_plan(self.folder, routing.load_memory()):
+            row = QHBoxLayout()
+            box = QCheckBox(('📁 ' if path.is_dir() else '') + path.name); box.setChecked(checked)
+            target = QComboBox(); target.setEditable(True); target.addItems(folders)
+            target.setCurrentText(destination or '')
+            target.lineEdit().setPlaceholderText('¿Dónde?')
+            row.addWidget(box, 1); row.addWidget(QLabel('→')); row.addWidget(target)
+            grid.addLayout(row); self.rows.append((path, box, target))
+        if not self.rows:
+            grid.addWidget(QLabel('No hay archivos sueltos en esta carpeta.'))
+        grid.addStretch(1)
+        holder = QWidget(); holder.setLayout(grid)
+        scroll = QScrollArea(); scroll.setWidgetResizable(True); scroll.setWidget(holder); layout.addWidget(scroll, 1)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText('Mover los marcados')
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText('Cancelar')
+        buttons.accepted.connect(self.accept); buttons.rejected.connect(self.reject); layout.addWidget(buttons)
+
+    def choices(self):
+        """[(ruta, carpeta destino)] de las filas marcadas con un destino válido."""
+        return [(path, target.currentText().strip()) for path, box, target in self.rows
+                if box.isChecked() and routing.safe_folder(target.currentText()) and target.currentText().strip() != path.name]
+
+
+def move_files(parent, choices, remember=True):
+    """Mueve [(ruta, carpeta)] a la carpeta de tipo junto a cada archivo; recuerda las extensiones
+    nuevas. Devuelve (movidos, errores)."""
+    memory, moved, errors = routing.load_memory(), [], []
+    for path, folder in choices:
+        is_file = path.is_file()
+        try:
+            moved.append(routing.move_to(path, path.parent / folder))
+        except OSError as error:
+            errors.append(f'{path.name}: {error}'); continue
+        ext = routing.extension(path.name)
+        if remember and is_file and ext and routing.folder_for(path.name, memory) is None:
+            memory[ext] = folder
+    if remember:
+        routing.save_memory(memory)
+    return moved, errors
+
+
+def ask_folder(parent, path):
+    """Carpeta para un archivo concreto: la regla, o el diálogo si la extensión es desconocida
+    (y entonces se recuerda). None si se cancela."""
+    memory = routing.load_memory()
+    folder = routing.folder_for(path.name, memory)
+    if folder is not None:
+        return folder
+    dialog = DestinationDialog(parent, path.name, path.parent)
+    if not dialog.exec():
+        return None
+    folder = dialog.folder()
+    ext = routing.extension(path.name)
+    if ext:
+        memory[ext] = folder; routing.save_memory(memory)
+    return folder

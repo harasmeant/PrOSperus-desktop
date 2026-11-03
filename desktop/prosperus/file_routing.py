@@ -140,3 +140,23 @@ def type_folders(project):
     except OSError:
         pass
     return list(dict.fromkeys(names))
+
+
+def sort_plan(folder, memory):
+    """Lo suelto directamente en `folder` (nunca en subcarpetas) para «Ordenar archivos sueltos»:
+    [(ruta, destino o None, marcado)]. Solo salen marcados los archivos con destino conocido que no
+    son notas (.md); las carpetas, las notas y lo desconocido, desmarcados. Fuera: ocultos, el fondo
+    (wallpaper.*) y las propias carpetas de tipo. (qwen no respondió: escrito a mano.)"""
+    skip = set(KINDS) | {'Capturas'}
+    items = []
+    for path in sorted(Path(folder).iterdir(), key=lambda p: p.name.lower()):
+        name = path.name
+        if name.startswith('.') or name.lower().startswith('wallpaper.'):
+            continue
+        if path.is_dir():
+            if name not in skip:
+                items.append((path, None, False))
+            continue
+        destination = folder_for(name, memory)
+        items.append((path, destination, destination is not None and not name.lower().endswith('.md')))
+    return items

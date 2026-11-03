@@ -140,12 +140,23 @@ class FileActions(QObject):
         rename.setEnabled(len(paths) == 1 and not self.busy)
         trash = menu.addAction('Mover a la papelera\tSupr', lambda: self.shell.trash_paths(paths))
         trash.setEnabled(bool(paths) and not self.busy)
+        # Clasificar a mano (nunca automático): «Mover a Imágenes», o «a su carpeta» si son de varios tipos.
+        files = [p for p in paths if p.is_file()]
+        if files and len(files) == len(paths):
+            from . import file_routing
+            memory = file_routing.load_memory()
+            kinds = {file_routing.folder_for(p.name, memory) for p in files}
+            title = ('Mover a ' + kinds.pop()) if len(kinds) == 1 and None not in kinds else 'Mover a su carpeta…'
+            sort = menu.addAction(title, lambda: self.shell.sort_into_folders(files))
+            sort.setEnabled(not self.busy)
         if len(paths) == 1 and paths[0].is_dir():
             menu.addAction('Pegar dentro de esta carpeta', lambda: self.paste(paths[0]))
         menu.addSeparator()
         menu.addAction('Nueva nota', create_note or (lambda: self.shell.new_note(folder=destination)))
         menu.addAction('Nueva carpeta', create_folder or (lambda: self.shell.new_folder(folder=destination)))
         menu.addAction('Nuevo proyecto', create_project or self.shell.new_project)
+        if not paths:
+            menu.addAction('Ordenar archivos sueltos…', lambda: self.shell.sort_loose(destination))
         menu.addSeparator()
         menu.addAction('Importar carpeta…', lambda: self.import_folder(destination))
         menu.addAction('Importar notas…', lambda: self.import_files(destination))
