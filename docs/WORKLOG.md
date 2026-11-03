@@ -489,3 +489,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - Buscar con el campo vacío o el botón «Recomendadas» vuelve al catálogo.
 - La imagen base instala también los textos en español (`%_install_langs en_US:es_ES:es`): el contenedor de
   Fedora solo traía inglés y `qtbase_es.qm` no llegaba a la ISO.
+- Al quitar GIMP de la imagen base se fue también DejaVu Sans Mono (venía con él): Foot salía con letra proporcional y un aviso. `dejavu-sans-mono-fonts` va ahora explícito en la imagen base (también la usan los bloques de código de las notas).
