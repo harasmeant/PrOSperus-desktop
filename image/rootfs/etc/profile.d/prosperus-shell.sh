@@ -19,7 +19,8 @@ __prosperus_prompt() {
 }
 PROMPT_COMMAND=__prosperus_prompt
 if command -v eza >/dev/null 2>&1; then
-    alias ls='eza --group-directories-first' ll='eza -l --git --group-directories-first' tree='eza --tree'
+    alias ls='eza --icons=auto --group-directories-first' ll='eza -l --git --icons=auto --group-directories-first' \
+        tree='eza --tree --icons=auto'
 fi
 command -v bat >/dev/null 2>&1 && alias cat='bat --paging=never --style=plain'
 # Una vez por consola: las bash anidadas heredan la variable y no lo repiten.
