@@ -120,6 +120,7 @@ def render_chart(spec, width, colors):
     return image
 
 
+# Gráficas de barras y de líneas, con sus ejes y escala
 def _axes_chart(p, area, spec, text, muted, font):
     series, labels = spec['series'], spec['labels']
     values = [v for _, vs in series for v in vs] or [0]
@@ -173,6 +174,7 @@ def _axes_chart(p, area, spec, text, muted, font):
                 p.drawEllipse(point, 3.2, 3.2)
 
 
+# Gráfica de tarta (en anillo) con porcentajes
 def _pie(p, area, spec, text, colors):
     values = spec['series'][0][1]
     total = sum(values)
@@ -198,6 +200,7 @@ def _pie(p, area, spec, text, colors):
     p.drawEllipse(box.center(), side * .16, side * .16)
 
 
+# Muestra leyendas con colores y etiquetas de series
 def _legend(p, rect, names, text, font):
     metrics = QFontMetrics(font)
     x = rect.left()

@@ -17,6 +17,7 @@ MODES = [('spiral', 'Espiral Fibonacci'), ('columns', 'Columnas'),
 
 
 class LayoutPreview(QWidget):
+    # Previsualiza distribución de ventanas antes de aplicar
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumHeight(190)
@@ -25,6 +26,7 @@ class LayoutPreview(QWidget):
         self.options = LayoutOptions()
         self.count = 4
 
+    # Dibuja la vista previa de la distribución de ventanas
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -47,6 +49,7 @@ class LayoutPreview(QWidget):
 
 
 class LayoutDialog(QDialog):
+    # Ventana para elegir la distribución de ventanas de cada pantalla, con vista previa
     def __init__(self, shell, settings=None):
         super().__init__(shell)
         self.shell = shell
@@ -111,6 +114,7 @@ class LayoutDialog(QDialog):
         QApplication.instance().screenAdded.disconnect(self.reload_screens)
         QApplication.instance().screenRemoved.disconnect(self.reload_screens)
 
+    # Actualiza pantallas y mantiene selección anterior
     def reload_screens(self, *_):
         previous = self.screen_choice.currentData()
         self.screen_choice.blockSignals(True); self.screen_choice.clear()
@@ -126,6 +130,7 @@ class LayoutDialog(QDialog):
     def screen_key(self):
         return hashlib.sha256(str(self.screen_choice.currentData()).encode()).hexdigest()[:16]
 
+    # Aplica perfil de distribución para pantalla seleccionada
     def select_screen(self, *_):
         screen = self.selected_screen()
         if screen is None:
@@ -138,6 +143,7 @@ class LayoutDialog(QDialog):
         self.profile.setCurrentIndex(max(0, self.profile.findData(selected)))
         self.profile.blockSignals(False); self.load_profile()
 
+    # Carga ajustes de distribución con vista previa antes de aplicar
     def load_profile(self, *_):
         prefix = 'layouts/profiles/' + self.profile.currentData() + '/'
         mode = self.settings.value(prefix + 'mode', 'spiral')
@@ -154,6 +160,7 @@ class LayoutDialog(QDialog):
     def options(self):
         return LayoutOptions(self.mode.currentData(), self.gap.value(), self.ratio.value(), self.width_limit.value())
 
+    # Actualiza vista previa del layout antes de aplicar cambios
     def refresh_preview(self, *_):
         screen = self.selected_screen()
         if screen is None:
@@ -169,6 +176,7 @@ class LayoutDialog(QDialog):
         self.preview_status.setText(message); self.preview.update()
         self.ratio.setEnabled(self.mode.currentData() != 'columns')
 
+    # Guarda ajustes para aplicar al cambiar de pantalla
     def save_profile(self):
         prefix = 'layouts/profiles/' + self.profile.currentData() + '/'
         for key, value in vars(self.options()).items():
@@ -177,6 +185,7 @@ class LayoutDialog(QDialog):
         self.settings.sync()
         self.status.setText('Perfil guardado.' if self.settings.status() == QSettings.Status.NoError else 'No se pudo guardar el perfil.')
 
+    # Organizar notas en pantalla
     def apply_notes(self):
         if self.selected_screen() != self.shell.screen():
             self.status.setText('Mueve PrOSperus a esa pantalla para organizar sus notas.'); return
@@ -194,6 +203,7 @@ class LayoutDialog(QDialog):
             panel.setGeometry(box.x, box.y, box.width, box.height)
         self.undo.setEnabled(True); self.status.setText(f'{len(panels)} notas organizadas. Puedes deshacer esta distribución.')
 
+    # Recupera la distribución anterior de las notas
     def undo_notes(self):
         for path, geometry in self.previous.items():
             panel = self.shell.panels.get(path)
@@ -201,6 +211,7 @@ class LayoutDialog(QDialog):
                 panel.setGeometry(geometry)
         self.previous = {}; self.undo.setEnabled(False); self.status.setText('Distribución anterior recuperada.')
 
+    # Coloca las aplicaciones abiertas según la distribución elegida
     def apply_applications(self):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             return
@@ -213,11 +224,13 @@ class LayoutDialog(QDialog):
             '--mode', options.mode, '--gap', str(options.gap), '--ratio', str(options.ratio),
             '--max-width', str(options.max_width)])
 
+    # Muestra si la colocación fue bien o el error
     def application_result(self, code, status):
         success = code == 0 and status == QProcess.ExitStatus.NormalExit
         message = bytes(self.process.readAllStandardOutput() if success else self.process.readAllStandardError()).decode(errors='replace')
         self.status.setText(message.strip() or 'No se pudo completar la distribución.')
 
+    # Fin de la colocación: libera el proceso y avisa del resultado
     def done(self, result):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             self.status.setText('Espera a que termine la distribución de aplicaciones.'); return

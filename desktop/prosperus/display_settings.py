@@ -73,6 +73,7 @@ def mirror_commands(outputs, primary):
             for o in outputs if o['name'] != primary]
 
 
+# Carga configuración de monitores Sway desde archivo JSON con valores predeterminados
 def load_config(path=None):
     config = dict(DEFAULTS)
     try:
@@ -84,12 +85,14 @@ def load_config(path=None):
     return config
 
 
+# Guarda configuración de monitores para Sway en JSON
 def save_config(config, path=None):
     path = Path(path or CONFIG)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config, indent=2), encoding='utf-8')
 
 
+# Obtiene estado de monitores en Sway
 def read_outputs():
     try:
         result = subprocess.run(['swaymsg', '-t', 'get_outputs', '-r'], capture_output=True,
@@ -99,6 +102,7 @@ def read_outputs():
         return []
 
 
+# Configura monitores en Sway según modo
 def apply(config):
     outputs = read_outputs()
     if not outputs:
@@ -124,6 +128,7 @@ def apply(config):
     return 'Pantallas aplicadas.'
 
 
+# Aplica configuracion guardada de monitores en Sway
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Aplica la configuración de monitores guardada.')
     parser.add_argument('--apply', action='store_true')
@@ -143,6 +148,7 @@ except ImportError:  # el CLI de arranque no necesita Qt
 class DisplayDialog(QDialog):
     """Elegir modo, pantalla principal y lado donde van las demás."""
 
+    # Configura monitores en Sway
     def __init__(self, parent=None, outputs=None):
         super().__init__(parent)
         self.setWindowTitle('Monitores'); self.resize(480, 260)
@@ -167,6 +173,7 @@ class DisplayDialog(QDialog):
         self.position_choice.setCurrentIndex(max(0, self.position_choice.findData(config['position'])))
         self.reload(primary=config['primary'])
 
+    # Refresca monitores y establece el principal
     def reload(self, *_, primary=None):
         primary = primary if primary is not None else self.primary_choice.currentData()
         self.outputs = self._outputs_provider()
@@ -187,6 +194,7 @@ class DisplayDialog(QDialog):
         return {'mode': self.mode_choice.currentData(), 'primary': self.primary_choice.currentData() or '',
                 'position': self.position_choice.currentData()}
 
+    # Aplica configuración de monitores en Sway
     def apply(self):
         config = self.current_config()
         save_config(config)
