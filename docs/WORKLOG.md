@@ -469,3 +469,13 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
   - Con alto contraste, borde simple sin filigrana.
   - Capturas: `docs/images/marcos-notas.png` (el mismo marco con dos fondos) y `docs/images/marco-ramas.png`. 147 pruebas correctas.
 - GIMP fuera de la imagen base, a petición. Si hace falta, se instala desde Flathub con «Instalar programas» (se conserva con el USB persistente).
+
+## 2026-11-03 — Botones y diálogos a juego
+
+- Los diálogos de Qt salen en español (Sí/No, Aceptar/Cancelar, Guardar…): se carga `qtbase_es` en todas las
+  apps y la imagen base añade `qt6-qttranslations`.
+- Fuera el icono azul de los avisos; botones de diálogo centrados.
+- Flechas SVG del color del tema en desplegables, casillas numéricas y botones con menú; marca ✓ en las casillas.
+- Deslizadores y botones de herramienta con estilo propio en todo el escritorio.
+- Las ventanas con marco dejan 22 px de margen: la filigrana de las esquinas ya no pisa Cerrar/Instalar.
+- Instalar programas usa el estilo común (botones y buscador como el resto).

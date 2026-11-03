@@ -68,3 +68,22 @@ class WindowFrameTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class FrameRoomTest(unittest.TestCase):
+    def test_frame_leaves_room_for_corner_filigree(self):
+        from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+        from prosperus.window_frame import MARGIN, attach_frame
+        from prosperus.appearance import Palette
+        app = QApplication.instance() or QApplication([])
+        window = QWidget(); layout = QVBoxLayout(window); layout.setContentsMargins(4, 4, 4, 4)
+        attach_frame(window, lambda: Palette())
+        m = layout.contentsMargins()
+        self.assertEqual((m.left(), m.right(), m.bottom()), (MARGIN, MARGIN, MARGIN))
+
+    def test_arrows_are_svg_in_the_requested_colour(self):
+        from pathlib import Path
+        from prosperus.appearance import arrow
+        for kind in ('down', 'up', 'check'):
+            text = Path(arrow(kind, '#abcdef')).read_text()
+            self.assertIn('#abcdef', text); self.assertIn('<svg', text)

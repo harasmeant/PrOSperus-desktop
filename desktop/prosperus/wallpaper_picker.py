@@ -123,6 +123,7 @@ def main():
     app = QApplication(sys.argv)
     # Establecer nombre de aplicación para el gestor de ventanas del escritorio
     app.setDesktopFileName('org.prosperus.Wallpapers')
+    from .appearance import speak_spanish; speak_spanish(app)
     window = WallpaperPicker()
     window.show()
     return app.exec()

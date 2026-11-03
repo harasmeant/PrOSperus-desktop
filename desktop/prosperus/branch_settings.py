@@ -220,7 +220,7 @@ class BranchSettings(QWidget):
         self.ornament_list.currentRowChanged.connect(self.select_ornament)
         box.addWidget(self.ornament_list, 1)
         row = QHBoxLayout()
-        add = QPushButton('Añadir adorno  ▾')
+        add = QPushButton('Añadir adorno'); add.setObjectName('menuButton')
         menu = QMenu(add)
         for kind, label in BUILTIN_ORNAMENTS.items():
             menu.addAction(label, lambda kind=kind: self.add_ornament({'kind': kind}))
@@ -440,6 +440,7 @@ class BranchSettings(QWidget):
 def main():
     app = QApplication(sys.argv)
     app.setDesktopFileName('org.prosperus.Branches')
+    from .appearance import speak_spanish; speak_spanish(app)
     window = BranchSettings()
     window.show()
     if '--screenshot' in sys.argv:

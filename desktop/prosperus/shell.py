@@ -1727,6 +1727,7 @@ def main():
     args = parser.parse_args()
     app = QApplication(sys.argv[:1]); app.setApplicationName('PrOSperus desktop')
     app.setDesktopFileName('org.prosperus.Desktop')
+    from .appearance import speak_spanish; speak_spanish(app)
     app.setStyleSheet(STYLE)
     try:
         desktop = Desktop(args.root, args.kiosk, args.system_session)

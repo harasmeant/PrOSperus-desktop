@@ -66,16 +66,12 @@ def install_command(item):
 
 def style(c):
     # Tono del proyecto que se ve en el escritorio (theme_state), no siempre verde.
-    return f'''
-QWidget {{ background: {c.base}; color: {c.text}; font-family: 'DejaVu Sans'; font-size: 13px; }}
+    return c.css() + f'''
+Installer {{ background: {c.base}; }}
 QLabel#title {{ font-size: 20px; font-weight: bold; }}
-QLabel#muted {{ color: {c.muted}; }}
-QLineEdit, QListWidget, QPlainTextEdit {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 10px; padding: 6px; }}
-QLineEdit {{ min-height: 30px; font-size: 15px; }}
-QListWidget::item {{ padding: 6px; border-radius: 8px; }}
+QLineEdit {{ font-size: 15px; }}
 QListWidget::item:selected {{ border: 2px solid {c.accent}; background: {c.card}; }}
-QPushButton {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 8px; padding: 6px 14px; }}
-QPushButton:hover {{ background: {c.card}; }}
+QPlainTextEdit {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 10px; padding: 8px 10px; font-size: 12px; }}
 '''
 
 
@@ -189,6 +185,7 @@ class Installer(QWidget):
 def main():
     app = QApplication(sys.argv)
     app.setDesktopFileName('org.prosperus.Installer')
+    from .appearance import speak_spanish; speak_spanish(app)
     window = Installer(sys.argv[1] if len(sys.argv) > 1 else None)
     window.show()
     return app.exec()

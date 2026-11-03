@@ -5,7 +5,7 @@ FROM ${FEDORA_BASE}
 # Sistema mínimo, sesión gráfica y red.
 RUN dnf -y --setopt=install_weak_deps=False install \
     kernel-core kernel-modules-core kernel-modules dracut systemd systemd-udev systemd-pam \
-    sway greetd python3-pyside6 qt6-qtwayland python3-gobject python3-pygments \
+    sway greetd python3-pyside6 qt6-qtwayland python3-gobject python3-pygments qt6-qttranslations \
     mesa-dri-drivers mesa-libEGL mesa-libGL \
     dbus-daemon polkit kbd dejavu-sans-fonts glibc-langpack-es \
     python3-evdev \

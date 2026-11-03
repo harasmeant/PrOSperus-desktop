@@ -4,7 +4,7 @@ from functools import lru_cache
 import hashlib
 import math
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QLibraryInfo, QLocale, QPointF, QRectF, Qt, QTranslator
 from PySide6.QtGui import QColor, QIcon, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QWidget
 
@@ -46,7 +46,9 @@ class Palette:
         QPushButton:checked {{ background: {self.hover}; border: 1px solid {self.accent}; }}
         QPushButton:disabled {{ color: {self.muted}; border-color: {self.panel}; }}
         QPushButton#minimized {{ background: {self.hover}; border: 1px solid {self.accent}; }}
-        QPushButton::menu-indicator {{ width: 0; }}
+        QPushButton::menu-indicator {{ image: url({arrow('down', self.muted)}); width: 10px; height: 6px;
+                       subcontrol-origin: padding; subcontrol-position: right center; right: 12px; }}
+        QPushButton#menuButton {{ text-align: center; padding-right: 34px; }}
         QLineEdit, QComboBox, QSpinBox {{ background: {self.panel}; border: 1px solid {self.border}; border-radius: 10px;
                        padding: 9px 12px; min-height: 18px; selection-background-color: {self.hover}; }}
         QComboBox::drop-down, QSpinBox::up-button, QSpinBox::down-button {{ border: none; width: 22px; }}
@@ -57,6 +59,7 @@ class Palette:
                        border-radius: 6px; background: {self.panel}; }}
         QRadioButton::indicator {{ border-radius: 9px; }}
         QCheckBox::indicator:checked, QRadioButton::indicator:checked {{ background: {self.accent}; border-color: {self.accent}; }}
+        QCheckBox::indicator:checked {{ image: url({arrow('check', self.base)}); }}
         QMenu {{ background: {self.panel}; border: 1px solid {self.border}; border-radius: 14px; padding: 8px; }}
         QMenu::item {{ padding: 10px 26px 10px 14px; border-radius: 9px; margin: 1px 0; }}
         QMenu::item:selected {{ background: {self.hover}; }}
@@ -81,7 +84,55 @@ class Palette:
         QScrollBar::handle {{ background: {self.border}; border-radius: 3px; min-width: 24px; min-height: 24px; }}
         QScrollBar::add-line, QScrollBar::sub-line {{ width: 0; height: 0; }}
         QToolTip {{ background: {self.panel}; color: {self.text}; border: 1px solid {self.border}; border-radius: 8px; padding: 6px 10px; }}
+        QDialogButtonBox QPushButton, QMessageBox QPushButton {{ text-align: center; min-width: 76px; }}
+        QLabel#qt_msgboxex_icon_label {{ max-width: 0; max-height: 0; margin: 0; padding: 0; }}
+        QMessageBox QLabel {{ font-size: 14px; }}
+        QComboBox::down-arrow, QSpinBox::down-arrow {{ image: url({arrow('down', self.muted)}); width: 10px; height: 6px; }}
+        QSpinBox::up-arrow {{ image: url({arrow('up', self.muted)}); width: 10px; height: 6px; }}
+        QComboBox::down-arrow:hover, QSpinBox::down-arrow:hover {{ image: url({arrow('down', self.accent)}); }}
+        QSpinBox::up-arrow:hover {{ image: url({arrow('up', self.accent)}); }}
+        QSpinBox {{ padding-right: 26px; }}
+        QSpinBox::up-button {{ subcontrol-position: top right; margin: 4px 6px 0 0; }}
+        QSpinBox::down-button {{ subcontrol-position: bottom right; margin: 0 6px 4px 0; }}
+        QSlider {{ min-height: 24px; }}
+        QSlider::groove:horizontal {{ height: 6px; background: {self.card}; border-radius: 3px; }}
+        QSlider::sub-page:horizontal {{ background: {self.accent}; border-radius: 3px; }}
+        QSlider::handle:horizontal {{ background: {self.text}; width: 18px; margin: -6px 0; border-radius: 9px; }}
+        QToolButton {{ background: {self.card}; border: 1px solid {self.border}; border-radius: 10px; padding: 7px 12px; }}
+        QToolButton:hover {{ background: {self.hover}; border-color: {self.accent}; }}
+        QToolButton:checked {{ background: {self.hover}; border-color: {self.accent}; }}
+        QToolButton::menu-indicator {{ width: 0; }}
         """
+
+
+def arrow(direction, color):
+    """Flecha pequeña o marca de casilla (SVG) del color pedido; devuelve su ruta."""
+    import os, tempfile
+    from pathlib import Path
+    folder = Path(os.environ.get('XDG_RUNTIME_DIR') or tempfile.gettempdir()) / 'prosperus' / 'arrows'
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{direction}-{color.lstrip('#')}.svg"
+    if not path.exists():
+        if direction == 'check':
+            path.write_text(f'<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">'
+                            f'<polyline points="3,7.5 6,10.5 11,4" fill="none" stroke="{color}" stroke-width="2" '
+                            f'stroke-linecap="round" stroke-linejoin="round"/></svg>')
+            return path.as_posix()
+        points = '1,1 5,5 9,1' if direction == 'down' else '1,5 5,1 9,5'
+        path.write_text(f'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6">'
+                        f'<polyline points="{points}" fill="none" stroke="{color}" stroke-width="1.6" '
+                        f'stroke-linecap="round" stroke-linejoin="round"/></svg>')
+    return path.as_posix()
+
+
+def speak_spanish(app):
+    """Botones estándar de Qt (Sí, No, Cancelar, Guardar…) en español, como el resto del escritorio."""
+    folder = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+    for name in ('qtbase_es', 'qt_es'):
+        translator = QTranslator(app)
+        if translator.load(name, folder):
+            app.installTranslator(translator)
+    QLocale.setDefault(QLocale(QLocale.Language.Spanish, QLocale.Country.Spain))
 
 
 # Devuelve la Palette adecuada: si hay wallpaper, usa su tono; si no, usa HUES o hash del nombre

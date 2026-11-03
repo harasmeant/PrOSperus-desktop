@@ -7,9 +7,11 @@ vida, art déco o art nouveau, según los rasgos del fondo). Lo usan las notas, 
 propias (Ramas, Fondos, Instalador) y los diálogos del escritorio."""
 from PySide6.QtCore import QEvent, QObject, QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPen
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMainWindow, QWidget
 
 from .branches import branch
+
+MARGIN = 22  # margen mínimo del contenido dentro del marco
 
 
 def _alpha(colour, value):
@@ -90,4 +92,15 @@ def attach_frame(window, colors, traits=lambda: None, radius=10):
     if existing is not None:
         return existing
     window._prosperus_frame = FrameOverlay(window, colors, traits, radius, len(window.windowTitle()))
+    make_room(window)
     return window._prosperus_frame
+
+
+def make_room(window, side=MARGIN, top=12):
+    """Deja margen para que la filigrana de las esquinas no pise los botones."""
+    holder = window.centralWidget() if isinstance(window, QMainWindow) else window
+    layout = holder.layout() if holder is not None else None
+    if layout is None:
+        return
+    m = layout.contentsMargins()
+    layout.setContentsMargins(max(m.left(), side), max(m.top(), top), max(m.right(), side), max(m.bottom(), side))
