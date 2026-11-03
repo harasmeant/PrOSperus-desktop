@@ -436,3 +436,4 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 ## 3 de noviembre de 2026 · Vuelve el tarjetero de proyectos
 
 - «Tus proyectos» recupera el tarjetero apilado (portadas en vertical, rueda o ↑ ↓, clic en la portada para abrir) en lugar de la cuadrícula, a petición. Se conservan las animaciones del panel (entrada y salida por la izquierda, portadas que aparecen una tras otra). El panel vuelve a 370 px. 132 pruebas correctas.
+- Después, a petición: la cuadrícula queda como opción. Botón con icono junto a «Fijar» que alterna tarjetero ↔ cuadrícula; se guarda en `projects/view` (por defecto, tarjetero). El panel mide 370 px con el tarjetero y 660 px con la cuadrícula. 133 pruebas correctas.

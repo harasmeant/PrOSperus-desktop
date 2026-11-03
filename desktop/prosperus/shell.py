@@ -1153,7 +1153,7 @@ class Desktop(QMainWindow):
 
     def position_overlays(self):
         if hasattr(self, 'drawer'):
-            self.drawer.setGeometry(0, 0, min(round(370 * self.accessibility.text_scale / 100), self.width() - 100), self.background.height())
+            self.drawer.setGeometry(0, 0, min(round(self.drawer.panel_width() * self.accessibility.text_scale / 100), self.width() - 100), self.background.height())
             self.edge.setGeometry(0, self.background.height() // 2 - 45, 25, 90)
             self.drawer.raise_()
 

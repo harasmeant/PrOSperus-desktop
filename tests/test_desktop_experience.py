@@ -66,6 +66,29 @@ class DesktopExperienceTests(unittest.TestCase):
         self.assertEqual(self.window.folder, self.root / 'Cuaderno')
         self.assertFalse(self.window.drawer.isVisible())
 
+    def test_grid_view_is_optional_and_remembered(self):
+        settings = QSettings(str(Path(self.temp.name) / 'ajustes.ini'), QSettings.Format.IniFormat)
+        window = Desktop(self.root, settings=settings); window.show(); self.addCleanup(window.close)
+        drawer = window.drawer
+        self.assertEqual(drawer.view, 'stack')
+        drawer.reveal(); self.app.processEvents()
+        narrow = drawer.width()
+        drawer.toggle_view(); self.app.processEvents()
+        self.assertEqual(drawer.view, 'grid')
+        self.assertEqual(len(drawer.stack.cards), len(drawer.filtered))
+        self.assertGreater(drawer.width(), narrow)
+        QTest.keyClick(drawer.stack, Qt.Key.Key_Right)
+        self.assertEqual(drawer.index, 1)
+        QTest.keyClick(drawer.stack, Qt.Key.Key_Up)
+        self.assertEqual(drawer.index, 0)
+        QTest.keyClick(drawer.stack, Qt.Key.Key_Return)
+        self.assertEqual(window.folder, self.root / 'Bienvenida')
+        self.assertEqual(settings.value('projects/view'), 'grid')
+        again = Desktop(self.root, settings=settings); self.addCleanup(again.close)
+        self.assertEqual(again.drawer.view, 'grid')
+        again.drawer.toggle_view()
+        self.assertEqual(settings.value('projects/view'), 'stack')
+
     def test_cover_filter_wrap_and_pin(self):
         drawer = self.window.drawer
         drawer.reveal(); drawer.step(-1)

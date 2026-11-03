@@ -5,6 +5,7 @@ El mapa muestra archivos y subcarpetas. Cambiar de proyecto recupera sus notas a
 ## Una experiencia familiar
 
 - **Carpetas** muestra las portadas. Explorar no cambia el escritorio: pulsa **Abrir**.
+- El botón de la cuadrícula, junto a **Fijar**, cambia el tarjetero por una vista en cuadrícula (y vuelve a las portadas); se recuerda tu elección.
 - **Fijar** mantiene el tarjetero visible. Si no está fijado, se recoge al salir.
 - Las subcarpetas heredan el wallpaper de su proyecto.
 - Las ventanas minimizadas aparecen destacadas en la barra inferior.
