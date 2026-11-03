@@ -8,6 +8,12 @@ export XKB_DEFAULT_LAYOUT=es
 export XCURSOR_THEME=Bibata-Modern-Classic XCURSOR_SIZE=24
 # greetd arranca en /: sin esto, todo lo que abre Sway (Foot incluido) empieza en la raíz.
 cd "$HOME" || true
+# Las descargas llegan a una carpeta de entrada y el escritorio las reparte en el proyecto
+# que se ve (incoming.py). Los navegadores (Firefox, Zen…) usan XDG_DOWNLOAD_DIR sin preguntar.
+incoming=$HOME/.local/share/prosperus/entrantes
+mkdir -p "$incoming"
+xdg-user-dirs-update --set DOWNLOAD "$incoming" 2>/dev/null || true
+export XDG_DOWNLOAD_DIR=$incoming
 # greetd no lee /etc/profile.d: sin esto los programas de Flathub no salen en Aplicaciones.
 export XDG_DATA_DIRS="${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share:/var/lib/flatpak/exports/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 # En equipos reales el framebuffer provisional (simpledrm) aparece antes que el

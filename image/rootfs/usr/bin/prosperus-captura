@@ -1,24 +1,28 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
 # Captura de pantalla (Impr Pant) o de una zona elegida con el ratón (Mayús+Impr Pant, «zona»):
-# se guarda en Imágenes/Capturas y se copia al portapapeles. «editar» (Super+Mayús+S, como Spectacle
+# se guarda en la carpeta Capturas del proyecto que se ve y se copia al portapapeles. «editar» (Super+Mayús+S, como Spectacle
 # en Bazzite): zona con el ratón y después swappy para dibujar flechas, recuadros y texto; al cerrar
 # el editor, lo dibujado se guarda y se copia.
 # Base escrita por qwen2.5-coder (local); corregidos la carpeta por defecto, la salida con error y una comilla.
-pictures=$(xdg-user-dir PICTURES 2>/dev/null)
-[ -n "$pictures" ] && [ "$pictures" != "$HOME" ] || pictures=$HOME/Imágenes
-dir=$pictures/Capturas
-mkdir -p "$dir"
+# Van a <proyecto>/Capturas del proyecto que se ve (lo publica el escritorio); si no, Imágenes/Capturas.
+state=${XDG_RUNTIME_DIR:-/nonexistent}/prosperus
+dir=
+[ -r "$state/capturas" ] && read -r dir < "$state/capturas"
+if [ -z "$dir" ]; then
+    pictures=$(xdg-user-dir PICTURES 2>/dev/null)
+    [ -n "$pictures" ] && [ "$pictures" != "$HOME" ] || pictures=$HOME/Imágenes
+    dir=$pictures/Capturas
+fi
 file="$dir/Captura $(date '+%Y-%m-%d %H.%M.%S').png"
 if [ "$1" = editar ]; then
     geometry=$(slurp) || exit 0
     # Configuración de swappy con los colores del proyecto (theme_state la publica).
-    state=${XDG_RUNTIME_DIR:-/nonexistent}/prosperus
     [ -d "$state/xdg/swappy" ] && export XDG_CONFIG_HOME=$state/xdg
     tmp=$(mktemp --suffix=.png) || exit 1
     grim -g "$geometry" - | swappy -f - -o - > "$tmp"
     if [ -s "$tmp" ]; then
-        mv "$tmp" "$file"
+        mkdir -p "$dir" && mv "$tmp" "$file"
         wl-copy --type image/png < "$file"
         notify-send -a PrOSperus -i "$file" 'Captura guardada' "$(basename "$file") · copiada al portapapeles"
     else
@@ -31,6 +35,8 @@ case "$1" in
           set -- -g "$geometry" ;;
     *)    set -- ;;
 esac
+# La carpeta se crea con la primera captura (no hay carpetas vacías en el mapa).
+mkdir -p "$dir"
 if ! grim "$@" "$file"; then
     notify-send -a PrOSperus 'Captura' 'No se pudo hacer la captura.'
     exit 1

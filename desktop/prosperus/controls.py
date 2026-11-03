@@ -6,6 +6,8 @@ import shutil
 from PySide6.QtCore import QObject, QProcess, Qt, Signal
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
+from .incoming import DestinationsDialog
+
 # Mapeo de acciones a programas y argumentos del sistema.
 COMMANDS = {
     'volume-up': ('wpctl', ['set-volume', '@DEFAULT_AUDIO_SINK@', '5%+', '--limit', '1.0']),
@@ -98,7 +100,8 @@ class ControlsDialog(QDialog):
 
         # Botones para abrir ajustes generales del sistema (accesibilidad y drivers).
         for title, action in [('Accesibilidad y botones…', shell.open_accessibility),
-                              ('Hardware y drivers…', shell.open_hardware)]:
+                              ('Hardware y drivers…', shell.open_hardware),
+                              ('Destinos de archivos…', lambda: DestinationsDialog(self).exec())]:
             option = QPushButton(title); option.clicked.connect(action); layout.addWidget(option)
 
         # Crea filas de controles (volumen, reproducción, brillo) con botones habilitados/deshabilitados según disponibilidad.

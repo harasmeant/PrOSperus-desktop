@@ -26,6 +26,7 @@ from . import motion
 from .charts import insert_charts
 from .code_blocks import separate_fences, style_code
 from .theme_state import publish as publish_theme
+from .file_routing import project_root
 from .branches import branch, flourish
 from .window_frame import attach_frame, paint_frame
 from . import branch_style
@@ -1133,6 +1134,12 @@ class Desktop(QMainWindow):
         self.files = FileActions(self)
         self.controls = SessionControls(self)
         self.controls.message.connect(self.status.setText)
+        # Descargas: de la carpeta de entrada al proyecto que se ve, en la carpeta de su tipo.
+        self.incoming = None
+        if self.system_session:
+            from .incoming import Incoming
+            self.incoming = Incoming(self, self.current_project)
+            self.incoming.message.connect(self.status.setText)
         self.keys = DesktopKeys(self)
         self.drawer = ProjectDrawer(self)
         self.edge = ProjectEdge(self)
@@ -1183,9 +1190,17 @@ class Desktop(QMainWindow):
         # Con dos pantallas, la que no tiene el mapa muestra el fondo del proyecto (no un color liso).
         self.windows.set_wallpaper(self.background.wallpaper, self.colors.base)
         # La consola, las notificaciones y las ventanas aparte toman el tono y la carpeta del proyecto.
+        self.last_project = project_root(self.vault.root, self.folder) or getattr(self, 'last_project', None)
+        if getattr(self, 'incoming', None):
+            self.incoming.timer.start()  # lo que esperaba a que se abriera un proyecto
         if self.system_session:
             publish_theme(self.colors, self.folder, traits=self.frame_traits(),
-                          wallpaper=self.background.wallpaper)
+                          wallpaper=self.background.wallpaper, project=self.current_project())
+
+    def current_project(self):
+        """Proyecto que recibe descargas y capturas: el que se ve o, en «Tus proyectos», el último abierto."""
+        project = getattr(self, 'last_project', None)
+        return project if project is not None and project.is_dir() else None
 
     def frame_traits(self):
         """Estilo de las ramas del proyecto actual (fondo + ajustes de «Ramas»): filigranas de los marcos."""
