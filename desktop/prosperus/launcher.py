@@ -12,10 +12,12 @@ from .model import searchable
 
 
 def use_icon_theme():
-    """En Sway Qt no tiene tema de iconos (solo hicolor): se usa Adwaita, con el clásico de respaldo."""
+    """En Sway Qt no tiene tema de iconos (solo hicolor): Papirus oscuro si está instalado
+    (imagen PrOSperus); si no, Adwaita con el clásico de respaldo."""
     if QIcon.themeName() in ('', 'hicolor'):
-        QIcon.setThemeName('Adwaita')
-        QIcon.setFallbackThemeName('AdwaitaLegacy')
+        papirus = any((Path(base) / 'Papirus-Dark').is_dir() for base in QIcon.themeSearchPaths())
+        QIcon.setThemeName('Papirus-Dark' if papirus else 'Adwaita')
+        QIcon.setFallbackThemeName('Adwaita' if papirus else 'AdwaitaLegacy')
 
 
 def app_item(app, favorites, colors):

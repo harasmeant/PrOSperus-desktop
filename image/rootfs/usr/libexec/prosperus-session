@@ -5,6 +5,7 @@ export XDG_CURRENT_DESKTOP=PrOSperus
 export QT_QPA_PLATFORM=wayland
 export WLR_RENDERER=pixman
 export XKB_DEFAULT_LAYOUT=es
+export XCURSOR_THEME=Bibata-Modern-Classic XCURSOR_SIZE=24
 # greetd arranca en /: sin esto, todo lo que abre Sway (Foot incluido) empieza en la raíz.
 cd "$HOME" || true
 # greetd no lee /etc/profile.d: sin esto los programas de Flathub no salen en Aplicaciones.
