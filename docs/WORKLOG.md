@@ -588,4 +588,4 @@ Ideas para más adelante:
 - Super+arrastrar (mover) y Super+clic derecho (tamaño) ya no abren Buscar al soltar Super: el escritorio
   descarta la búsqueda si una aplicación cambió de geometría en el último segundo y medio.
   Super+Alt+flechas cambian el tamaño con el teclado. Configuración validada con `sway -C`.
-- Pruebas con árbol de Sway simulado; sin probar en hardware real ni con dos monitores. 211 pruebas correctas.
+- Pruebas con árbol de Sway simulado; sin probar en hardware real ni con dos monitores. 203 pruebas correctas.
