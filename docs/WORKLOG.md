@@ -617,4 +617,5 @@ Ideas para más adelante:
   ratón (con teclado hay Ctrl+C/V); los puntos de ventana no son tabulables porque tienen atajo.
 - Base de `focus_trap.py` y `window_switcher.py` escrita por qwen2.5-coder:7b (local); corregidos un
   import que faltaba, el recorte del nombre y Escape. Comprobado sin pantalla con el escritorio real;
-  sin probar en Sway real: falta ver que la ventana de Alt+Tab recibe la suelta de Alt. 207 pruebas correctas.
+  207 pruebas correctas. ISO de Debian de las 22:35 (SHA-256 `3e22e652…eee3`) en QEMU: con Alt pulsado sale el selector
+  (dos consolas, la minimizada apagada), Tab cambia la marcada y al soltar Alt se abre. Sin probar en hardware real.
