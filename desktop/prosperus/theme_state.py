@@ -71,6 +71,7 @@ def mako_config(colors, base_text):
     return base_text
 
 
+# Evitar sobrescribir archivos idénticos
 def _write(path, text):
     if path.exists() and path.read_text(encoding='utf-8') == text:
         return False

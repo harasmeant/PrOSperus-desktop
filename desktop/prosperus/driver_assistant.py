@@ -32,6 +32,7 @@ class Gpu:
     driver: str
     slot: str
 
+    # Identifica la tarjeta gráfica para recomendar controladores
     @property
     def name(self):
         names = {NVIDIA: 'NVIDIA', INTEL: 'Intel', AMD: 'AMD', **VIRTUAL}
@@ -70,6 +71,7 @@ def detect_gpus(root=Path('/sys/bus/pci/devices')):
     return gpus
 
 
+# Indica si Secure Boot está habilitado
 def secure_boot_enabled(path=SECURE_BOOT):
     try:
         return path.read_bytes()[-1] == 1  # 4 bytes de atributos + 1 byte de valor
@@ -77,6 +79,7 @@ def secure_boot_enabled(path=SECURE_BOOT):
         return False
 
 
+# Recomienda controladores según la gráfica detectada
 def plan_for(gpu, secure_boot=False):
     if gpu.vendor in VIRTUAL:
         return Plan(gpu, 'Gráfica virtual: el sistema ya incluye lo necesario.')
@@ -128,6 +131,7 @@ def terminal_command(commands):
 
 
 class DriverAssistant(QDialog):
+    # Recomienda drivers gráficos para la tarjeta detectada
     def __init__(self, shell, plans=None):
         super().__init__(shell)
         self.shell = shell
@@ -163,6 +167,7 @@ class DriverAssistant(QDialog):
         self.install.setEnabled(needs_attention(self.plans)); row.addWidget(self.install)
         layout.addLayout(row)
 
+    # Obtiene comandos únicos para instalar controladores
     def selected_commands(self):
         commands = []
         for group in self.groups:
@@ -171,6 +176,7 @@ class DriverAssistant(QDialog):
                 commands += [c for c in button.option.commands if c not in commands]
         return commands
 
+    # Ejecuta comandos de instalación en terminal visible con sudo
     def run(self):
         commands = self.selected_commands()
         if not commands:

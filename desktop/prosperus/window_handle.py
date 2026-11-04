@@ -69,6 +69,7 @@ def minimize_command(node, workspace):
     return f'[con_id={node["id"]}] move container to workspace "{name}"'
 
 
+# Píldora flotante con los controles de la ventana enfocada (Sway)
 def main():
     from PySide6.QtCore import QRectF, Qt, QTimer
     from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen
