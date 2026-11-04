@@ -570,4 +570,4 @@ Ideas para más adelante:
 - Esc vuelve a la carpeta anterior (antes de eso cierra la nota enfocada o el tarjetero); en el
   explorador sube una carpeta y, en Todos los proyectos, lo cierra.
 - Ventanas: Super+↑ amplía/restaura (comparte estado con la píldora), Super+↓ minimiza, Alt+F4 cierra;
-  siguen Super+M, Super+Q y Super+F. Configuración comprobada con Sway sin pantalla. 197 pruebas correctas.
+  siguen Super+M, Super+Q y Super+F. Configuración comprobada con Sway sin pantalla. 194 pruebas correctas.
