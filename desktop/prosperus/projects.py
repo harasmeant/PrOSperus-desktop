@@ -109,6 +109,7 @@ class CoverStack(QWidget):
             self.drawer.step(-1 if event.angleDelta().y() > 0 else 1)
         event.accept()
 
+    # Maneja teclas para navegar y abrir proyectos
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down):
             self.drawer.step(-1 if event.key() == Qt.Key.Key_Up else 1)
@@ -125,6 +126,7 @@ class GridCard(QPushButton):
     """Tarjeta de un escritorio: su fondo, nombre y contenido."""
     HEIGHT = 150
 
+    # Inicializa tarjetas de proyectos con estado visual
     def __init__(self, grid, path, position):
         super().__init__()
         self.grid, self.path, self.position = grid, path, position
@@ -148,6 +150,7 @@ class GridCard(QPushButton):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.clicked.connect(self.open)
 
+    # Fijar altura mínima tras cambios de estilo
     def event(self, event):
         # Las hojas de estilo (min-height de los botones) fijan el mínimo al aplicarse: se recupera el alto.
         result = super().event(event)
@@ -165,6 +168,7 @@ class GridCard(QPushButton):
     def _set_glow(self, value):
         self.glow = value; self.update()
 
+    # Actualiza el brillo al pasar el ratón
     def _fade_hover(self, on):
         self.hover = on
         self.glow_animation.stop()
@@ -179,12 +183,14 @@ class GridCard(QPushButton):
         self._fade_hover(False)
         super().leaveEvent(event)
 
+    # Cambiar a modo cuadrícula con teclas
     def keyPressEvent(self, event):
         if event.key() in GRID_KEYS:
             self.grid.keyPressEvent(event)
         else:
             super().keyPressEvent(event)
 
+    # Dibuja proyectos en portadas apiladas o cuadrícula
     def paintEvent(self, event):
         p = QPainter(self)
         font_size = self.grid.drawer.shell.accessibility.font_size
@@ -224,6 +230,7 @@ class ProjectGrid(QScrollArea):
     """Escritorios en cuadrícula: flechas en las cuatro direcciones, Intro abre."""
     SPACING = 12
 
+    # Organiza proyectos en cuadrícula para escritorios
     def __init__(self, drawer):
         super().__init__(drawer)
         self.drawer = drawer
@@ -245,6 +252,7 @@ class ProjectGrid(QScrollArea):
     def fit_columns(self):
         return max(1, (self.viewport().width() + self.SPACING) // (MIN_CARD + self.SPACING))
 
+    # Reorganiza tarjetas en cuadrícula y asegura visibilidad actual
     def rebuild(self):
         for card in self.cards:
             self.layout_.removeWidget(card); card.hide(); card.deleteLater()
@@ -252,6 +260,7 @@ class ProjectGrid(QScrollArea):
         self.place()
         self.ensure_current_visible()
 
+    # Acomoda proyectos en cuadrícula dinámica
     def place(self):
         self.columns = self.fit_columns()
         for row in range(self.layout_.rowCount()):
@@ -269,11 +278,13 @@ class ProjectGrid(QScrollArea):
         if 0 <= self.drawer.index < len(self.cards):
             self.ensureWidgetVisible(self.cards[self.drawer.index], 0, 12)
 
+    # Reorganiza proyectos en cuadrícula al redimensionar ventana
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if self.fit_columns() != self.columns:
             self.place()
 
+    # Navegación y apertura de proyectos por teclado
     def keyPressEvent(self, event):
         key, count = event.key(), len(self.drawer.filtered)
         if key in (Qt.Key.Key_Left, Qt.Key.Key_Right):
@@ -290,6 +301,7 @@ class ProjectGrid(QScrollArea):
 
 
 class ProjectDrawer(QFrame):
+    # Muestra proyectos en vista apilada o cuadrícula
     def __init__(self, shell):
         super().__init__(shell.background)
         self.shell = shell
@@ -339,6 +351,7 @@ class ProjectDrawer(QFrame):
     def make_view(self):
         return ProjectGrid(self) if self.view == 'grid' else CoverStack(self)
 
+    # Alternar vista de proyectos entre apilada y cuadrícula
     def label_view(self):
         grid = self.view == 'grid'
         # Solo icono (el título no cabe con texto en el tarjetero): el del modo al que se cambia.
@@ -376,11 +389,13 @@ class ProjectDrawer(QFrame):
         self.pinned = value
         self.pin.setText('Fijado' if value else 'Fijar')
 
+    # Abrir la raíz de proyectos
     def open_root(self):
         self.shell.navigate(self.shell.vault.root)
         if not self.pinned:
             self.hide()
 
+    # Mostrar proyectos con animación al entrar desde el borde izquierdo
     def reveal(self):
         self.search.blockSignals(True); self.search.clear(); self.search.blockSignals(False)
         self.filtered = list(self.shell.project_paths)
@@ -397,6 +412,7 @@ class ProjectDrawer(QFrame):
         # Sale hacia la izquierda (una imagen del panel): el panel real queda oculto al momento.
         motion.ghost_out(self, QPoint(-self.width(), 0), 190)
 
+    # Filtra proyectos por búsqueda y actualiza lista
     def filter_projects(self):
         try:
             self.filtered = self.shell.vault.search_projects(self.search.text())
@@ -406,6 +422,7 @@ class ProjectDrawer(QFrame):
         self.index = 0
         self.refresh()
 
+    # Navegar entre proyectos filtrados
     def step(self, direction):
         if self.filtered:
             self.index = (self.index + direction) % len(self.filtered)
@@ -418,6 +435,7 @@ class ProjectDrawer(QFrame):
             self.index = max(0, min(index, len(self.filtered) - 1))
             self.update_selection()
 
+    # Actualizar posición y asegurar tarjeta actual visible
     def update_selection(self):
         if self.view == 'stack':
             self.refresh(); return  # el tarjetero recoloca las portadas alrededor de la actual
@@ -426,17 +444,20 @@ class ProjectDrawer(QFrame):
             card.update()
         self.stack.ensure_current_visible()
 
+    # Actualiza la posición y habilita navegación en proyectos filtrados
     def refresh(self):
         self.stack.rebuild()
         self.position.setText(f'{self.index + 1} / {len(self.filtered)}' if self.filtered else 'Sin resultados')
         self.previous.setEnabled(len(self.filtered) > 1); self.next.setEnabled(len(self.filtered) > 1)
 
+    # Abrir proyecto actual y ocultar si no está fijado
     def open_current(self):
         if self.filtered:
             self.shell.navigate(self.filtered[self.index])
             if not self.pinned:
                 self.hide()
 
+    # Ocultar proyecto no fijado al salir del área
     def leaveEvent(self, event):
         if not self.pinned:
             self.hide()
@@ -444,6 +465,7 @@ class ProjectDrawer(QFrame):
 
 
 class ProjectEdge(QPushButton):
+    # Mostrar proyectos en vista apilada o cuadrícula
     def __init__(self, shell):
         super().__init__('›', shell.background)
         self.shell = shell
