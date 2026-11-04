@@ -571,3 +571,5 @@ Ideas para más adelante:
   explorador sube una carpeta y, en Todos los proyectos, lo cierra.
 - Ventanas: Super+↑ amplía/restaura (comparte estado con la píldora), Super+↓ minimiza, Alt+F4 cierra;
   siguen Super+M, Super+Q y Super+F. Configuración comprobada con Sway sin pantalla. 194 pruebas correctas.
+- Cursor: Bibata no gustaba; ahora Breeze (el de KDE) desde los repos de cada sistema
+  (`breeze-cursor-theme` en Fedora y Debian, `breeze-cursors` en Arch). ISO de Debian de las 19:03.

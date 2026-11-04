@@ -9,16 +9,12 @@ RUN curl -fsSL -o /etc/yum.repos.d/swayfx.repo \
     && dnf -y --setopt=install_weak_deps=False install --allowerasing swayfx \
     && dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper \
        grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy playerctl \
-       eza bat fastfetch btop papirus-icon-theme \
+       eza bat fastfetch btop papirus-icon-theme breeze-cursor-theme \
        adw-gtk3-theme dconf gsettings-desktop-schemas xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr \
     && dnf clean all
-# Cursor Bibata y símbolos de Nerd Fonts (iconos de eza), que no están en Fedora:
-# versiones fijas comprobadas con su SHA-256.
-RUN curl -fsSL -o /tmp/bibata.tar.xz \
-        https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Classic.tar.xz \
-    && echo '7d3495864e5bbef02f5e77de760b2905903b63c71495a78ef6306d19a3b556d8  /tmp/bibata.tar.xz' | sha256sum -c - \
-    && tar -xJf /tmp/bibata.tar.xz -C /usr/share/icons && rm /tmp/bibata.tar.xz \
-    && curl -fsSL -o /tmp/nerd.tar.xz \
+# Símbolos de Nerd Fonts (iconos de eza), que no están en Fedora:
+# versión fija comprobada con su SHA-256.
+RUN curl -fsSL -o /tmp/nerd.tar.xz \
         https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/NerdFontsSymbolsOnly.tar.xz \
     && echo '01172f37db8543edb102e5cb5c64101c9f4686630804d49b419aa07b23a69996  /tmp/nerd.tar.xz' | sha256sum -c - \
     && mkdir -p /usr/share/fonts/nerd-symbols && tar -xJf /tmp/nerd.tar.xz -C /usr/share/fonts/nerd-symbols \

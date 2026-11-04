@@ -20,14 +20,9 @@ COPY --from=aur /home/builder/out /tmp/aur
 RUN pacman -Rdd --noconfirm sway && pacman -U --noconfirm /tmp/aur/*.pkg.tar.zst && rm -rf /tmp/aur \
     && pacman -S --noconfirm --needed wl-mirror \
        grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy playerctl \
-       eza bat fastfetch btop papirus-icon-theme ttf-nerd-fonts-symbols ttf-nerd-fonts-symbols-mono \
+       eza bat fastfetch btop papirus-icon-theme breeze-cursors ttf-nerd-fonts-symbols ttf-nerd-fonts-symbols-mono \
        adw-gtk-theme dconf gsettings-desktop-schemas xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr \
     && pacman -Scc --noconfirm
-# Cursor Bibata: versión fija comprobada con su SHA-256 (no está en los repos oficiales).
-RUN curl -fsSL -o /tmp/bibata.tar.xz \
-        https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Classic.tar.xz \
-    && echo '7d3495864e5bbef02f5e77de760b2905903b63c71495a78ef6306d19a3b556d8  /tmp/bibata.tar.xz' | sha256sum -c - \
-    && tar -xJf /tmp/bibata.tar.xz -C /usr/share/icons && rm /tmp/bibata.tar.xz && fc-cache -f
 COPY desktop/prosperus /usr/lib/prosperus/prosperus
 COPY demo-system /usr/share/prosperus/demo
 COPY LICENSE /usr/share/licenses/prosperus/LICENSE

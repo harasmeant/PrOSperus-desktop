@@ -36,17 +36,13 @@ RUN for bin in sway swaymsg swaynag; do \
     && ! ldd /usr/bin/sway | grep "not found" \
     && apt-get install -y qt6-svg-plugins qt6-image-formats-plugins wl-mirror input-remapper \
        grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy playerctl \
-       eza bat fastfetch btop papirus-icon-theme \
+       eza bat fastfetch btop papirus-icon-theme breeze-cursor-theme \
        dconf-cli gsettings-desktop-schemas xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr \
     && apt-get clean \
     && ln -s /usr/bin/batcat /usr/local/bin/bat
-# Cursor Bibata, tema adw-gtk3 y símbolos de Nerd Fonts, que no están en Debian:
+# Tema adw-gtk3 y símbolos de Nerd Fonts, que no están en Debian:
 # versiones fijas comprobadas con su SHA-256.
-RUN apt-get install -y xz-utils && curl -fsSL -o /tmp/bibata.tar.xz \
-        https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Classic.tar.xz \
-    && echo '7d3495864e5bbef02f5e77de760b2905903b63c71495a78ef6306d19a3b556d8  /tmp/bibata.tar.xz' | sha256sum -c - \
-    && tar -xJf /tmp/bibata.tar.xz -C /usr/share/icons && rm /tmp/bibata.tar.xz \
-    && curl -fsSL -o /tmp/adw.tar.xz \
+RUN apt-get install -y xz-utils && curl -fsSL -o /tmp/adw.tar.xz \
         https://github.com/lassekongo83/adw-gtk3/releases/download/v6.5/adw-gtk3v6.5.tar.xz \
     && echo 'a81780fadfc432be0fc3d89c4ebb41aa28e4f032d42c36f9789c57dd10cfa41c  /tmp/adw.tar.xz' | sha256sum -c - \
     && tar -xJf /tmp/adw.tar.xz -C /usr/share/themes && rm /tmp/adw.tar.xz \

@@ -1,10 +1,10 @@
 # Valores por defecto de PrOSperus para GTK/libadwaita y Flatpak (vía xdg-desktop-portal-gtk):
-# tema oscuro, iconos Papirus y cursor Bibata. Cada usuario puede cambiarlos.
+# tema oscuro, iconos Papirus y cursor Breeze (el de KDE). Cada usuario puede cambiarlos.
 [org/gnome/desktop/interface]
 color-scheme='prefer-dark'
 gtk-theme='adw-gtk3-dark'
 icon-theme='Papirus-Dark'
-cursor-theme='Bibata-Modern-Classic'
+cursor-theme='breeze_cursors'
 cursor-size=24
 font-name='DejaVu Sans 11'
 monospace-font-name='DejaVu Sans Mono 11'

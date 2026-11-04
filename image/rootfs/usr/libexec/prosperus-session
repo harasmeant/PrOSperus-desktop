@@ -5,7 +5,7 @@ export XDG_CURRENT_DESKTOP=PrOSperus
 export QT_QPA_PLATFORM=wayland
 export WLR_RENDERER=pixman
 export XKB_DEFAULT_LAYOUT=es
-export XCURSOR_THEME=Bibata-Modern-Classic XCURSOR_SIZE=24
+export XCURSOR_THEME=breeze_cursors XCURSOR_SIZE=24
 # greetd arranca en /: sin esto, todo lo que abre Sway (Foot incluido) empieza en la raíz.
 cd "$HOME" || true
 # Las descargas llegan a una carpeta de entrada y el escritorio las reparte en el proyecto
