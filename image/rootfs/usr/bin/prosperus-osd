@@ -15,7 +15,8 @@ volume() {
     output=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
     percent=$(echo "$output" | awk '{printf "%d", $2 * 100 + 0.5}')
     if echo "$output" | grep -q "MUTED"; then
-        show "$percent muted"
+        # wob 0.14 (Debian) no tiene estilos: la barra vacía indica silencio.
+        if grep -qs '^\[style.muted\]' "${fifo%/*}/wob.ini"; then show "$percent muted"; else show 0; fi
     else
         show "$percent"
     fi

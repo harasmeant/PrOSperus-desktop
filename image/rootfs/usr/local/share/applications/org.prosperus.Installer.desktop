@@ -6,5 +6,5 @@ Exec=prosperus-instalar %f
 Icon=system-software-install
 Terminal=false
 Categories=System;PackageManager;
-Keywords=instalar;programas;pacman;rpm;dnf;flatpak;flathub;software;
-MimeType=application/x-rpm;application/vnd.flatpak.ref;
+Keywords=instalar;programas;pacman;apt;deb;rpm;dnf;flatpak;flathub;software;
+MimeType=application/x-rpm;application/vnd.debian.binary-package;application/vnd.flatpak.ref;

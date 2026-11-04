@@ -10,7 +10,7 @@ import socket
 
 def command(name, arguments=None, iso=False):
     # Cada VM tiene su socket: las órdenes nunca deben llegar a otra sesión.
-    # Arch: PROSPERUS_ISO_DIR=out/iso-arch.
+    # Arch: PROSPERUS_ISO_DIR=out/iso-arch; Debian: out/iso-debian.
     directory = os.environ.get('PROSPERUS_ISO_DIR', 'out/iso') + '/vm' if iso else 'out/vm'
     path = Path(__file__).resolve().parents[1] / directory / 'qmp.sock'
     with socket.socket(socket.AF_UNIX) as connection:

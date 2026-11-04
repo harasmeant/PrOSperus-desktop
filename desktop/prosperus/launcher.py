@@ -260,7 +260,7 @@ class ApplicationBrowser(QDialog):
     def report_error(self, message):
         if 'gi' in message and 'module' in message:
             message = ('Falta el componente de aplicaciones (PyGObject). Instálalo y pulsa Actualizar lista: '
-                       + current_distro().shell_install('python-gobject' if current_distro().key == 'arch' else 'python3-gobject'))
+                       + current_distro().shell_install(current_distro().gobject))
         self.status.setText(message)
 
     def refresh(self):

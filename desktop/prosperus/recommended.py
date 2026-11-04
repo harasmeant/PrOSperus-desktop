@@ -2,7 +2,7 @@
 """Programas recomendados del instalador, por categorías.
 
 Cada entrada: nombre, descripción corta, origen ('flathub' o 'system') e id (id de Flathub o
-paquetes del sistema separados por espacios; un dict {'arch': …, 'fedora': …} si los nombres
+paquetes del sistema separados por espacios; un dict {'arch': …, 'debian': …, 'fedora': …} si los nombres
 cambian). 'after' son servicios que hay que activar después (solo paquetes del sistema)."""
 from . import distro
 
@@ -16,7 +16,7 @@ CATALOG = (
         app('Input Remapper', 'Reasigna teclas y botones de teclados, ratones y mandos', 'system', 'input-remapper',
             ['input-remapper']),
         app('Piper', 'Configura ratones gaming: DPI, botones y luces', 'system',
-            {'arch': 'piper libratbag', 'fedora': 'piper libratbag-ratbagd'}, ['ratbagd']),
+            {'arch': 'piper libratbag', 'debian': 'piper ratbagd', 'fedora': 'piper libratbag-ratbagd'}, ['ratbagd']),
         app('Solaar', 'Dispositivos Logitech: batería, emparejado y botones', 'system', 'solaar'),
         app('OpenRGB', 'Controla la iluminación RGB de todo el equipo', 'flathub', 'org.openrgb.OpenRGB'),
         app('Mission Center', 'Monitor del sistema: CPU, memoria, discos y GPU', 'flathub', 'io.missioncenter.MissionCenter'),

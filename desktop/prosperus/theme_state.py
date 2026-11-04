@@ -26,10 +26,16 @@ def state_dir():
     return Path(runtime) / 'prosperus' if runtime else None
 
 
-def foot_config(colors, base=FOOT_BASE):
+def foot_section(version=None):
+    """foot 1.22 llamó [colors-dark] a [colors]; 1.21 (Debian 13) rechaza el nombre nuevo."""
+    version = version or program_version('foot') or (1, 22)
+    return 'colors-dark' if version >= (1, 22) else 'colors'
+
+
+def foot_config(colors, base=FOOT_BASE, version=None):
     """foot.ini que parte del del sistema y solo cambia fondo, texto y barra de título."""
     return (f'[main]\ninclude={base}\n\n'
-            f'[colors-dark]\nbackground={colors.base[1:]}\nforeground={colors.text[1:]}\n\n'
+            f'[{foot_section(version)}]\nbackground={colors.base[1:]}\nforeground={colors.text[1:]}\n\n'
             f'[csd]\ncolor=cc{colors.panel[1:]}\nbutton-color=ff{colors.text[1:]}\n'
             f'button-minimize-color=ff{colors.card[1:]}\nbutton-maximize-color=ff{colors.card[1:]}\n'
             # Borde en el color de resalte del fondo, como las demás ventanas.
@@ -46,26 +52,34 @@ def fuzzel_config(colors):
             f"selection-match={c(colors.accent)}\nborder={c(colors.accent)}\n\n[border]\nwidth=2\nradius=14\n")
 
 
-@lru_cache(maxsize=1)
-def wob_has_output_mode():
-    """wob 0.16 (Arch) quitó output_mode y rechaza el archivo si aparece; 0.15 (Fedora) lo necesita."""
+@lru_cache(maxsize=None)
+def program_version(program):
+    """(mayor, menor) de un programa con --version; None si no se sabe (se supone el más reciente)."""
     try:
-        version = subprocess.run(['wob', '--version'], capture_output=True, text=True, timeout=2).stdout
+        version = subprocess.run([program, '--version'], capture_output=True, text=True, timeout=2).stdout
     except (OSError, subprocess.SubprocessError):
-        return True
+        return None
     found = re.search(r'(\d+)\.(\d+)', version)
-    return not found or (int(found[1]), int(found[2])) < (0, 16)
+    return (int(found[1]), int(found[2])) if found else None
 
 
-def wob_config(colors, output_mode=None):
-    """Barra de volumen y brillo (wob) en los colores del proyecto; «muted» la apaga."""
+def wob_version():
+    return program_version('wob')
+
+
+def wob_config(colors, version=None):
+    """Barra de volumen y brillo (wob) en los colores del proyecto; «muted» la apaga.
+
+    Cada versión rechaza el archivo entero si ve algo que no conoce: output_mode solo
+    hasta 0.15 (Fedora; 0.16 en Arch lo quitó) y [style.muted] desde 0.15 (Debian trae 0.14)."""
     c = lambda value, alpha='ff': value.lstrip('#') + alpha
-    if output_mode is None:
-        output_mode = wob_has_output_mode()
+    if version is None:
+        version = wob_version() or (0, 15)
     return ('timeout = 1200\nmax = 100\nwidth = 360\nheight = 34\nborder_offset = 0\nborder_size = 2\n'
-            'bar_padding = 6\nanchor = bottom\nmargin = 140\n' + ('output_mode = focused\n' if output_mode else '') +
+            'bar_padding = 6\nanchor = bottom\nmargin = 140\n' + ('output_mode = focused\n' if version < (0, 16) else '') +
             f'background_color = {c(colors.base, "dd")}\nborder_color = {c(colors.accent)}\n'
-            f'bar_color = {c(colors.text)}\n\n[style.muted]\nbar_color = {c(colors.muted)}\n')
+            f'bar_color = {c(colors.text)}\n' +
+            (f'\n[style.muted]\nbar_color = {c(colors.muted)}\n' if version >= (0, 15) else ''))
 
 
 def swappy_config(colors, captures):

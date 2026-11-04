@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 from prosperus import driver_assistant as da
-from prosperus.distro import ARCH, FEDORA
+from prosperus.distro import ARCH, DEBIAN, FEDORA
 
 
 class TestDriverAssistant(unittest.TestCase):
@@ -94,6 +94,17 @@ class TestDriverAssistant(unittest.TestCase):
             self.assertTrue(plan.options[0].recommended)
             self.assertIn(da.OPEN_STACK, plan.options[0].commands)
             self.assertIn(da.ARCH_OPEN_STACK, da.plan_for(gpu, system=ARCH).options[0].commands)
+            self.assertIn(da.DEBIAN_OPEN_STACK, da.plan_for(gpu, system=DEBIAN).options[0].commands)
+
+    def test_plan_for_nvidia_on_debian_uses_open_dkms(self):
+        gpu = da.Gpu('0x10de', 0x2684, '', '0000:00:00.0')
+        cmds = da.plan_for(gpu, secure_boot=True, system=DEBIAN).options[0].commands
+        text = ' '.join(cmds)
+        self.assertIn('nvidia-open-kernel-dkms', text)
+        self.assertIn('linux-headers-$(uname -r)', text)
+        self.assertNotIn('dnf', text)
+        self.assertNotIn('pacman', text)
+        self.assertEqual(cmds[-1], 'sudo mokutil --import /var/lib/dkms/mok.pub')
 
     def test_plan_for_nvidia_on_arch_uses_dkms_and_archive_headers(self):
         gpu = da.Gpu('0x10de', 0x2684, '', '0000:00:00.0')

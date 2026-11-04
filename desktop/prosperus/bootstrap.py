@@ -7,9 +7,6 @@ import sys
 
 from . import distro
 
-INSTALL_COMMAND = ('sudo dnf install --setopt=install_weak_deps=False '
-                   'python3-pyside6 qt6-qtwayland python3-gobject')
-ARCH_INSTALL_COMMAND = 'sudo pacman -Syu --needed pyside6 qt6-wayland python-gobject'
 
 
 # Detecta sesión Live para adaptar los mensajes de espacio en disco
@@ -50,7 +47,7 @@ def dependency_diagnostic(error):
         'Consulta LEEME.txt antes de volver a instalar en una sesión Live.',
         '',
         f'En {distro.current().label} con espacio suficiente, instala las dependencias con:',
-        ARCH_INSTALL_COMMAND if distro.current().key == 'arch' else INSTALL_COMMAND,
+        distro.current().shell_install(distro.current().ui_packages),
     ])
     return '\n'.join(lines)
 
@@ -68,7 +65,7 @@ def main():
     try:
         importlib.import_module('gi')
     except (ImportError, OSError):
-        print('Para usar Aplicaciones instala: ' + distro.current().shell_install('python-gobject' if distro.current().key == 'arch' else 'python3-gobject'), file=sys.stderr)
+        print('Para usar Aplicaciones instala: ' + distro.current().shell_install(distro.current().gobject), file=sys.stderr)
     from .shell import main as desktop_main
     desktop_main()
     return 0

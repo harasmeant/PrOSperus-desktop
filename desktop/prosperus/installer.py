@@ -58,9 +58,15 @@ def install_command(item, system=None):
     raise ValueError(f"Solo se instalan archivos {' o '.join(system.package_suffixes)} o .flatpakref.")
 
 
-def after_commands(item):
+# Debian llama al servicio por su nombre real; el alias de siempre no se puede activar.
+DEBIAN_SERVICES = {'input-remapper': 'input-remapper-daemon'}
+
+
+def after_commands(item, system=None):
     """Servicios que activar tras instalar (p. ej. el demonio de Input Remapper)."""
-    return [['sudo', '-n', 'systemctl', 'enable', '--now', name] for name in item.get('after', ())]
+    system = system or distro.current()
+    rename = DEBIAN_SERVICES if system.key == 'debian' else {}
+    return [['sudo', '-n', 'systemctl', 'enable', '--now', rename.get(name, name)] for name in item.get('after', ())]
 
 
 def installed_names():

@@ -25,12 +25,18 @@ class ThemeStateTest(unittest.TestCase):
     def test_foot_includes_system_config(self):
         text = foot_config(Palette(30), base='/etc/xdg/foot/foot.ini')
         self.assertTrue(text.startswith('[main]\ninclude=/etc/xdg/foot/foot.ini'))
+        self.assertIn('[colors-dark]', foot_config(Palette(30), version=(1, 22)))
+        self.assertIn('[colors]', foot_config(Palette(30), version=(1, 21)))
 
     def test_wob_uses_palette(self):
         colors = Palette(207)
         text = wob_config(colors)
         self.assertIn('border_color = ' + colors.accent[1:] + 'ff', text)
         self.assertIn('[style.muted]', text)
+        self.assertIn('output_mode', wob_config(colors, (0, 15)))
+        self.assertNotIn('output_mode', wob_config(colors, (0, 16)))
+        # Debian 13: wob 0.14 no conoce los estilos.
+        self.assertNotIn('[style.muted]', wob_config(colors, (0, 14)))
 
     def test_mako_keeps_other_lines(self):
         base = 'font=DejaVu Sans 11\nbackground-color=#1d231cee\ntext-color=#e3e8da\nborder-color=#9fc28a\n'

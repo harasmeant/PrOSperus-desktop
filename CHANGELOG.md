@@ -2,6 +2,8 @@
 
 ## 0.4.0-dev — 2026-10-30 · Desarrollo, sin nueva ISO
 
+- 2026-11-04: ISO Live sobre Debian 13 (`scripts/build-iso-debian.sh`, `docs/DEBIAN.md`),
+  con SwayFX compilado en la receta. El escritorio detecta también Debian y usa apt.
 - 2026-11-04: ISO Live sobre Arch Linux (`scripts/build-iso-arch.sh`, `docs/ARCH.md`).
   El escritorio detecta Arch o Fedora (`distro.py`) para instalar programas y controladores.
 - Fibonacci, columnas y principal centrada, perfiles ultrawide y vista previa.

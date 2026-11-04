@@ -4,6 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # Arch: PROSPERUS_ISO_DIR=out/iso-arch PROSPERUS_TOOLS=localhost/prosperus-arch-tools:dev
 #       PROSPERUS_VM_NAME=prosperus-arch-vm PROSPERUS_VNC_PORT=5904 (puede convivir con la de Fedora)
+# Debian: lo mismo con iso-debian, prosperus-debian-tools:dev, prosperus-debian-vm y 5905.
 iso_dir=${PROSPERUS_ISO_DIR:-out/iso}
 tools=${PROSPERUS_TOOLS:-localhost/prosperus-live-tools:dev}
 name=${PROSPERUS_VM_NAME:-prosperus-iso-vm}

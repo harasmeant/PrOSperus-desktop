@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# PrOSperus sobre Debian 13 (trixie) estable: sistema mínimo, sesión gráfica y red.
+ARG DEBIAN_BASE=docker.io/library/debian:trixie
+FROM ${DEBIAN_BASE}
+ENV DEBIAN_FRONTEND=noninteractive
+# contrib, non-free y non-free-firmware: firmware de Wi-Fi/gráficas y el controlador NVIDIA.
+# Sin paquetes recomendados (como install_weak_deps=False en Fedora): lo necesario, a mano
+# (p. ej. qt6-svg-plugins, sin el cual Qt no dibuja los iconos SVG de Papirus).
+RUN sed -i 's/^Components: main$/Components: main contrib non-free non-free-firmware/' \
+        /etc/apt/sources.list.d/debian.sources \
+    && printf 'APT::Install-Recommends "false";\n' > /etc/apt/apt.conf.d/90prosperus \
+    && apt-get update \
+    && apt-get install -y locales \
+    && sed -i 's/^# *\(es_ES.UTF-8 UTF-8\)/\1/; s/^# *\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen \
+    && locale-gen
+# dracut antes que el núcleo: si no, apt elige initramfs-tools y no hay arranque Live.
+RUN apt-get install -y dracut dracut-live systemd systemd-sysv udev libpam-systemd \
+    && apt-get install -y linux-image-amd64 \
+    && apt-get install -y \
+       sway swaybg xwayland greetd \
+       python3-pyside6.qtcore python3-pyside6.qtgui python3-pyside6.qtwidgets \
+       python3-pyside6.qtopengl python3-pyside6.qtopenglwidgets qt6-wayland qt6-translations-l10n \
+       python3-gi gir1.2-glib-2.0 python3-pygments python3-evdev \
+       libgl1-mesa-dri libegl1 libgl1 mesa-vulkan-drivers \
+       dbus polkitd kbd fonts-dejavu \
+       network-manager iputils-ping curl ca-certificates \
+       foot sudo git nano python3-pip flatpak plocate \
+       pipewire wireplumber pipewire-pulse rtkit bluez brightnessctl mako-notifier libnotify-bin \
+       libreoffice-writer libreoffice-l10n-es libreoffice-gtk3 \
+    && apt-get clean \
+    && flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+    && flatpak update --appstream

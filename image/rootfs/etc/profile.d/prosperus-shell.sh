@@ -4,10 +4,11 @@
 # Base escrita por qwen2.5-coder (local), revisada.
 [ -n "$BASH_VERSION" ] || return 0
 case $- in *i*) ;; *) return 0 ;; esac
-if [ -f /usr/share/git-core/contrib/completion/git-prompt.sh ]; then
-    . /usr/share/git-core/contrib/completion/git-prompt.sh
-    GIT_PS1_SHOWDIRTYSTATE=1
-fi
+# Fedora, Arch y Debian guardan git-prompt.sh en sitios distintos.
+for f in /usr/share/git-core/contrib/completion/git-prompt.sh /usr/share/git/completion/git-prompt.sh \
+         /usr/lib/git-core/git-sh-prompt; do
+    [ -f "$f" ] && { . "$f"; GIT_PS1_SHOWDIRTYSTATE=1; break; }
+done; unset f
 __prosperus_prompt() {
     local status=$? colour=32
     [ "$status" -eq 0 ] || colour=31

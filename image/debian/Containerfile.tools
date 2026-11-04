@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Herramientas para crear y probar la ISO; no se incluyen en el sistema del usuario.
+ARG DEBIAN_BASE=docker.io/library/debian:trixie
+FROM ${DEBIAN_BASE}
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    qemu-system-x86 ovmf e2fsprogs tar zstd python3 \
+    systemd-ukify systemd-boot-efi dosfstools mtools gdisk xorriso squashfs-tools \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /usr/share/edk2/ovmf \
+    && ln -s ../../OVMF/OVMF_CODE_4M.fd /usr/share/edk2/ovmf/OVMF_CODE.fd \
+    && ln -s ../../OVMF/OVMF_VARS_4M.fd /usr/share/edk2/ovmf/OVMF_VARS.fd \
+    && test -e /usr/share/edk2/ovmf/OVMF_CODE.fd
+WORKDIR /work

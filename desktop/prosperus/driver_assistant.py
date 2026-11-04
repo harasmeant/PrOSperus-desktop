@@ -31,10 +31,15 @@ ARCH_OPEN_STACK = 'sudo pacman -Syu --needed --noconfirm linux-firmware mesa vul
 ARCH_HEADERS = ('sudo pacman -U --needed --noconfirm "https://archive.archlinux.org/packages/l/linux-headers/'
                 'linux-headers-$(uname -r | sed s/-arch/.arch/)-x86_64.pkg.tar.zst"')
 ARCH_NVIDIA = 'sudo pacman -S --needed --noconfirm gcc make nvidia-open-dkms nvidia-utils opencl-nvidia'
+DEBIAN_OPEN_STACK = ('sudo apt-get update && sudo apt-get install -y firmware-misc-nonfree firmware-amd-graphics '
+                     'firmware-intel-graphics mesa-vulkan-drivers')
+# Módulos abiertos de NVIDIA (contrib/non-free de Debian), compilados con DKMS para el núcleo que arranca.
+DEBIAN_NVIDIA = ('sudo apt-get update && sudo apt-get install -y "linux-headers-$(uname -r)" '
+                 'nvidia-open-kernel-dkms nvidia-driver libcuda1 nvidia-smi firmware-misc-nonfree')
 
 
 def open_stack(system):
-    return ARCH_OPEN_STACK if system.key == 'arch' else OPEN_STACK
+    return {'arch': ARCH_OPEN_STACK, 'debian': DEBIAN_OPEN_STACK}.get(system.key, OPEN_STACK)
 
 
 @dataclass(frozen=True)
@@ -117,6 +122,16 @@ def plan_for(gpu, secure_boot=False, system=None):
                 proprietary += ['sudo pacman -S --needed --noconfirm mokutil',
                                 'sudo mokutil --import /var/lib/dkms/mok.pub']
             source = 'repositorio de Arch'
+        elif system.key == 'debian':
+            warnings = ['El controlador propietario se compila en este equipo (DKMS) y requiere reiniciar.']
+            proprietary = [DEBIAN_NVIDIA]
+            if secure_boot:
+                warnings.append('Secure Boot está activo: habrá que registrar la clave de DKMS (MOK) '
+                                'o el controlador propietario no cargará. Las órdenes la preparan; '
+                                'al reiniciar, acepta la clave con la contraseña que elijas.')
+                proprietary += ['sudo apt-get install -y mokutil',
+                                'sudo mokutil --import /var/lib/dkms/mok.pub']
+            source = 'non-free de Debian'
         else:
             warnings = ['El controlador propietario se compila en este equipo (akmods) y requiere reiniciar.']
             if secure_boot:
@@ -142,7 +157,8 @@ def plan_for(gpu, secure_boot=False, system=None):
         Option('open', 'Libre: nouveau', 'Escritorio y aplicaciones básicas; rendimiento 3D limitado.',
                (stack,), recommended=True),
         Option('none', 'No instalar nada ahora',
-               'Las series heredadas del controlador propietario se consultan en '
+               'Debian 13 ya no incluye las series heredadas del controlador propietario.' if system.key == 'debian'
+               else 'Las series heredadas del controlador propietario se consultan en '
                + ('el AUR (nvidia-580xx y anteriores).' if system.key == 'arch' else 'RPM Fusion.'))])
 
 
