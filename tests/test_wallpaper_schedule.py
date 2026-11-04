@@ -93,3 +93,16 @@ class PickerTests(unittest.TestCase):
         from prosperus.model import is_wallpaper_name
         self.assertTrue(is_wallpaper_name('wallpaper-07') and is_wallpaper_name('wallpaper'))
         self.assertFalse(is_wallpaper_name('wallpaper-tarde'))
+
+
+class LivingWallpaperTests(unittest.TestCase):
+    def test_cover_crop_fills_without_stretching(self):
+        from prosperus.living_wallpaper import cover_crop
+        self.assertEqual(cover_crop((1600, 1000), (1600, 1000)), (0.0, 0.0, 1.0, 1.0))
+        x, y, w, h = cover_crop((2000, 1000), (1000, 1000))   # imagen ancha en pantalla cuadrada: recorta los lados
+        self.assertAlmostEqual(w, .5); self.assertAlmostEqual(x, .25); self.assertEqual((y, h), (0.0, 1.0))
+
+    def test_living_wallpaper_is_off_by_default(self):
+        from PySide6.QtCore import QSettings
+        settings = QSettings(tempfile.mktemp(suffix='.ini'), QSettings.Format.IniFormat)
+        self.assertFalse(settings.value('fondo/animado', False, type=bool))

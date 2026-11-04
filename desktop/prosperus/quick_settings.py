@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import threading
+from .appearance import arrow
 from PySide6.QtWidgets import (QComboBox, QFrame, QVBoxLayout, QHBoxLayout, QLabel,
                              QSlider, QPushButton, QWidget)
 from PySide6.QtCore import QProcess, Qt, QTimer, Signal
@@ -102,27 +103,7 @@ class QuickSettings(QFrame):
         super().__init__()
         self.state_ready.connect(self.apply)
         self.setMinimumWidth(420)
-        c = shell.colors
-        self.setStyleSheet(f'''
-            #quickSettings {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 14px; }}
-            QLabel {{ color: {c.text}; background: transparent; }}
-            QLabel#section {{ color: {c.accent}; font-size: 11px; font-weight: 600; letter-spacing: 1.6px; }}
-            QLabel#value, QLabel#hint {{ color: {c.muted}; }}
-            QPushButton {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 12px;
-                           padding: 10px 16px; min-height: 18px; }}
-            QPushButton:hover {{ background: {c.hover}; }}
-            QPushButton:checked {{ background: {c.hover}; border: 1px solid {c.accent}; }}
-            QPushButton:disabled {{ color: {c.border}; }}
-            QComboBox {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 12px;
-                         padding: 8px 14px; }}
-            QComboBox::drop-down {{ border: none; width: 24px; }}
-            QComboBox QAbstractItemView {{ background: {c.panel}; color: {c.text}; border: 1px solid {c.border};
-                         selection-background-color: {c.hover}; outline: none; padding: 6px; }}
-            QPushButton#media {{ font-size: 16px; padding: 6px 14px; }}
-            QSlider {{ min-height: 26px; }}
-            QSlider::groove:horizontal {{ height: 8px; background: {c.card}; border-radius: 4px; }}
-            QSlider::sub-page:horizontal {{ background: {c.accent}; border-radius: 4px; }}
-            QSlider::handle:horizontal {{ background: {c.text}; width: 22px; margin: -7px 0; border-radius: 11px; }}''')
+        self.restyle(shell.colors)
         self.shell = shell
         self.setObjectName("quickSettings")
         self.box = QVBoxLayout(self)
@@ -231,7 +212,19 @@ class QuickSettings(QFrame):
         self.section('Notificaciones')
         self.box.addLayout(self.notif_row)
 
-        # 6. Footer
+        # 6. Fondo animado: opcional, usa la GPU.
+        self.living_row = QHBoxLayout()
+        self.living = QPushButton('Fondo animado')
+        self.living.setCheckable(True)
+        self.living.setChecked(self.shell.living_enabled())
+        self.living.setToolTip('La tela del fondo ondula muy despacio. Usa la GPU: mejor apagado en equipos modestos.')
+        self.living.toggled.connect(self.shell.set_living)
+        self.living_note = QLabel('Usa la GPU', objectName='muted')
+        self.living_row.addWidget(self.living); self.living_row.addWidget(self.living_note); self.living_row.addStretch(1)
+        self.section('Fondo')
+        self.box.addLayout(self.living_row)
+
+        # 7. Footer
         self.foot_row = QHBoxLayout()
         self.btn_ctrl = QPushButton("Controles")
         self.btn_ctrl.clicked.connect(lambda: self.shell.open_controls())
@@ -241,6 +234,32 @@ class QuickSettings(QFrame):
         self.foot_row.addWidget(self.btn_ctrl)
         self.foot_row.addWidget(self.btn_help)
         self.box.addLayout(self.foot_row)
+
+    def restyle(self, colors):
+        """Colores del proyecto actual: el escritorio lo llama cada vez que cambia el tema o el fondo."""
+        c = colors
+        self.setStyleSheet(f'''
+            #quickSettings {{ background: {c.panel}; border: 1px solid {c.border}; border-radius: 14px; }}
+            QLabel {{ color: {c.text}; background: transparent; }}
+            QLabel#section {{ color: {c.accent}; font-size: 11px; font-weight: 600; letter-spacing: 1.6px; }}
+            QLabel#value, QLabel#hint {{ color: {c.muted}; }}
+            QPushButton {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 12px;
+                           padding: 10px 16px; min-height: 18px; }}
+            QPushButton:hover {{ background: {c.hover}; }}
+            QPushButton:checked {{ background: {c.hover}; border: 1px solid {c.accent}; }}
+            QPushButton:disabled {{ color: {c.border}; }}
+            QComboBox {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 12px;
+                         padding: 8px 14px; }}
+            QComboBox::drop-down {{ border: none; width: 24px; }}
+            QComboBox::down-arrow {{ image: url({arrow('down', c.muted)}); width: 10px; height: 6px; }}
+            QComboBox QAbstractItemView {{ background: {c.panel}; color: {c.text}; border: 1px solid {c.border};
+                         selection-background-color: {c.hover}; outline: none; padding: 6px; }}
+            QPushButton#media {{ font-size: 16px; padding: 6px 14px; }}
+            QSlider {{ min-height: 26px; }}
+            QSlider::groove:horizontal {{ height: 8px; background: {c.card}; border-radius: 4px; }}
+            QSlider::sub-page:horizontal {{ background: {c.accent}; border-radius: 4px; }}
+            QSlider::handle:horizontal {{ background: {c.text}; width: 22px; margin: -7px 0; border-radius: 11px; }}''')
+        self.update()
 
     def section(self, text, first=False):
         """Título de sección en versalitas, con aire por encima."""

@@ -1214,6 +1214,8 @@ class Desktop(QMainWindow):
         for index in range(9):
             self.shortcut(f'Ctrl+{index + 1}', lambda i=index: self.open_project_index(i))
         self.apply_accessibility()
+        if self.living_enabled() and not os.environ.get('PROSPERUS_NO_LIVING'):
+            self.set_living(True)
         print('PROSPERUS_READY ' + __version__, flush=True)
 
     def resizeEvent(self, event):
@@ -1235,6 +1237,10 @@ class Desktop(QMainWindow):
         self.colors = self.accessibility.palette(palette_for(self.vault, self.folder))
         self.setStyleSheet(self.accessibility.css(self.colors))
         self.background.palette = self.colors
+        # El panel Sistema y su menú se construyen una vez: hay que darles los colores nuevos.
+        if hasattr(self, 'quick_panel'):
+            self.quick_panel.restyle(self.colors)
+            self.quick.menu.setStyleSheet(f'QMenu {{ background: {self.colors.panel}; border: 1px solid {self.colors.border}; padding: 4px; }}')
         self.show_scene()
         self.surface.update()
         # Con dos pantallas, la que no tiene el mapa muestra el fondo del proyecto (no un color liso).
@@ -1263,6 +1269,26 @@ class Desktop(QMainWindow):
         self.background.current = current
         self.scene_key = (previous, current, tone, mix >= .5)
         self.background.update()
+        if self.background.living is not None:
+            self.background.living.set_scene(previous, current, mix, self.colors.base, self.colors.shade)
+
+    def living_enabled(self):
+        return self.settings.value('fondo/animado', False, type=bool)
+
+    def set_living(self, on):
+        """Fondo animado (la tela ondula; lo dibuja la GPU). Opcional: en equipos sin GPU gasta mucho."""
+        self.settings.setValue('fondo/animado', bool(on))
+        if on and self.background.living is None:
+            try:
+                from .living_wallpaper import LivingWallpaper
+                layer = LivingWallpaper(self.background)
+            except ImportError as error:
+                print('prosperus: sin fondo animado:', error, file=sys.stderr); return
+            layer.setGeometry(self.background.rect()); layer.lower(); layer.show()
+            self.background.living = layer
+        elif not on and self.background.living is not None:
+            self.background.living.hide(); self.background.living.deleteLater(); self.background.living = None
+        self.show_scene()
 
     def tick_scene(self):
         # Cada poco: si cambia la imagen o el tono que manda, se rehace el tema; si solo avanza el fundido, se repinta.
@@ -1273,6 +1299,8 @@ class Desktop(QMainWindow):
             self.apply_appearance()
         elif mix != self.background.mix:
             self.background.mix = mix; self.background.update()
+            if self.background.living is not None:
+                self.background.living.set_scene(previous, current, mix, self.colors.base, self.colors.shade)
 
     def frame_traits(self):
         """Estilo de las ramas del proyecto actual (fondo + ajustes de «Ramas»): filigranas de los marcos."""

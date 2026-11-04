@@ -538,3 +538,12 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 Ideas para más adelante:
 - Fondo animado (la tela ondulando un poco): deformación suave de la imagen a 20-30 fps. Gasta CPU/GPU de forma
   continua; solo como opción para equipos con GPU, desactivada en portátiles y con batería.
+
+## 2026-11-04 — Fondo animado (opcional) y panel Sistema con los colores del proyecto
+
+- `living_wallpaper.py`: capa OpenGL bajo las tarjetas; un shader ondula muy despacio la tela del fondo (solo
+  donde hay dibujo; lo oscuro, donde va el texto, queda quieto), con un brillo que se mueve con la onda. Hace
+  también el fundido de los fondos por horas y el velo. 30 fps solo en la GPU: las tarjetas no se repintan.
+  Se para al ocultarse. Probado en Sway sin pantalla (grim): tarjetas y zona oscura idénticas entre fotogramas.
+- Sistema › Fondo › «Fondo animado» (apagado por defecto; se recuerda). `PROSPERUS_NO_LIVING=1` lo impide.
+- El panel Sistema y su menú se reestilan en cada cambio de proyecto/tono (antes se quedaban en verde).

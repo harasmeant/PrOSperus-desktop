@@ -415,9 +415,17 @@ class Wallpaper(QWidget):
         self.wallpaper = None
         self.previous, self.mix = None, 1.0
         self.palette = Palette()
+        self.living = None  # capa animada (living_wallpaper), si está activada
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.living is not None:
+            self.living.setGeometry(self.rect())
 
     # paintEvent personalizado: usa paint_wallpaper con la palette base
     def paintEvent(self, event):
+        if self.living is not None:
+            return  # el fondo lo pinta la GPU, debajo
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         paint_wallpaper(painter, self.rect(), self.wallpaper, self.palette.base, (110, 30, 120), self.palette.shade,
