@@ -519,3 +519,22 @@ Cierre: paquete local out/prosperus-demo-v4.tar.gz preparado, 7.648.493 bytes, S
 - ISO de las 00:19 probada en QEMU: un PDF dejado en la carpeta de entrada acaba en `Laboratorio/Documentos`; `user-dirs.dirs` correcto y `~/.config` del usuario; wob en marcha con el tema; Super+Mayús+S abre la selección de zona; `ls` con iconos. Fallo: fastfetch solo dibujaba el logo (sin lista de módulos en la configuración); corregido.
 - ISO de las 00:35, SHA-256 `bca455fefd0d…`: fastfetch con logo y datos; resto como la anterior.
 - ISO del 4 nov a las 07:43, SHA-256 `cd13a59d6403…`: main con los comentarios del tarjetero (sin cambios de comportamiento); 171 pruebas en verde.
+
+## 2026-11-04 — Tonos y fondos por horas
+
+- `tones.py`: 23 tonos en tres grupos. Contraste (blanco y rojo, papel y azul tinta, marrón y verde, negro y
+  amarillo, azul marino y naranja, granate y crema, verde bosque y dorado, violeta y menta, carbón y turquesa),
+  Suavidad (verdes, azules, amarillos, rojos, lavanda, turquesas, terracota, rosas, piedra) y Momentos del día
+  (amanecer, mediodía, atardecer, ocaso, noche). Cada tono da la paleta de la interfaz y una receta de color.
+- `recolour.py`: recolorea el fondo conservando su diseño (telas, estampados, luces): busca las dos familias de
+  tono de la imagen y cambia tono y saturación, no la luz; mezcla suave entre familias. Caché en
+  `~/.cache/prosperus/fondos/` (unos 2 s la primera vez por imagen y tono).
+- `wallpaper_schedule.py`: horario por carpeta en `.fondo.json` (tono por defecto, fundido en minutos, horas
+  con imagen y tono). Las imágenes de cada hora se copian como `wallpaper-HH.*` y no salen en el mapa.
+- El escritorio mira la hora cada 15 s y funde la imagen anterior con la nueva durante el fundido (30 min por
+  defecto); la paleta cambia a mitad del fundido.
+- Fondos (selector): miniaturas, «Fondo actual», tono con vista previa, horario (añadir/quitar hora) y fundido.
+
+Ideas para más adelante:
+- Fondo animado (la tela ondulando un poco): deformación suave de la imagen a 20-30 fps. Gasta CPU/GPU de forma
+  continua; solo como opción para equipos con GPU, desactivada en portátiles y con batería.

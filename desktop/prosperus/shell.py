@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDial
 
 from . import __version__
 from .appearance import (Palette, Wallpaper, draw_symbol, paint_wallpaper,
-                         palette_for, symbol_icon, wallpaper_for, wallpaper_traits)
+                         palette_for, symbol_icon, wallpaper_for, wallpaper_scene, wallpaper_traits)
 from .model import Vault
 from .corner_menu import HoverMenuButton
 from .quick_settings import QuickSettings
@@ -1108,6 +1108,9 @@ class Desktop(QMainWindow):
         self.resize(1360, 850)
         self.setMinimumSize(860, 650)
         self.background = Wallpaper()
+        # Fondos por horas: comprueba cada 15 s (el fundido dura minutos, los pasos no se notan).
+        self.scene_timer = QTimer(self); self.scene_timer.setInterval(15000)
+        self.scene_timer.timeout.connect(self.tick_scene); self.scene_timer.start()
         self.viewport = QScrollArea(); self.viewport.setWidgetResizable(True)
         self.viewport.setWidget(self.background); self.setCentralWidget(self.viewport)
         layout = QVBoxLayout(self.background)
@@ -1232,8 +1235,8 @@ class Desktop(QMainWindow):
         self.colors = self.accessibility.palette(palette_for(self.vault, self.folder))
         self.setStyleSheet(self.accessibility.css(self.colors))
         self.background.palette = self.colors
-        self.background.wallpaper = None if self.accessibility.high_contrast else wallpaper_for(self.vault, self.folder)
-        self.background.update(); self.surface.update()
+        self.show_scene()
+        self.surface.update()
         # Con dos pantallas, la que no tiene el mapa muestra el fondo del proyecto (no un color liso).
         self.windows.set_wallpaper(self.background.wallpaper, self.colors.base)
         # La consola, las notificaciones y las ventanas aparte toman el tono y la carpeta del proyecto.
@@ -1249,9 +1252,31 @@ class Desktop(QMainWindow):
         project = getattr(self, 'last_project', None)
         return project if project is not None and project.is_dir() else None
 
+    def show_scene(self):
+        """Fondo de ahora (horario y tono incluidos); durante un cambio de hora funde la imagen anterior y la nueva."""
+        if self.accessibility.high_contrast:
+            previous, current, mix, tone = None, None, 1.0, 'fondo'
+        else:
+            previous, current, mix, tone = wallpaper_scene(self.vault, self.folder)
+        self.background.previous, self.background.mix = previous, mix
+        self.background.wallpaper = current if mix >= .5 else previous
+        self.background.current = current
+        self.scene_key = (previous, current, tone, mix >= .5)
+        self.background.update()
+
+    def tick_scene(self):
+        # Cada poco: si cambia la imagen o el tono que manda, se rehace el tema; si solo avanza el fundido, se repinta.
+        if self.accessibility.high_contrast:
+            return
+        previous, current, mix, tone = wallpaper_scene(self.vault, self.folder)
+        if (previous, current, tone, mix >= .5) != getattr(self, 'scene_key', None):
+            self.apply_appearance()
+        elif mix != self.background.mix:
+            self.background.mix = mix; self.background.update()
+
     def frame_traits(self):
         """Estilo de las ramas del proyecto actual (fondo + ajustes de «Ramas»): filigranas de los marcos."""
-        source = self.background.wallpaper
+        source = getattr(self.background, 'current', None) or self.background.wallpaper
         try:
             traits = wallpaper_traits(source, source.stat().st_mtime_ns) if source else None
         except OSError:

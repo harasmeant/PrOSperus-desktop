@@ -135,10 +135,15 @@ def speak_spanish(app):
     QLocale.setDefault(QLocale(QLocale.Language.Spanish, QLocale.Country.Spain))
 
 
-# Devuelve la Palette adecuada: si hay wallpaper, usa su tono; si no, usa HUES o hash del nombre
-def palette_for(vault, folder):
+# Devuelve la Palette adecuada: con un tono elegido, la suya; si no, el tono del fondo; si no, HUES o hash del nombre
+def palette_for(vault, folder, minute=None):
     folder = vault.checked(folder)
-    wallpaper = wallpaper_for(vault, folder)
+    previous, current, mix, tone_name = wallpaper_scene(vault, folder, minute)
+    from .tones import tone
+    chosen = tone(tone_name)
+    if chosen is not None:
+        return chosen.palette()
+    wallpaper = current if mix >= .5 else previous
     if wallpaper:
         try:
             modified = wallpaper.stat().st_mtime_ns
@@ -153,22 +158,51 @@ def palette_for(vault, folder):
     return Palette(hue)
 
 
-# Busca recursivamente un archivo wallpaper.{png,jpg,...} en folder o sus padres, hasta vault.root
-def wallpaper_for(vault, folder):
+def minute_now():
+    import time
+    now = time.localtime()
+    return now.tm_hour * 60 + now.tm_min
+
+
+def wallpaper_owner(vault, folder):
+    """(carpeta que manda en el fondo, su wallpaper.*): la más cercana hacia arriba con fondo o con .fondo.json."""
+    from .wallpaper_schedule import CONFIG
     current = vault.checked(folder)
     if current.is_file():
         current = current.parent
     while True:
+        base = None
         for suffix in ('png', 'jpg', 'jpeg', 'webp', 'avif'):
             candidate = current / ('wallpaper.' + suffix)
             if candidate.is_file():
                 try:
-                    return vault.checked(candidate)
+                    base = vault.checked(candidate); break
                 except (OSError, ValueError):
                     continue
+        if base is not None or (current / CONFIG).is_file():
+            return current, base
         if current == vault.root:
-            return None
+            return None, None
         current = current.parent
+
+
+def wallpaper_scene(vault, folder, minute=None):
+    """Lo que se ve ahora en la carpeta: (imagen anterior, imagen actual, mezcla 0-1, tono que manda).
+    Las imágenes ya vienen recoloreadas con su tono (tones.toned_wallpaper)."""
+    from .tones import toned_wallpaper
+    from .wallpaper_schedule import scene
+    owner, base = wallpaper_owner(vault, folder)
+    if owner is None:
+        return None, None, 1.0, 'fondo'
+    before, before_tone, now, now_tone, mix = scene(owner, base, minute_now() if minute is None else minute)
+    return (toned_wallpaper(before, before_tone), toned_wallpaper(now, now_tone), mix,
+            now_tone if mix >= .5 else before_tone)
+
+
+# El fondo que se ve ahora en la carpeta (con horario y tono aplicados); None si no hay
+def wallpaper_for(vault, folder, minute=None):
+    previous, current, mix, _ = wallpaper_scene(vault, folder, minute)
+    return current if mix >= .5 else previous
 
 
 # Cachea Pixmaps para evitar recargas; modificado permite invalidar cuando cambia el archivo
@@ -214,18 +248,24 @@ def wallpaper_hue(path, modified):
 # Pinta el fondo: base color, wallpaper escalado y sombra superpuesta
 # shade puede ser un número (velo uniforme) o (arriba, centro, abajo) para un
 # degradado vertical: oscurece solo donde hay texto y deja ver la foto.
-def paint_wallpaper(painter, rect, path, base, shade=80, tint='#000000'):
+def paint_wallpaper(painter, rect, path, base, shade=80, tint='#000000', previous=None, mix=1.0):
     painter.fillRect(rect, QColor(base))
-    if path:
+    # Fundido entre la imagen anterior y la actual (fondos por horas).
+    layers = [(path, 1.0)] if previous is None or previous == path or mix >= 1 else [(previous, 1.0), (path, mix)]
+    for source_path, opacity in layers:
+        if not source_path:
+            continue
         try:
-            pixmap = wallpaper_pixmap(path, path.stat().st_mtime_ns)
+            pixmap = wallpaper_pixmap(source_path, source_path.stat().st_mtime_ns)
         except OSError:
             pixmap = QPixmap()
         if not pixmap.isNull():
             scale = max(rect.width() / pixmap.width(), rect.height() / pixmap.height())
             w, h = rect.width() / scale, rect.height() / scale
             source = QRectF((pixmap.width() - w) / 2, (pixmap.height() - h) / 2, w, h)
+            painter.setOpacity(opacity)
             painter.drawPixmap(QRectF(rect), pixmap, source)
+            painter.setOpacity(1.0)
     if isinstance(shade, tuple):
         top, middle, bottom = shade
         veil = QLinearGradient(0, rect.top(), 0, rect.bottom())
@@ -373,13 +413,15 @@ class Wallpaper(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.wallpaper = None
+        self.previous, self.mix = None, 1.0
         self.palette = Palette()
 
     # paintEvent personalizado: usa paint_wallpaper con la palette base
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-        paint_wallpaper(painter, self.rect(), self.wallpaper, self.palette.base, (110, 30, 120), self.palette.shade)
+        paint_wallpaper(painter, self.rect(), self.wallpaper, self.palette.base, (110, 30, 120), self.palette.shade,
+                        self.previous, self.mix)
 # Iconos minimalistas (referencia estética)
 # Referencia: Numix / Papirus / Breeze minimal
 

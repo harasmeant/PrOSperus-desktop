@@ -92,6 +92,12 @@ def rename_markdown_links(text, note_dir, old_path, new_path):
     return (''.join(chunks), count)
 
 
+
+def is_wallpaper_name(stem):
+    """wallpaper y wallpaper-07 (fondos por horas) son configuración, no documentos."""
+    stem = stem.lower()
+    return stem == 'wallpaper' or (stem.startswith('wallpaper-') and stem[10:].isdigit())
+
 class Vault:
     MAX_NOTE_BYTES = 2 * 1024 * 1024
 
@@ -121,7 +127,7 @@ class Vault:
             try:
                 path = self.checked(candidate)
                 # El fondo de la carpeta es configuración, no un documento del mapa.
-                if path.is_dir() or path.stem.lower() != 'wallpaper':
+                if path.is_dir() or not is_wallpaper_name(path.stem):
                     entries.append(path)
             except (OSError, ValueError):
                 continue
