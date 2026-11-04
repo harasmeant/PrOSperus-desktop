@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# PrOSperus sobre Arch Linux: sistema mínimo, sesión gráfica y red.
+ARG ARCH_BASE=docker.io/library/archlinux:base
+FROM ${ARCH_BASE}
+# El contenedor de Arch no extrae traducciones, locales ni manuales (NoExtract):
+# se quitan esas reglas para que Qt y los programas salgan en español.
+RUN sed -i '/^NoExtract.*usr\/share/d' /etc/pacman.conf \
+    && sed -i 's/^#\?ParallelDownloads.*/ParallelDownloads = 5/' /etc/pacman.conf \
+    && pacman -Syu --noconfirm \
+    && pacman -S --noconfirm glibc \
+    && sed -i 's/^#\(es_ES.UTF-8 UTF-8\)/\1/; s/^#\(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen \
+    && locale-gen \
+    && pacman -Scc --noconfirm
+# dracut (y no mkinitcpio) para reutilizar el arranque Live y la persistencia de PrOSperus.
+RUN pacman -S --noconfirm --needed \
+    dracut linux systemd systemd-sysvcompat \
+    sway swaybg xorg-xwayland greetd pyside6 qt6-wayland python-gobject python-pygments qt6-translations \
+    mesa vulkan-swrast \
+    dbus polkit kbd ttf-dejavu \
+    python-evdev \
+    networkmanager iputils curl \
+    foot sudo git nano python-pip flatpak plocate which \
+    pipewire wireplumber pipewire-pulse rtkit bluez bluez-utils brightnessctl mako libnotify \
+    libreoffice-fresh libreoffice-fresh-es \
+    && pacman -Scc --noconfirm \
+    && flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo \
+    && flatpak update --appstream

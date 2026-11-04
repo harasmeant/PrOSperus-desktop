@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Paquetes del AUR (repositorio de la comunidad): se compilan aparte, sin dejar
+# herramientas de compilación en el sistema final.
+FROM localhost/prosperus-arch-base:dev AS aur
+RUN pacman -Rdd --noconfirm sway && pacman -S --noconfirm --needed base-devel git \
+    && useradd -m builder \
+    && echo 'builder ALL=(ALL) NOPASSWD: /usr/bin/pacman' > /etc/sudoers.d/builder
+USER builder
+WORKDIR /home/builder
+# SwayFX: Sway con desenfoque, esquinas y sombras. Input Remapper: botones y teclas reasignados.
+RUN for pkg in input-remapper swayfx; do \
+        git clone --depth 1 "https://aur.archlinux.org/$pkg.git" \
+        && (cd "$pkg" && makepkg --syncdeps --install --noconfirm --needed --nocheck) || exit 1; \
+    done \
+    && mkdir out && cp */*.pkg.tar.zst out/
+
+FROM localhost/prosperus-arch-base:dev
+COPY --from=aur /home/builder/out /tmp/aur
+# swayfx sustituye a sway (se quita sway antes para que pacman no pregunte).
+RUN pacman -Rdd --noconfirm sway && pacman -U --noconfirm /tmp/aur/*.pkg.tar.zst && rm -rf /tmp/aur \
+    && pacman -S --noconfirm --needed wl-mirror \
+       grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy playerctl \
+       eza bat fastfetch btop papirus-icon-theme ttf-nerd-fonts-symbols ttf-nerd-fonts-symbols-mono \
+       adw-gtk-theme dconf gsettings-desktop-schemas xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr \
+    && pacman -Scc --noconfirm
+# Cursor Bibata: versión fija comprobada con su SHA-256 (no está en los repos oficiales).
+RUN curl -fsSL -o /tmp/bibata.tar.xz \
+        https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-Classic.tar.xz \
+    && echo '7d3495864e5bbef02f5e77de760b2905903b63c71495a78ef6306d19a3b556d8  /tmp/bibata.tar.xz' | sha256sum -c - \
+    && tar -xJf /tmp/bibata.tar.xz -C /usr/share/icons && rm /tmp/bibata.tar.xz && fc-cache -f
+COPY desktop/prosperus /usr/lib/prosperus/prosperus
+COPY demo-system /usr/share/prosperus/demo
+COPY LICENSE /usr/share/licenses/prosperus/LICENSE
+COPY image/rootfs/ /
+RUN echo 'LANG=es_ES.UTF-8' > /etc/locale.conf \
+    && chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-ramas /usr/bin/prosperus-instalar /usr/bin/prosperus-claude /usr/bin/prosperus-terminal /usr/bin/prosperus-bloquear /usr/bin/prosperus-captura /usr/bin/prosperus-portapapeles /usr/bin/prosperus-osd /usr/bin/prosperus-handle /usr/libexec/prosperus-session /usr/libexec/prosperus-persistence /usr/libexec/prosperus-client \
+    && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
+    && passwd --lock root \
+    && passwd --delete prosperus \
+    && install -D -o prosperus -g prosperus -m 0644 /usr/share/prosperus/btop.conf /home/prosperus/.config/btop/btop.conf \
+    && chown -R prosperus:prosperus /home/prosperus \
+    && usermod -aG wheel,video,audio,input prosperus \
+    && chmod 0440 /etc/sudoers.d/prosperus-vm \
+    && systemctl enable NetworkManager.service \
+    && systemctl enable greetd.service \
+    && systemctl enable input-remapper.service \
+    && systemctl set-default graphical.target \
+    && systemctl mask getty@tty1.service \
+    && mkdir -p /boot /usr/share/prosperus /var/log/journal \
+    && pacman -Q | sort > /usr/share/prosperus/packages.txt \
+    && dconf update \
+    && python3 -m compileall -q /usr/lib/prosperus/prosperus \
+    && updatedb \
+    && kernel_version="$(ls /usr/lib/modules | sort -V | tail -1)" \
+    && cp "/usr/lib/modules/$kernel_version/vmlinuz" /boot/vmlinuz-prosperus \
+    && dracut --force --no-hostonly --no-hostonly-cmdline \
+       --add-drivers 'virtio_pci virtio_blk virtio_gpu ext4' \
+       /boot/initramfs-prosperus.img "$kernel_version" > /usr/share/prosperus/dracut-build.log 2>&1 \
+    && truncate -s 0 /etc/machine-id
+LABEL org.opencontainers.image.title="PrOSperus desktop (Arch Linux)"
+LABEL org.opencontainers.image.licenses="GPL-3.0-only"
+LABEL org.opencontainers.image.version="0.4.0-dev"
+CMD ["/sbin/init"]

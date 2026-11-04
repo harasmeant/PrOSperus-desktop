@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 from prosperus import driver_assistant as da
+from prosperus.distro import ARCH, FEDORA
 
 
 class TestDriverAssistant(unittest.TestCase):
@@ -62,13 +63,13 @@ class TestDriverAssistant(unittest.TestCase):
 
     def test_plan_for_nvidia_ada_0x2684(self):
         gpu = da.Gpu('0x10de', 0x2684, '', '0000:00:00.0')
-        plan = da.plan_for(gpu, secure_boot=False)
+        plan = da.plan_for(gpu, secure_boot=False, system=FEDORA)
         self.assertEqual(plan.options[0].key, 'proprietary')
         self.assertTrue(plan.options[0].recommended)
         self.assertIn('akmod-nvidia', ' '.join(plan.options[0].commands))
         self.assertNotIn('mokutil', ' '.join(plan.options[0].commands))
 
-        plan_sb = da.plan_for(gpu, secure_boot=True)
+        plan_sb = da.plan_for(gpu, secure_boot=True, system=FEDORA)
         cmds = plan_sb.options[0].commands
         self.assertIn('sudo mokutil --import /etc/pki/akmods/certs/public_key.der', cmds)
         idx_mok = cmds.index('sudo mokutil --import /etc/pki/akmods/certs/public_key.der')
@@ -88,10 +89,20 @@ class TestDriverAssistant(unittest.TestCase):
     def test_plan_for_intel_amd(self):
         for vendor in (da.INTEL, da.AMD):
             gpu = da.Gpu(vendor, 0x1234, '', '0000:00:00.0')
-            plan = da.plan_for(gpu)
+            plan = da.plan_for(gpu, system=FEDORA)
             self.assertEqual(plan.options[0].key, 'open')
             self.assertTrue(plan.options[0].recommended)
             self.assertIn(da.OPEN_STACK, plan.options[0].commands)
+            self.assertIn(da.ARCH_OPEN_STACK, da.plan_for(gpu, system=ARCH).options[0].commands)
+
+    def test_plan_for_nvidia_on_arch_uses_dkms_and_archive_headers(self):
+        gpu = da.Gpu('0x10de', 0x2684, '', '0000:00:00.0')
+        cmds = da.plan_for(gpu, secure_boot=True, system=ARCH).options[0].commands
+        text = ' '.join(cmds)
+        self.assertIn('nvidia-open-dkms', text)
+        self.assertNotIn('dnf', text)
+        self.assertLess(cmds.index(da.ARCH_HEADERS), cmds.index(da.ARCH_NVIDIA))
+        self.assertEqual(cmds[-1], 'sudo mokutil --import /var/lib/dkms/mok.pub')
 
     def test_plan_for_virtual_and_needs_attention(self):
         gpu = da.Gpu('0x1af4', 0x1000, '', '0000:00:00.0')

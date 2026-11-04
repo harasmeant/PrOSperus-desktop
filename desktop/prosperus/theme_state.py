@@ -11,6 +11,7 @@ import json
 import os
 import re
 import subprocess
+from functools import lru_cache
 from pathlib import Path
 
 from .appearance import Palette
@@ -45,11 +46,24 @@ def fuzzel_config(colors):
             f"selection-match={c(colors.accent)}\nborder={c(colors.accent)}\n\n[border]\nwidth=2\nradius=14\n")
 
 
-def wob_config(colors):
+@lru_cache(maxsize=1)
+def wob_has_output_mode():
+    """wob 0.16 (Arch) quitó output_mode y rechaza el archivo si aparece; 0.15 (Fedora) lo necesita."""
+    try:
+        version = subprocess.run(['wob', '--version'], capture_output=True, text=True, timeout=2).stdout
+    except (OSError, subprocess.SubprocessError):
+        return True
+    found = re.search(r'(\d+)\.(\d+)', version)
+    return not found or (int(found[1]), int(found[2])) < (0, 16)
+
+
+def wob_config(colors, output_mode=None):
     """Barra de volumen y brillo (wob) en los colores del proyecto; «muted» la apaga."""
     c = lambda value, alpha='ff': value.lstrip('#') + alpha
+    if output_mode is None:
+        output_mode = wob_has_output_mode()
     return ('timeout = 1200\nmax = 100\nwidth = 360\nheight = 34\nborder_offset = 0\nborder_size = 2\n'
-            'bar_padding = 6\nanchor = bottom\nmargin = 140\noutput_mode = focused\n'
+            'bar_padding = 6\nanchor = bottom\nmargin = 140\n' + ('output_mode = focused\n' if output_mode else '') +
             f'background_color = {c(colors.base, "dd")}\nborder_color = {c(colors.accent)}\n'
             f'bar_color = {c(colors.text)}\n\n[style.muted]\nbar_color = {c(colors.muted)}\n')
 

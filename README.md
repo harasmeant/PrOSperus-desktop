@@ -28,6 +28,9 @@ incluye las dependencias y arranca directamente en PrOSperus. Comprobada con
 UEFI, dos CPU y 2 GiB en QEMU; sin instalador ni persistencia. Consulta la
 [guía de la ISO](docs/ISO-LIVE.md).
 
+Hay también una [versión sobre Arch Linux](docs/ARCH.md) (`scripts/build-iso-arch.sh`),
+sin repositorios de Red Hat.
+
 Para probarla dentro de Fedora, consulta [la guía de la demo](docs/FEDORA-DEMO.md).
 El [diario de trabajo](docs/WORKLOG.md) registra la referencia acordada, los cambios
 y sus límites. No se ha alcanzado la paridad completa con el complemento de

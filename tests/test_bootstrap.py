@@ -6,11 +6,13 @@ import unittest
 from unittest.mock import patch
 
 from prosperus.bootstrap import dependency_diagnostic, main
+from prosperus.distro import FEDORA
 
 
 class BootstrapTests(unittest.TestCase):
     def test_missing_dependency_reports_live_space_without_installing_anything(self):
         with patch('prosperus.bootstrap.live_session', return_value=True), \
+             patch('prosperus.distro.current', return_value=FEDORA), \
              patch('prosperus.bootstrap.shutil.disk_usage', return_value=SimpleNamespace(free=183 * 1024 * 1024)), \
              patch('prosperus.bootstrap.importlib.import_module', side_effect=ModuleNotFoundError('No module named PySide6')):
             output = io.StringIO()

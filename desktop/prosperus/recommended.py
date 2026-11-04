@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Programas recomendados del instalador, por categorías.
 
-Cada entrada: nombre, descripción corta, origen ('flathub' o 'fedora') e id (id de Flathub o
-paquetes de Fedora separados por espacios). 'after' son servicios que hay que activar después
-(solo para paquetes de Fedora que traen un servicio del sistema)."""
+Cada entrada: nombre, descripción corta, origen ('flathub' o 'system') e id (id de Flathub o
+paquetes del sistema separados por espacios; un dict {'arch': …, 'fedora': …} si los nombres
+cambian). 'after' son servicios que hay que activar después (solo paquetes del sistema)."""
+from . import distro
 
 
 def app(name, summary, source, id, after=()):
@@ -12,10 +13,11 @@ def app(name, summary, source, id, after=()):
 
 CATALOG = (
     ('Utilidades', (
-        app('Input Remapper', 'Reasigna teclas y botones de teclados, ratones y mandos', 'fedora', 'input-remapper',
+        app('Input Remapper', 'Reasigna teclas y botones de teclados, ratones y mandos', 'system', 'input-remapper',
             ['input-remapper']),
-        app('Piper', 'Configura ratones gaming: DPI, botones y luces', 'fedora', 'piper libratbag-ratbagd', ['ratbagd']),
-        app('Solaar', 'Dispositivos Logitech: batería, emparejado y botones', 'fedora', 'solaar'),
+        app('Piper', 'Configura ratones gaming: DPI, botones y luces', 'system',
+            {'arch': 'piper libratbag', 'fedora': 'piper libratbag-ratbagd'}, ['ratbagd']),
+        app('Solaar', 'Dispositivos Logitech: batería, emparejado y botones', 'system', 'solaar'),
         app('OpenRGB', 'Controla la iluminación RGB de todo el equipo', 'flathub', 'org.openrgb.OpenRGB'),
         app('Mission Center', 'Monitor del sistema: CPU, memoria, discos y GPU', 'flathub', 'io.missioncenter.MissionCenter'),
         app('Easy Effects', 'Ecualizador y efectos para el sonido del sistema', 'flathub', 'com.github.wwmm.easyeffects'),
@@ -80,8 +82,14 @@ def recommended():
     return [dict(entry, category=category) for category, entries in CATALOG for entry in entries]
 
 
-def is_installed(entry, flatpaks, packages):
-    """¿Ya está? Flathub: por id de aplicación; Fedora: todos sus paquetes."""
+def package_ids(entry, system=None):
+    """Paquetes de la entrada en este sistema, separados por espacios."""
+    ids = entry['id']
+    return ids[(system or distro.current()).key] if isinstance(ids, dict) else ids
+
+
+def is_installed(entry, flatpaks, packages, system=None):
+    """¿Ya está? Flathub: por id de aplicación; sistema: todos sus paquetes."""
     if entry['source'] == 'flathub':
         return entry['id'] in flatpaks
-    return all(name in packages for name in entry['id'].split())
+    return all(name in packages for name in package_ids(entry, system).split())

@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: GPL-3.0-only
+FROM localhost/prosperus-arch:dev
+# Firmware: Wi-Fi y gráficas habituales para arrancar el USB en equipos reales.
+# El módulo dmsquash-live (SquashFS + overlay) ya viene en el paquete dracut de Arch.
+RUN pacman -S --noconfirm --needed e2fsprogs util-linux device-mapper \
+    linux-firmware-intel linux-firmware-amdgpu linux-firmware-realtek linux-firmware-atheros \
+    linux-firmware-broadcom linux-firmware-mediatek \
+    && pacman -Scc --noconfirm
+# Asistente Claude: Claude Code (instalador oficial) en la carpeta del usuario,
+# que la partición PROSPERUS_DATA conserva junto con el inicio de sesión.
+RUN runuser -l prosperus -c 'curl -fsSL https://claude.ai/install.sh | bash' \
+    && test -x /home/prosperus/.local/bin/claude
+# Versión de la imagen: la capa persistente solo se reutiliza con la misma ISO.
+# pacman no actualiza el núcleo: el arranque usa siempre el de la ISO.
+RUN date -u +%Y%m%d%H%M%S > /usr/share/prosperus/build-id \
+    && sed -i 's/^#\?IgnorePkg.*/IgnorePkg = linux linux-headers/' /etc/pacman.conf
+RUN printf '# Live root is mounted by the initramfs.\n' > /etc/fstab \
+    && systemctl enable prosperus-persistence.service \
+    && kernel_version="$(ls /usr/lib/modules | sort -V | tail -1)" \
+    && dracut --force --no-hostonly --no-hostonly-cmdline \
+       --add 'dmsquash-live prosperus-persist' \
+       --add-drivers 'virtio_pci virtio_blk virtio_scsi virtio_gpu sr_mod isofs squashfs overlay loop usb_storage uas xhci_pci ehci_pci sd_mod nvme' \
+       /boot/initramfs-prosperus.img "$kernel_version" \
+       > /usr/share/prosperus/dracut-live-build.log 2>&1 \
+    && pacman -Q | sort > /usr/share/prosperus/packages.txt

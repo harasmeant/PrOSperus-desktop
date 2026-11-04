@@ -409,13 +409,14 @@ class LinkLayoutTests(unittest.TestCase):
 
 class InstallerTests(unittest.TestCase):
     def test_commands_parsing_and_rejections(self):
-        from prosperus.installer import install_command, parse_dnf, parse_flatpak, search_commands
+        from prosperus.distro import FEDORA
+        from prosperus.installer import install_command, parse_flatpak, search_commands
         self.assertEqual(search_commands('rm -rf; ls'), [])
-        self.assertEqual([s for s, _ in search_commands('blender')], ['fedora', 'flathub'])
-        self.assertEqual(parse_dnf('blender\t3D\nblender\t3D\n\n')[0]['id'], 'blender')
-        self.assertEqual(len(parse_dnf('blender\t3D\nblender\t3D\n')), 1)
+        self.assertEqual([s for s, _ in search_commands('blender')], ['system', 'flathub'])
+        self.assertEqual(FEDORA.parse_search('blender\t3D\nblender\t3D\n\n')[0]['id'], 'blender')
+        self.assertEqual(len(FEDORA.parse_search('blender\t3D\nblender\t3D\n')), 1)
         self.assertEqual(parse_flatpak('org.blender.Blender\tBlender\t3D\nNo matches found\n')[0]['id'], 'org.blender.Blender')
-        self.assertEqual(install_command({'source': 'file', 'id': '/tmp/x.rpm'})[-1], '/tmp/x.rpm')
+        self.assertEqual(install_command({'source': 'file', 'id': '/tmp/x.rpm'}, FEDORA)[-1], '/tmp/x.rpm')
         with self.assertRaises(ValueError):
             install_command({'source': 'file', 'id': '/tmp/x.sh'})
 

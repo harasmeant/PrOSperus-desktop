@@ -5,11 +5,14 @@ from pathlib import Path
 import shutil
 import sys
 
+from . import distro
+
 INSTALL_COMMAND = ('sudo dnf install --setopt=install_weak_deps=False '
                    'python3-pyside6 qt6-qtwayland python3-gobject')
+ARCH_INSTALL_COMMAND = 'sudo pacman -Syu --needed pyside6 qt6-wayland python-gobject'
 
 
-# Detecta sesión Live de Fedora para adaptar los mensajes de espacio en disco
+# Detecta sesión Live para adaptar los mensajes de espacio en disco
 def live_session():
     try:
         cmdline = Path('/proc/cmdline').read_text()
@@ -30,7 +33,7 @@ def dependency_diagnostic(error):
     if live_session():
         # En Live, /tmp es volátil y el disco virtual puede estar casi lleno
         lines.extend([
-            'Estás en Fedora Live: el espacio para instalar paquetes puede ser',
+            f'Estás en {distro.current().label} Live: el espacio para instalar paquetes puede ser',
             'mucho menor que el disco virtual configurado en Boxes.',
             '',
             'Si preparaste el entorno ligero antes de reiniciar, /tmp se ha',
@@ -41,13 +44,13 @@ def dependency_diagnostic(error):
         ])
     lines.extend([
         '',
-        'Si DNF indicó "needs more space" o "No space left", la instalación',
+        'Si el gestor de paquetes indicó "needs more space" o "No space left", la instalación',
         'no se completó. Repetir iniciar.sh no instala las dependencias.',
         'Comprueba el espacio con: df -h / /var/cache /tmp',
         'Consulta LEEME.txt antes de volver a instalar en una sesión Live.',
         '',
-        'En Fedora con espacio suficiente, instala las dependencias con:',
-        INSTALL_COMMAND,
+        f'En {distro.current().label} con espacio suficiente, instala las dependencias con:',
+        ARCH_INSTALL_COMMAND if distro.current().key == 'arch' else INSTALL_COMMAND,
     ])
     return '\n'.join(lines)
 
@@ -65,7 +68,7 @@ def main():
     try:
         importlib.import_module('gi')
     except (ImportError, OSError):
-        print('Para usar Aplicaciones instala: sudo dnf install python3-gobject', file=sys.stderr)
+        print('Para usar Aplicaciones instala: ' + distro.current().shell_install('python-gobject' if distro.current().key == 'arch' else 'python3-gobject'), file=sys.stderr)
     from .shell import main as desktop_main
     desktop_main()
     return 0

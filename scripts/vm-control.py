@@ -2,6 +2,7 @@
 """Local development VM controls, via its Unix QMP socket."""
 # SPDX-License-Identifier: GPL-3.0-only
 import argparse
+import os
 import json
 from pathlib import Path
 import socket
@@ -9,7 +10,8 @@ import socket
 
 def command(name, arguments=None, iso=False):
     # Cada VM tiene su socket: las órdenes nunca deben llegar a otra sesión.
-    directory = 'out/iso/vm' if iso else 'out/vm'
+    # Arch: PROSPERUS_ISO_DIR=out/iso-arch.
+    directory = os.environ.get('PROSPERUS_ISO_DIR', 'out/iso') + '/vm' if iso else 'out/vm'
     path = Path(__file__).resolve().parents[1] / directory / 'qmp.sock'
     with socket.socket(socket.AF_UNIX) as connection:
         connection.settimeout(10)

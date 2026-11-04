@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Herramientas para crear y probar la ISO; no se incluyen en el sistema del usuario.
+ARG ARCH_BASE=docker.io/library/archlinux:base
+FROM ${ARCH_BASE}
+RUN pacman -Syu --noconfirm --needed \
+    qemu-base qemu-hw-display-virtio-vga qemu-hw-display-virtio-gpu edk2-ovmf e2fsprogs tar zstd python \
+    systemd-ukify dosfstools mtools gptfdisk libisoburn squashfs-tools \
+    && pacman -Scc --noconfirm \
+    && mkdir -p /usr/share/edk2/ovmf \
+    && ln -s ../x64/OVMF_CODE.4m.fd /usr/share/edk2/ovmf/OVMF_CODE.fd \
+    && ln -s ../x64/OVMF_VARS.4m.fd /usr/share/edk2/ovmf/OVMF_VARS.fd
+WORKDIR /work

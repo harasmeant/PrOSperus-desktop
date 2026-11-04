@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-"""Instalar programas desde Fedora (dnf5) y Flathub (flatpak), o un .rpm/.flatpakref local."""
+"""Instalar programas del sistema (pacman en Arch, dnf5 en Fedora) y de Flathub, o un paquete local."""
 from pathlib import Path
 import re
 import subprocess
@@ -9,7 +9,8 @@ from PySide6.QtCore import QProcess, Qt
 from PySide6.QtGui import QColor, QFont
 from .window_header import WindowHeader
 from .theme_state import current_palette
-from .recommended import is_installed, recommended
+from . import distro
+from .recommended import is_installed, package_ids, recommended
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget)
 
@@ -17,29 +18,16 @@ from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QLi
 SAFE = re.compile(r'^[\w .+-]+$')
 
 
-# Busca programas en Fedora y Flathub para instalar
-def search_commands(text):
-    # Ejecuta `dnf5 repoquery` para Fedora o `flatpak search` para Flathub según el texto ingresado.
+# Busca programas en el sistema (pacman o dnf) y en Flathub
+def search_commands(text, system=None):
     # Retorna una lista de tuplas (source, argv) para cada fuente válida.
+    system = system or distro.current()
     term = text.strip()
     # Nunca pasa por un shell, pero una búsqueda rara no es un nombre de programa.
     if not term or not SAFE.match(term):
         return []
-    return [('fedora', ['dnf5', '-q', '-C', 'repoquery', '--available', '--latest-limit=1',
-                        '--queryformat=%{name}\t%{summary}\n', f'*{term}*']),
+    return [('system', system.search_command(term)),
             ('flathub', ['flatpak', 'search', '--columns=application,name,description', term])]
-
-
-# Extrae paquetes Fedora únicos de repoquery
-def parse_dnf(output):
-    # Analiza la salida tabulado de `repoquery` de Fedora en una lista de diccionarios de paquetes.
-    found, seen = [], set()
-    for line in output.splitlines():
-        name, _, summary = line.partition('\t')
-        if name.strip() and name not in seen:
-            seen.add(name)
-            found.append({'source': 'fedora', 'id': name.strip(), 'name': name.strip(), 'summary': summary.strip()})
-    return found
 
 
 # Filtra aplicaciones Flathub por ID con punto
@@ -55,20 +43,19 @@ def parse_flatpak(output):
     return found
 
 
-# Genera comandos de instalación para Fedora, Flathub o archivos .rpm/.flatpakref
-def install_command(item):
-    # Construye la lista de argumentos para la instalación según la fuente ('fedora', 'flathub') o la extensión del archivo local.
-    if item['source'] == 'fedora':
-        return ['sudo', '-n', 'dnf5', 'install', '-y', *item['id'].split()]
+# Genera comandos de instalación para el sistema, Flathub o un paquete local
+def install_command(item, system=None):
+    system = system or distro.current()
+    if item['source'] == 'system':
+        return system.install_command(package_ids(item, system).split())
     if item['source'] == 'flathub':
         return ['sudo', '-n', 'flatpak', 'install', '-y', '--noninteractive', 'flathub', item['id']]
     path = str(item['id'])
-    # shortcut: sudo -n usa el sudo sin contraseña de la imagen de desarrollo; usar pkexec en la de uso diario.
-    if path.lower().endswith('.rpm'):
-        return ['sudo', '-n', 'dnf5', 'install', '-y', path]
+    if path.lower().endswith(system.package_suffixes):
+        return system.install_file_command(path)
     if path.lower().endswith('.flatpakref'):
         return ['sudo', '-n', 'flatpak', 'install', '-y', '--noninteractive', '--from', path]
-    raise ValueError('Solo se instalan archivos .rpm o .flatpakref.')
+    raise ValueError(f"Solo se instalan archivos {' o '.join(system.package_suffixes)} o .flatpakref.")
 
 
 def after_commands(item):
@@ -77,14 +64,14 @@ def after_commands(item):
 
 
 def installed_names():
-    """(aplicaciones de Flathub, paquetes rpm) ya instalados; vacío si no se puede saber."""
+    """(aplicaciones de Flathub, paquetes del sistema) ya instalados; vacío si no se puede saber."""
     def names(argv):
         try:
             return set(subprocess.run(argv, capture_output=True, text=True, timeout=10).stdout.split())
         except (OSError, subprocess.SubprocessError):
             return set()
     return (names(['flatpak', 'list', '--app', '--columns=application']),
-            names(['rpm', '-qa', '--queryformat', '%{NAME}\n']))
+            names(distro.current().installed_command()))
 
 
 # Define estilos visuales de la interfaz
@@ -102,9 +89,10 @@ QPlainTextEdit {{ background: {c.panel}; border: 1px solid {c.border}; border-ra
 def persistence_note(marker='/run/prosperus-persistent', system_marker='/run/prosperus-system-persistent'):
     """Qué se conserva al apagar según haya persistencia en el USB (carpeta personal y, aparte, el sistema)."""
     if Path(marker).exists() and Path(system_marker).exists():
-        return 'USB persistente: lo que instales, de Fedora o de Flathub, se conserva al apagar.'
+        return f'USB persistente: lo que instales, de {distro.current().label} o de Flathub, se conserva al apagar.'
     if Path(marker).exists():
-        return 'Con el USB persistente, los programas de Flathub se conservan al apagar; los de Fedora se pierden.'
+        return ('Con el USB persistente, los programas de Flathub se conservan al apagar; '
+                f'los de {distro.current().label} se pierden.')
     return 'Sesión sin persistencia: lo que instales se perderá al apagar.'
 
 
@@ -138,10 +126,10 @@ class Installer(QWidget):
     # Mostrar ítems con origen y resumen
     def show_items(self, items):
         self.showing_recommended = False
-        # Limpia la lista y muestra los ítems; asigna prefijos visuales (`[Fedora]`, `[Flathub]`, `[Archivo]`) según el origen.
+        # Limpia la lista y muestra los ítems; asigna prefijos visuales (`[Arch]`, `[Flathub]`, `[Archivo]`) según el origen.
         self.list.clear()
         for item in items:
-            tag = {'fedora': '[Fedora]', 'flathub': '[Flathub]'}.get(item['source'], '[Archivo]')
+            tag = {'system': f'[{distro.current().label}]', 'flathub': '[Flathub]'}.get(item['source'], '[Archivo]')
             widget = QListWidgetItem(f"{tag}  {item['name']} — {item['summary']}")
             widget.setData(Qt.ItemDataRole.UserRole, item); self.list.addItem(widget)
         if self.list.count():
@@ -159,7 +147,7 @@ class Installer(QWidget):
                 font = QFont(); font.setPointSizeF(8.5); font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 1.5)
                 header.setFont(font); header.setForeground(QColor(self.colors.accent)); self.list.addItem(header)
             done = is_installed(entry, flatpaks, packages)
-            origin = 'Fedora' if entry['source'] == 'fedora' else 'Flathub'
+            origin = distro.current().label if entry['source'] == 'system' else 'Flathub'
             widget = QListWidgetItem(f"{'✓  ' if done else '     '}{entry['name']} — {entry['summary']}   · {origin}")
             widget.setData(Qt.ItemDataRole.UserRole, dict(entry, installed=done))
             if done:
@@ -168,9 +156,9 @@ class Installer(QWidget):
         self.list.setCurrentRow(1)
         self.log.setPlainText('Elige un programa y pulsa Instalar (o doble clic). ✓ = ya instalado.')
 
-    # Buscar programas en Fedora y Flathub
+    # Buscar programas en el sistema y en Flathub
     def run_search(self):
-        # Obtiene los comandos válidos y ejecuta ambos procesos en paralelo (Fedora y Flathub).
+        # Obtiene los comandos válidos y ejecuta ambos procesos en paralelo (sistema y Flathub).
         if not self.search.text().strip():
             self.show_recommended(); return
         commands = search_commands(self.search.text())
@@ -190,7 +178,7 @@ class Installer(QWidget):
             self.log.appendPlainText('No está disponible: ' + process.program())
             self.search_done(process, None)
 
-    # Mostrar programas encontrados en Fedora y Flathub
+    # Mostrar programas encontrados en el sistema y en Flathub
     def search_done(self, process, source):
         # Procesa la salida finalizada de un proceso de búsqueda, la guarda y actualiza la lista de la interfaz.
         if process not in self.searches:
@@ -198,11 +186,11 @@ class Installer(QWidget):
         self.searches.remove(process)
         if source:
             output = bytes(process.readAllStandardOutput()).decode(errors='replace')
-            self.results[source] = (parse_dnf if source == 'fedora' else parse_flatpak)(output)
+            self.results[source] = (distro.current().parse_search if source == 'system' else parse_flatpak)(output)
             if process.exitCode() and not self.results[source]:
                 self.log.appendPlainText(bytes(process.readAllStandardError()).decode(errors='replace').strip())
         process.deleteLater()
-        items = self.results.get('fedora', []) + self.results.get('flathub', [])
+        items = self.results.get('system', []) + self.results.get('flathub', [])
         self.show_items(items)
         if not self.searches:
             self.log.appendPlainText(f'{len(items)} resultados.')

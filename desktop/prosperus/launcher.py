@@ -8,6 +8,7 @@ from PySide6.QtCore import QEvent, QObject, QProcess, QSettings, QSize, Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import QButtonGroup, QDialog, QPushButton, QHBoxLayout, QLabel, QLineEdit, QListView, QListWidget, QListWidgetItem, QVBoxLayout
 
+from .distro import current as current_distro
 from .model import searchable
 
 
@@ -255,10 +256,11 @@ class ApplicationBrowser(QDialog):
         self.service.failed.disconnect(self.report_error)
         self.service.favorites_changed.disconnect(self.render)
 
-    # Mostrar error al faltar python3-gobject en Fedora
+    # Mostrar error al faltar PyGObject
     def report_error(self, message):
         if 'gi' in message and 'module' in message:
-            message = 'Falta el componente de aplicaciones. Instala python3-gobject dentro de Fedora y pulsa Actualizar lista.'
+            message = ('Falta el componente de aplicaciones (PyGObject). Instálalo y pulsa Actualizar lista: '
+                       + current_distro().shell_install('python-gobject' if current_distro().key == 'arch' else 'python3-gobject'))
         self.status.setText(message)
 
     def refresh(self):

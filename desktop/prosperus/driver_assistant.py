@@ -9,6 +9,8 @@ from pathlib import Path
 import shlex
 import subprocess
 
+from . import distro
+
 from PySide6.QtWidgets import (QButtonGroup, QDialog, QHBoxLayout, QLabel, QPushButton,
                                QRadioButton, QVBoxLayout)
 
@@ -23,6 +25,16 @@ RPMFUSION = ('sudo dnf install -y '
              'https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm '
              'https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm')
 OPEN_STACK = 'sudo dnf install -y kernel-modules linux-firmware mesa-vulkan-drivers'
+ARCH_OPEN_STACK = 'sudo pacman -Syu --needed --noconfirm linux-firmware mesa vulkan-radeon vulkan-intel vulkan-nouveau'
+# El núcleo de la ISO se queda fijo (IgnorePkg) y el repositorio solo guarda las cabeceras
+# del más reciente: las de la versión que arranca salen del archivo histórico de Arch.
+ARCH_HEADERS = ('sudo pacman -U --needed --noconfirm "https://archive.archlinux.org/packages/l/linux-headers/'
+                'linux-headers-$(uname -r | sed s/-arch/.arch/)-x86_64.pkg.tar.zst"')
+ARCH_NVIDIA = 'sudo pacman -S --needed --noconfirm gcc make nvidia-open-dkms nvidia-utils opencl-nvidia'
+
+
+def open_stack(system):
+    return ARCH_OPEN_STACK if system.key == 'arch' else OPEN_STACK
 
 
 @dataclass(frozen=True)
@@ -80,42 +92,58 @@ def secure_boot_enabled(path=SECURE_BOOT):
 
 
 # Recomienda controladores según la gráfica detectada
-def plan_for(gpu, secure_boot=False):
+def plan_for(gpu, secure_boot=False, system=None):
+    system = system or distro.current()
+    stack = open_stack(system)
     if gpu.vendor in VIRTUAL:
         return Plan(gpu, 'Gráfica virtual: el sistema ya incluye lo necesario.')
     if gpu.vendor in (INTEL, AMD):
         return Plan(gpu, 'Intel y AMD funcionan con controladores libres (Mesa).', [
             Option('open', 'Controladores libres completos',
                    'Módulos del núcleo, firmware y Vulkan para juegos, Blender y FreeCAD.',
-                   (OPEN_STACK,), recommended=True),
+                   (stack,), recommended=True),
             Option('none', 'No instalar nada ahora', 'Puedes volver desde Controles › Hardware y drivers.')])
     if gpu.vendor != NVIDIA:
         return Plan(gpu, 'Fabricante no reconocido: no hay recomendación automática.')
     if gpu.device >= TURING_FIRST:
-        warnings = ['El controlador propietario se compila en este equipo (akmods) y requiere reiniciar.']
-        if secure_boot:
-            warnings.append('Secure Boot está activo: habrá que registrar la clave del módulo (MOK) '
-                            'o el controlador propietario no cargará. Las órdenes la preparan; '
-                            'al reiniciar, acepta la clave con la contraseña que elijas.')
-        proprietary = [RPMFUSION, 'sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda "kernel-devel-$(uname -r)"',
-                       'sudo akmods --force']
-        if secure_boot:
-            proprietary[2:2] = ['sudo dnf install -y mokutil', 'sudo kmodgenca -a',
-                                'sudo mokutil --import /etc/pki/akmods/certs/public_key.der']
+        if system.key == 'arch':
+            warnings = ['El controlador propietario se compila en este equipo (DKMS) y requiere reiniciar.']
+            proprietary = [ARCH_HEADERS, ARCH_NVIDIA]
+            if secure_boot:
+                # DKMS firma los módulos con su clave (la crea al compilar); se registra después.
+                warnings.append('Secure Boot está activo: habrá que registrar la clave de DKMS (MOK) '
+                                'o el controlador propietario no cargará. Las órdenes la preparan; '
+                                'al reiniciar, acepta la clave con la contraseña que elijas.')
+                proprietary += ['sudo pacman -S --needed --noconfirm mokutil',
+                                'sudo mokutil --import /var/lib/dkms/mok.pub']
+            source = 'repositorio de Arch'
+        else:
+            warnings = ['El controlador propietario se compila en este equipo (akmods) y requiere reiniciar.']
+            if secure_boot:
+                warnings.append('Secure Boot está activo: habrá que registrar la clave del módulo (MOK) '
+                                'o el controlador propietario no cargará. Las órdenes la preparan; '
+                                'al reiniciar, acepta la clave con la contraseña que elijas.')
+            proprietary = [RPMFUSION, 'sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda "kernel-devel-$(uname -r)"',
+                           'sudo akmods --force']
+            if secure_boot:
+                proprietary[2:2] = ['sudo dnf install -y mokutil', 'sudo kmodgenca -a',
+                                    'sudo mokutil --import /etc/pki/akmods/certs/public_key.der']
+            source = 'RPM Fusion'
         return Plan(gpu, 'NVIDIA Turing o posterior (RTX, GTX 16xx o más nueva).', [
-            Option('proprietary', 'Propietario NVIDIA (RPM Fusion)',
+            Option('proprietary', f'Propietario NVIDIA ({source})',
                    'Máximo rendimiento y CUDA/OptiX para Blender Cycles y cálculo. Recomendado para ingeniería.',
                    tuple(proprietary), recommended=True),
             Option('open', 'Libre: nouveau + NVK',
                    'Sin compilar nada y compatible con Secure Boot. Vulkan con NVK; sin CUDA.',
-                   (OPEN_STACK,)),
+                   (stack,)),
             Option('none', 'No instalar nada ahora', 'Puedes volver desde Controles › Hardware y drivers.')],
             warnings)
     return Plan(gpu, 'NVIDIA anterior a Turing: el controlador propietario actual ya no la admite.', [
         Option('open', 'Libre: nouveau', 'Escritorio y aplicaciones básicas; rendimiento 3D limitado.',
-               (OPEN_STACK,), recommended=True),
+               (stack,), recommended=True),
         Option('none', 'No instalar nada ahora',
-               'Las series heredadas del controlador propietario se consultan en RPM Fusion.')])
+               'Las series heredadas del controlador propietario se consultan en '
+               + ('el AUR (nvidia-580xx y anteriores).' if system.key == 'arch' else 'RPM Fusion.'))])
 
 
 def needs_attention(plans):

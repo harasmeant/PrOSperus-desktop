@@ -2,6 +2,8 @@
 
 ## 0.4.0-dev — 2026-10-30 · Desarrollo, sin nueva ISO
 
+- 2026-11-04: ISO Live sobre Arch Linux (`scripts/build-iso-arch.sh`, `docs/ARCH.md`).
+  El escritorio detecta Arch o Fedora (`distro.py`) para instalar programas y controladores.
 - Fibonacci, columnas y principal centrada, perfiles ultrawide y vista previa.
 - Organización reversible de notas sin alterar contenido.
 - Adaptador experimental Sway para aplicaciones reales, con validación de tamaños.
