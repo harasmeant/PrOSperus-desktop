@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-only
+# Instala PrOSperus (Arch) desde el USB Live en el espacio LIBRE de un disco,
+# junto al sistema que ya tenga (dual boot con Bazzite, Fedora, Windows...).
+#
+# Garantías:
+# - Nunca borra, mueve, formatea ni redimensiona particiones existentes: solo
+#   crea una partición nueva en espacio sin asignar y comprueba después que las
+#   demás siguen idénticas.
+# - En la partición EFI existente solo escribe su propia carpeta EFI/prosperus.
+# - Añade la entrada «PrOSperus» al FINAL del orden de arranque: el sistema que
+#   arrancaba por defecto sigue haciéndolo; PrOSperus se elige con el menú de
+#   arranque del firmware (F9 en los HP).
+#
+# Uso: sudo prosperus-instalar-disco --disco /dev/nvme0n1 [--tamano 150] [--simular]
+#   --tamano  GiB para PrOSperus (por defecto, todo el hueco libre más grande).
+#   --simular muestra lo que haría sin escribir nada.
+#   --si      no pide confirmación (pruebas automáticas; la contraseña sale
+#             entonces de PROSPERUS_INSTALL_PASSWORD).
+set -euo pipefail
+export LC_ALL=C
+
+min_gib=30
+root_type=4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709   # Linux root (x86-64)
+esp_type=c12a7328-f81f-11d2-ba4b-00a0c93ec93b
+label=PrOSperus
+src=/run/rootfsbase
+work=/run/prosperus-instalar
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+say() { echo "==> $*"; }
+
+disk= size_gib= simulate=0 yes=0
+while [ $# -gt 0 ]; do
+    case $1 in
+        --disco) disk=${2:-}; shift 2 ;;
+        --tamano) size_gib=${2:-}; shift 2 ;;
+        --simular) simulate=1; shift ;;
+        --si) yes=1; shift ;;
+        -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
+        *) die "opción desconocida: $1" ;;
+    esac
+done
+
+[ "$(id -u)" = 0 ] || die 'hay que ejecutarlo con sudo.'
+[ -f "$src/usr/share/prosperus/build-id" ] || die 'solo funciona desde el USB Live de PrOSperus.'
+[ -d /sys/firmware/efi/efivars ] || die 'el equipo no ha arrancado en modo UEFI.'
+if [ -z "$disk" ]; then
+    echo 'Discos disponibles:'
+    lsblk -dpno NAME,SIZE,MODEL,TRAN | grep -v '^/dev/\(loop\|zram\|sr\)' || true
+    die 'indica el disco con --disco (por ejemplo --disco /dev/nvme0n1).'
+fi
+[ -b "$disk" ] && [ "$(lsblk -dno TYPE "$disk")" = disk ] || die "$disk no es un disco."
+[[ -z "$size_gib" || "$size_gib" =~ ^[0-9]+$ ]] || die '--tamano va en GiB enteros.'
+
+# El USB del que arranca la Live y los discos con algo montado no se tocan.
+lsblk -no LABEL "$disk" | grep -qx 'PROSPERUS_LIVE' && die "$disk es el USB de PrOSperus."
+if lsblk -lno MOUNTPOINTS "$disk" | grep -q .; then
+    die "$disk tiene particiones montadas; desmóntalas antes."
+fi
+[ "$(sfdisk --dump "$disk" | awk '/^label:/ {print $2}')" = gpt ] \
+    || die "$disk no tiene tabla GPT (necesaria para UEFI)."
+
+# Partición EFI existente (no se crea ninguna: es para convivir con otro sistema).
+esp=$(lsblk -lnpo NAME,PARTTYPE "$disk" | awk -v t="$esp_type" 'tolower($2) == t {print $1}')
+[ -n "$esp" ] || die "$disk no tiene partición EFI. Este instalador solo añade PrOSperus junto a otro sistema."
+[ "$(wc -l <<<"$esp")" = 1 ] || die "$disk tiene varias particiones EFI; no sé cuál usar."
+esp_num=$(cat "/sys/class/block/${esp##*/}/partition")
+
+# Hueco libre más grande, alineado a 1 MiB.
+ss=$(blockdev --getss "$disk")
+align=$((1048576 / ss))
+read -r free_start free_end < <(sfdisk --list-free "$disk" \
+    | awk '$1 ~ /^[0-9]+$/ && $3 > best {best = $3; s = $1; e = $2} END {if (best) print s, e}') \
+    || die "$disk no tiene espacio sin asignar. Primero hay que hacer sitio (docs/DUAL-BOOT.md)."
+start=$(( (free_start + align - 1) / align * align ))
+avail=$(( (free_end - start + 1) / align * align ))
+avail_gib=$(( avail * ss / 1073741824 ))
+if [ -n "$size_gib" ]; then
+    sectors=$(( size_gib * 1073741824 / ss ))
+    [ "$sectors" -le "$avail" ] || die "pides $size_gib GiB y el hueco libre es de $avail_gib GiB."
+else
+    sectors=$avail size_gib=$avail_gib
+fi
+[ "$size_gib" -ge "$min_gib" ] || die "hacen falta al menos $min_gib GiB libres (hay $avail_gib GiB)."
+
+echo
+echo "Disco: $disk ($(lsblk -dno SIZE,MODEL "$disk" | xargs))"
+lsblk -po NAME,SIZE,FSTYPE,LABEL,PARTLABEL "$disk"
+echo
+echo "Se hará:"
+echo "  1. Crear una partición nueva de $size_gib GiB en el espacio libre (sector $start)."
+echo "     Las particiones de arriba NO se modifican."
+echo "  2. Copiar PrOSperus en ella (ext4, etiqueta PROSPERUS_ROOT)."
+echo "  3. Añadir EFI/prosperus/prosperus.efi en $esp y la entrada «$label» al final"
+echo "     del orden de arranque. El sistema por defecto no cambia."
+echo
+if [ "$simulate" = 1 ]; then echo 'Simulación: no se ha escrito nada.'; exit 0; fi
+
+if [ "$yes" = 1 ]; then
+    password=${PROSPERUS_INSTALL_PASSWORD:-}
+    [ -n "$password" ] || die 'con --si hace falta PROSPERUS_INSTALL_PASSWORD.'
+else
+    read -r -p 'Escribe INSTALAR para continuar: ' answer
+    [ "$answer" = INSTALAR ] || die 'cancelado; no se ha escrito nada.'
+    while :; do
+        read -r -s -p 'Contraseña del usuario prosperus (para sudo y el bloqueo): ' password; echo
+        read -r -s -p 'Repítela: ' again; echo
+        [ -n "$password" ] && [ "$password" = "$again" ] && break
+        echo 'No coinciden o está vacía; otra vez.'
+    done
+fi
+
+mkdir -p "$work"
+target=$work/root espmnt=$work/esp
+cleanup() {
+    for m in "$target/dev" "$target/proc" "$target/sys" "$target" "$espmnt"; do
+        mountpoint -q "$m" && umount -R -l "$m"
+    done
+    return 0
+}
+trap cleanup EXIT
+
+# 1. Partición nueva, y comprobación de que las existentes siguen iguales.
+before=$work/tabla-antes.sfdisk
+sfdisk --dump "$disk" > "$before"
+say "Copia de la tabla de particiones: $before"
+printf 'start=%s, size=%s, type=%s, name="%s"\n' "$start" "$sectors" "$root_type" "$label" \
+    | sfdisk --append --no-reread -q "$disk"
+sfdisk --dump "$disk" > "$work/tabla-despues.sfdisk"
+while IFS= read -r line; do
+    grep -qxF "$line" "$work/tabla-despues.sfdisk" \
+        || die "una partición existente ha cambiado (¡no debería!): $line. Para y revisa con «sfdisk --dump $disk»."
+done < <(grep '^/dev/' "$before")
+part=$(grep '^/dev/' "$work/tabla-despues.sfdisk" | grep -vxF -f <(grep '^/dev/' "$before") | awk '{print $1}')
+[ -n "$part" ] && [ "$(wc -l <<<"$part")" = 1 ] || die 'no encuentro la partición nueva.'
+partx --add --nr "${part##*[!0-9]}" "$disk" 2>/dev/null || true
+udevadm settle
+for _ in $(seq 20); do [ -b "$part" ] && break; sleep 0.5; partx --update "$disk" 2>/dev/null || true; done
+[ -b "$part" ] || die "el núcleo no ve $part; reinicia la Live y vuelve a probar."
+say "Partición nueva: $part"
+
+# 2. Sistema de archivos y copia de la imagen (sin los cambios de la sesión Live).
+mkfs.ext4 -q -F -L PROSPERUS_ROOT "$part"
+uuid=$(blkid -s UUID -o value "$part")
+mkdir -p "$target" "$espmnt"
+mount "$part" "$target"
+say 'Copiando el sistema (unos minutos)...'
+cp -a "$src/." "$target/"
+cp "$before" "$target/usr/share/prosperus/tabla-particiones-antes.sfdisk"
+
+say 'Configurando el sistema instalado...'
+printf '# PrOSperus instalado en disco.\nUUID=%s / ext4 rw,relatime 0 1\n' "$uuid" > "$target/etc/fstab"
+echo prosperus > "$target/etc/hostname"
+truncate -s 0 "$target/etc/machine-id"
+# Lo propio del USB Live no va al disco: ni la persistencia ni sudo sin contraseña.
+systemctl --root="$target" disable prosperus-persistence.service >/dev/null 2>&1 || true
+rm -f "$target/etc/sudoers.d/prosperus-vm"
+printf '%%wheel ALL=(ALL:ALL) ALL\n' > "$target/etc/sudoers.d/prosperus"
+chmod 0440 "$target/etc/sudoers.d/prosperus"
+printf 'prosperus:%s\n' "$password" | chpasswd -R "$target"
+date -u +%Y-%m-%dT%H:%M:%SZ > "$target/usr/share/prosperus/instalado"
+
+# Initramfs para arrancar desde disco (el de la imagen es el del Live).
+# rslave: desmontarlos después no debe propagarse a /dev, /proc y /sys de la Live.
+for m in dev proc sys; do
+    mkdir -p "$target/$m"; mount --rbind "/$m" "$target/$m"; mount --make-rslave "$target/$m"
+done
+kernel_version=$(ls "$target/usr/lib/modules" | sort -V | tail -1)
+chroot "$target" dracut --force --no-hostonly --no-hostonly-cmdline \
+    --omit 'dmsquash-live prosperus-persist' \
+    --add-drivers 'nvme ahci sd_mod ext4 virtio_pci virtio_blk virtio_gpu' \
+    /boot/initramfs-prosperus.img "$kernel_version" > "$target/usr/share/prosperus/dracut-disco.log" 2>&1 \
+    || die "dracut ha fallado; mira $target/usr/share/prosperus/dracut-disco.log"
+umount -R -l "$target/dev" "$target/proc" "$target/sys"
+
+# 3. Imagen de arranque única (UKI) en la partición EFI existente.
+ukify build --linux="$target/boot/vmlinuz-prosperus" \
+    --initrd="$target/boot/initramfs-prosperus.img" \
+    --cmdline="root=UUID=$uuid rw quiet loglevel=3 console=tty0 console=ttyS0,115200 modprobe.blacklist=nouveau rd.driver.blacklist=nouveau" \
+    --os-release="@$target/etc/os-release" --output="$work/prosperus.efi" >/dev/null
+mount "$esp" "$espmnt"
+need=$(( $(stat -c %s "$work/prosperus.efi") / 1024 + 4096 ))
+[ "$(df -Pk "$espmnt" | awk 'NR == 2 {print $4}')" -ge "$need" ] \
+    || die "no cabe en la partición EFI ($esp); necesito $((need / 1024)) MiB libres."
+mkdir -p "$espmnt/EFI/prosperus"
+cp "$work/prosperus.efi" "$espmnt/EFI/prosperus/prosperus.efi.nuevo"
+mv "$espmnt/EFI/prosperus/prosperus.efi.nuevo" "$espmnt/EFI/prosperus/prosperus.efi"
+sync
+umount "$espmnt"
+
+# Entrada de arranque al final del orden: quita las «PrOSperus» de una instalación anterior.
+for n in $(efibootmgr | sed -n "s/^Boot\([0-9A-Fa-f]\{4\}\)\*\? $label\b.*/\1/p"); do
+    efibootmgr -q -b "$n" -B
+done
+order=$(efibootmgr | awk '/^BootOrder:/ {print $2}')
+new=$(efibootmgr --create --disk "$disk" --part "$esp_num" --label "$label" \
+    --loader '\EFI\prosperus\prosperus.efi' | sed -n "s/^Boot\([0-9A-Fa-f]\{4\}\)\*\? $label\b.*/\1/p" | head -1)
+[ -n "$new" ] || die 'no se pudo crear la entrada de arranque.'
+efibootmgr -q --bootorder "${order:+$order,}$new"
+efibootmgr
+
+echo
+say "PrOSperus instalado en $part."
+echo "Reinicia, pulsa F9 al encender (equipos HP) y elige «$label»."
+echo 'El sistema que arrancaba por defecto sigue siendo el mismo.'

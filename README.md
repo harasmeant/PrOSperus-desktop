@@ -30,6 +30,7 @@ UEFI, dos CPU y 2 GiB en QEMU; sin instalador ni persistencia. Consulta la
 
 Hay también versiones sobre [Arch Linux](docs/ARCH.md) (`scripts/build-iso-arch.sh`)
 y [Debian 13 estable](docs/DEBIAN.md) (`scripts/build-iso-debian.sh`), con el mismo escritorio.
+La de Arch se puede instalar en disco junto a otro sistema: [dual boot](docs/DUAL-BOOT.md).
 
 Para probarla dentro de Fedora, consulta [la guía de la demo](docs/FEDORA-DEMO.md).
 El [diario de trabajo](docs/WORKLOG.md) registra la referencia acordada, los cambios

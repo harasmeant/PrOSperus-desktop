@@ -39,6 +39,11 @@ El escritorio detecta el sistema leyendo `/etc/os-release`
 (`desktop/prosperus/distro.py`): Instalar programas, el asistente de
 controladores y los mensajes de dependencias usan pacman en Arch y dnf en Fedora.
 
+## Instalar en disco (dual boot)
+
+La ISO trae `prosperus-instalar-disco`, que instala PrOSperus en el espacio libre
+de un disco junto al sistema que ya haya. Ver [DUAL-BOOT.md](DUAL-BOOT.md).
+
 ## Pendiente de probar
 
 Falta probar los dos sistemas (Arch y Fedora) en hardware real, y en Arch

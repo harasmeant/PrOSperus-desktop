@@ -70,6 +70,17 @@ Marca: `[x]` funciona · `[!]` falla (anota qué) · `[ ]` sin probar.
 | Programas del sistema siguen tras reiniciar (capa del sistema) | [ ] | [ ] | [ ] |
 | Grabar una ISO nueva no borra la carpeta personal | [ ] | [ ] | [ ] |
 
+## 6. Instalación en disco (dual boot, solo Arch, [DUAL-BOOT.md](DUAL-BOOT.md))
+
+| Prueba | Arch VM | Arch real |
+|---|---|---|
+| `--simular` muestra el plan sin escribir nada | [ ] | [ ] |
+| Instala en el espacio libre sin tocar las particiones existentes | [x] 04-11 | [ ] |
+| El sistema que arrancaba por defecto sigue arrancando igual | — | [ ] |
+| PrOSperus arranca desde el menú del firmware (F9) | [!] OVMF ignora entradas HD() cortas; se arranca su UKI | [ ] |
+| El sistema instalado llega al escritorio | [x] 04-11 | [ ] |
+| sudo pide la contraseña elegida | [ ] | [ ] |
+
 ## Registro
 
 Anota aquí cada sesión de pruebas: fecha, equipo, ISO (SHA-256 corto) y fallos.
@@ -80,3 +91,6 @@ Anota aquí cada sesión de pruebas: fecha, equipo, ISO (SHA-256 corto) y fallos
   escritorio, Aplicaciones, consola sin errores de configuración, búsqueda con
   apt y Flathub correctas; sin bucle de wob. Corregido antes: SwayFX 0.5.1
   dejaba un recuadro oscuro sin repintar al abrir Buscar (ahora 0.5.3).
+- 2026-11-04 · QEMU/KVM, disco virtual que imita el del portátil · Arch, instalador a disco
+  (`scripts/test-install-arch.sh`): instala en 40 GiB libres, arranca hasta el escritorio;
+  EFI de «Bazzite», xboot y sistema intactos byte a byte.

@@ -2,6 +2,9 @@
 
 ## 0.4.0-dev — 2026-10-30 · Desarrollo, sin nueva ISO
 
+- 2026-11-04: instalador a disco para dual boot en la ISO de Arch (`prosperus-instalar-disco`,
+  `docs/DUAL-BOOT.md`): solo usa espacio libre, no toca las particiones existentes y deja
+  el sistema por defecto como estaba. Probado en QEMU con `scripts/test-install-arch.sh`.
 - 2026-11-04: ISO Live sobre Debian 13 (`scripts/build-iso-debian.sh`, `docs/DEBIAN.md`),
   con SwayFX compilado en la receta. El escritorio detecta también Debian y usa apt.
 - 2026-11-04: ISO Live sobre Arch Linux (`scripts/build-iso-arch.sh`, `docs/ARCH.md`).

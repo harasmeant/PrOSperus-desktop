@@ -2,7 +2,7 @@
 FROM localhost/prosperus-arch:dev
 # Firmware: Wi-Fi y gráficas habituales para arrancar el USB en equipos reales.
 # El módulo dmsquash-live (SquashFS + overlay) ya viene en el paquete dracut de Arch.
-RUN pacman -S --noconfirm --needed e2fsprogs util-linux device-mapper \
+RUN pacman -S --noconfirm --needed e2fsprogs util-linux device-mapper efibootmgr systemd-ukify \
     linux-firmware-intel linux-firmware-amdgpu linux-firmware-realtek linux-firmware-atheros \
     linux-firmware-broadcom linux-firmware-mediatek \
     && pacman -Scc --noconfirm
@@ -10,6 +10,9 @@ RUN pacman -S --noconfirm --needed e2fsprogs util-linux device-mapper \
 # que la partición PROSPERUS_DATA conserva junto con el inicio de sesión.
 RUN runuser -l prosperus -c 'curl -fsSL https://claude.ai/install.sh | bash' \
     && test -x /home/prosperus/.local/bin/claude
+# Instalador a disco para dual boot: solo usa espacio libre (docs/DUAL-BOOT.md).
+COPY image/arch/prosperus-instalar-disco /usr/bin/prosperus-instalar-disco
+RUN chmod 0755 /usr/bin/prosperus-instalar-disco
 # Versión de la imagen: la capa persistente solo se reutiliza con la misma ISO.
 # pacman no actualiza el núcleo: el arranque usa siempre el de la ISO.
 RUN date -u +%Y%m%d%H%M%S > /usr/share/prosperus/build-id \
