@@ -21,7 +21,8 @@ echo 'XDG_DOWNLOAD_DIR="$HOME/.local/share/prosperus/entrantes"' >> "$dirs.tmp"
 mv "$dirs.tmp" "$dirs"
 export XDG_DOWNLOAD_DIR=$incoming
 # greetd no lee /etc/profile.d: sin esto los programas de Flathub no salen en Aplicaciones.
-export XDG_DATA_DIRS="${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share:/var/lib/flatpak/exports/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+# /usr/share/prosperus/xdg va primero: sus .desktop sustituyen a los del sistema (btop).
+export XDG_DATA_DIRS="/usr/share/prosperus/xdg:${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/exports/share:/var/lib/flatpak/exports/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 # En equipos reales el framebuffer provisional (simpledrm) aparece antes que el
 # driver de la gráfica; si Sway lo toma, la pantalla queda negra al cargar amdgpu/i915.
 # Se espera a las gráficas reales y se usan todas, la de arranque (boot_vga) primero:

@@ -1,0 +1,12 @@
+[Desktop Entry]
+# Sustituye al btop.desktop del sistema (mismo nombre, carpeta antes en XDG_DATA_DIRS):
+# el original abría una consola sin título que tapaba el escritorio y no decía cómo salir.
+Type=Application
+Name=Monitor del sistema
+GenericName=Monitor del sistema
+Comment=Procesador, memoria, discos, red y procesos (btop). Q para salir.
+Keywords=btop;procesos;memoria;cpu;rendimiento;
+Icon=btop
+Exec=prosperus-terminal --title "Monitor del sistema · Q para salir" btop
+Terminal=false
+Categories=System;Monitor;

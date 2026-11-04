@@ -554,3 +554,8 @@ Ideas para más adelante:
   detecta Arch o Fedora (`distro.py`). Comprobada solo en QEMU sin red.
 - **Pendiente:** probar los dos sistemas (Arch y Fedora) en hardware real. Lista de pruebas mínimas en
   `docs/PRUEBAS-MINIMAS.md`, para ir marcando.
+- Primera prueba de la ISO de Debian: las flechas no movían la selección del mapa (el foco se quedaba
+  en el QScrollArea al arrancar) y btop abría una consola sin título ni forma visible de salir. El mapa
+  toma el teclado al mostrarse; btop sale en Aplicaciones como «Monitor del sistema» con el título
+  «Q para salir» (`/usr/share/prosperus/xdg/applications/btop.desktop`, primero en XDG_DATA_DIRS).
+  Intro en Aplicaciones ya no lanza el programa dos veces. Comprobado en QEMU.

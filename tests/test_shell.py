@@ -51,6 +51,14 @@ class ShellTests(unittest.TestCase):
         self.window.search.setText('hipotesis')
         self.assertEqual([node.path.name for node in self.window.surface.nodes], ['Hipótesis.md', 'Plan de trabajo.md'])
 
+    def test_arrows_work_on_the_map_right_after_start(self):
+        # En la ISO de Debian el foco caía en el QScrollArea y las flechas no hacían nada.
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+        self.assertIs(self.window.focusWidget(), self.window.surface)
+        QTest.keyClick(self.window.surface, Qt.Key.Key_Right)
+        self.assertEqual(len(self.window.surface.selection), 1)
+
     def test_kiosk_and_host_power_controls(self):
         self.window.kiosk = True
         self.window.close()

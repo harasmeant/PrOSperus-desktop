@@ -1112,6 +1112,8 @@ class Desktop(QMainWindow):
         self.scene_timer = QTimer(self); self.scene_timer.setInterval(15000)
         self.scene_timer.timeout.connect(self.tick_scene); self.scene_timer.start()
         self.viewport = QScrollArea(); self.viewport.setWidgetResizable(True)
+        # Las barras de desplazamiento no deben quedarse el teclado: las flechas son del mapa.
+        self.viewport.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.viewport.setWidget(self.background); self.setCentralWidget(self.viewport)
         layout = QVBoxLayout(self.background)
         layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
@@ -1167,6 +1169,7 @@ class Desktop(QMainWindow):
         self.dock_scroll = QScrollArea(); self.dock_scroll.setWidgetResizable(True)
         self.dock_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.dock_scroll.setFixedHeight(62)
+        self.dock_scroll.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.dock_content = QWidget(); self.dock = QHBoxLayout(self.dock_content)
         self.dock.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         self.dock.setContentsMargins(0, 0, 0, 7); self.dock.setSpacing(8)
@@ -1228,6 +1231,12 @@ class Desktop(QMainWindow):
             self.drawer.setGeometry(0, 0, min(round(self.drawer.panel_width() * self.accessibility.text_scale / 100), self.width() - 100), self.background.height())
             self.edge.setGeometry(0, self.background.height() // 2 - 45, 25, 90)
             self.drawer.raise_()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Al arrancar nada tenía el foco y las flechas no movían la selección del mapa.
+        if self.focusWidget() is None:
+            self.surface.setFocus()
 
     def shortcut(self, key, callback):
         item = QShortcut(QKeySequence(key), self); item.activated.connect(callback); self.shortcuts.append(item)

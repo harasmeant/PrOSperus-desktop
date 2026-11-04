@@ -389,6 +389,15 @@ class ApplicationBrowser(QDialog):
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(app['path'])))
             self.accept()
 
+    # Intro en la cuadrícula ya abre por itemActivated; el diálogo además pulsaba un botón
+    # por defecto y el segundo intento salía como «operación en curso».
+    def keyPressEvent(self, event):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if self.focusWidget() is not self.list:
+                self.launch()
+            return
+        super().keyPressEvent(event)
+
     # Enfoca lista de favoritos con flecha abajo
     def eventFilter(self, obj, event):
         if obj is self.search and event.type() == QEvent.KeyPress and event.key() == Qt.Key_Down:
