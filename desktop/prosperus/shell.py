@@ -392,6 +392,14 @@ class MapNode(QPushButton):
         if open_path:
             self.surface.open_node(self)
 
+    # Tab y las flechas comparten una sola selección: llegar con Tab también selecciona.
+    # Con ratón no, para no deshacer la selección múltiple con Ctrl+clic.
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        if (not self.center and self.surface.selection != [self.path]
+                and event.reason() in (Qt.FocusReason.TabFocusReason, Qt.FocusReason.BacktabFocusReason)):
+            self.surface.select(self.path)
+
     # Procesa teclas para navegar y seleccionar nodos
     def keyPressEvent(self, event):
         if not self.center and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):

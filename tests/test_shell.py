@@ -59,6 +59,21 @@ class ShellTests(unittest.TestCase):
         QTest.keyClick(self.window.surface, Qt.Key.Key_Right)
         self.assertEqual(len(self.window.surface.selection), 1)
 
+    def test_tab_and_arrows_share_one_selection(self):
+        # En el portátil, Tab movía el foco a otra tarjeta sin mover la selección
+        # de las flechas: salían dos tarjetas resaltadas a la vez.
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+        surface = self.window.surface
+        QTest.keyClick(surface, Qt.Key.Key_Right)
+        for _ in range(3):
+            QTest.keyClick(self.window.focusWidget(), Qt.Key.Key_Tab)
+            focused = self.window.focusWidget()
+            highlighted = [n for n in surface.nodes if n.path in surface.selection or n.hasFocus()]
+            if focused in surface.nodes:
+                self.assertEqual(surface.selection, [focused.path])
+                self.assertEqual(highlighted, [focused])
+
     def test_kiosk_and_host_power_controls(self):
         self.window.kiosk = True
         self.window.close()
