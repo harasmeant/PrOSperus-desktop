@@ -40,7 +40,7 @@ Marca: `[x]` funciona · `[!]` falla (anota qué) · `[ ]` sin probar.
 | Crear proyecto, crear nota, escribir, guardar | [x] | [ ] |
 | Buscar una nota por una palabra de su contenido | [x] | [ ] |
 | Copiar/pegar notas y carpetas | [ ] | [ ] |
-| Aplicaciones (Ctrl+Espacio): lista y abre programas | [x] | [x] 04-11 (VM) |
+| Aplicaciones (Ctrl+Espacio): lista y abre programas | [ ] | [x] 04-11 (VM) |
 | Consola (Foot) abre en la carpeta del proyecto | [ ] | [ ] |
 | Ventanas: Fibonacci, mover, minimizar, cerrar | [ ] | [ ] |
 | Captura de pantalla y portapapeles | [ ] | [ ] |
