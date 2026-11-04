@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QLi
 SAFE = re.compile(r'^[\w .+-]+$')
 
 
+# Busca programas en Fedora y Flathub para instalar
 def search_commands(text):
     # Ejecuta `dnf5 repoquery` para Fedora o `flatpak search` para Flathub según el texto ingresado.
     # Retorna una lista de tuplas (source, argv) para cada fuente válida.
@@ -29,6 +30,7 @@ def search_commands(text):
             ('flathub', ['flatpak', 'search', '--columns=application,name,description', term])]
 
 
+# Extrae paquetes Fedora únicos de repoquery
 def parse_dnf(output):
     # Analiza la salida tabulado de `repoquery` de Fedora en una lista de diccionarios de paquetes.
     found, seen = [], set()
@@ -40,6 +42,7 @@ def parse_dnf(output):
     return found
 
 
+# Filtra aplicaciones Flathub por ID con punto
 def parse_flatpak(output):
     # Analiza la salida tabulado de `flatpak search` de Flathub.
     # El ID del flatpak (columna 0) debe contener un punto para filtrar aplicaciones internas o de prueba.
@@ -52,6 +55,7 @@ def parse_flatpak(output):
     return found
 
 
+# Genera comandos de instalación para Fedora, Flathub o archivos .rpm/.flatpakref
 def install_command(item):
     # Construye la lista de argumentos para la instalación según la fuente ('fedora', 'flathub') o la extensión del archivo local.
     if item['source'] == 'fedora':
@@ -83,6 +87,7 @@ def installed_names():
             names(['rpm', '-qa', '--queryformat', '%{NAME}\n']))
 
 
+# Define estilos visuales de la interfaz
 def style(c):
     # Tono del proyecto que se ve en el escritorio (theme_state), no siempre verde.
     return c.css() + f'''
@@ -130,6 +135,7 @@ class Installer(QWidget):
             self.show_recommended()
         self.search.setFocus()
 
+    # Mostrar ítems con origen y resumen
     def show_items(self, items):
         self.showing_recommended = False
         # Limpia la lista y muestra los ítems; asigna prefijos visuales (`[Fedora]`, `[Flathub]`, `[Archivo]`) según el origen.
@@ -141,6 +147,7 @@ class Installer(QWidget):
         if self.list.count():
             self.list.setCurrentRow(0)
 
+    # Muestra programas recomendados con estado de instalación
     def show_recommended(self):
         # Catálogo por categorías; las que ya están instaladas llevan ✓.
         flatpaks, packages = installed_names()
@@ -161,6 +168,7 @@ class Installer(QWidget):
         self.list.setCurrentRow(1)
         self.log.setPlainText('Elige un programa y pulsa Instalar (o doble clic). ✓ = ya instalado.')
 
+    # Buscar programas en Fedora y Flathub
     def run_search(self):
         # Obtiene los comandos válidos y ejecuta ambos procesos en paralelo (Fedora y Flathub).
         if not self.search.text().strip():
@@ -175,12 +183,14 @@ class Installer(QWidget):
             process.errorOccurred.connect(lambda error, p=process: self.failed(p, error))
             process.start(argv[0], argv[1:])
 
+    # Avisa si un comando de búsqueda no llega a arrancar
     def failed(self, process, error):
         # Muestra un error si el comando externo no puede iniciarse (ej. ejecutable no encontrado).
         if error == QProcess.ProcessError.FailedToStart:
             self.log.appendPlainText('No está disponible: ' + process.program())
             self.search_done(process, None)
 
+    # Mostrar programas encontrados en Fedora y Flathub
     def search_done(self, process, source):
         # Procesa la salida finalizada de un proceso de búsqueda, la guarda y actualiza la lista de la interfaz.
         if process not in self.searches:
@@ -197,6 +207,7 @@ class Installer(QWidget):
         if not self.searches:
             self.log.appendPlainText(f'{len(items)} resultados.')
 
+    # Inicia instalación de programas desde repositorios o archivos locales
     def install(self):
         # Inicia el proceso de instalación para el ítem seleccionado si no hay otra instalación en curso.
         current = self.list.currentItem()
@@ -217,6 +228,7 @@ class Installer(QWidget):
         self.pending = after_commands(item)
         self.run_job(argv)
 
+    # Lanza un paso (instalar o activar un servicio) y vuelca su salida al registro
     def run_job(self, argv):
         self.job = QProcess(self); self.job.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self.job.readyReadStandardOutput.connect(lambda: self.log.appendPlainText(bytes(self.job.readAllStandardOutput()).decode(errors='replace').rstrip()))
@@ -224,6 +236,7 @@ class Installer(QWidget):
         self.install_button.setEnabled(False)
         self.job.start(argv[0], argv[1:])
 
+    # Procesa resultados de instalación y actualiza interfaz
     def install_done(self, code, status):
         # Actualiza el registro de actividad, libera el estado del trabajo y cierra la aplicación si la ventana está oculta.
         ok = code == 0 and status == QProcess.ExitStatus.NormalExit
@@ -240,6 +253,7 @@ class Installer(QWidget):
         if not self.isVisible():
             QApplication.quit()
 
+    # Evitar cerrar ventana durante instalación
     def closeEvent(self, event):
         # Cerrar durante una instalación solo oculta la ventana: la instalación sigue en segundo plano.
         if self.job is not None:
@@ -247,6 +261,7 @@ class Installer(QWidget):
         super().closeEvent(event)
 
 
+# Punto de entrada: abre la ventana del instalador
 def main():
     app = QApplication(sys.argv)
     app.setDesktopFileName('org.prosperus.Installer')

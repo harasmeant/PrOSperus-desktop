@@ -119,6 +119,7 @@ class WallpaperPicker(QWidget):
             QMessageBox.warning(self, 'Error', str(e))
 
 
+# Punto de entrada del selector de fondos
 def main():
     app = QApplication(sys.argv)
     # Establecer nombre de aplicación para el gestor de ventanas del escritorio
