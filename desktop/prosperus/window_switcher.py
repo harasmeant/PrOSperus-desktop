@@ -19,6 +19,8 @@ class SwitcherTile(QPushButton):
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if self.item['hidden']:
+            p.setOpacity(0.5)  # minimizada: apagada a la mitad, sin texto que lo diga
         p.setBrush(QColor(self.colors.hover if self.current else self.colors.card))
         p.setPen(QPen(QColor(self.colors.accent if self.current else self.colors.border), 3 if self.current else 1))
         p.drawRoundedRect(QRectF(self.rect()).adjusted(2, 2, -2, -2), 12, 12)
@@ -27,11 +29,6 @@ class SwitcherTile(QPushButton):
         p.setPen(QColor(self.colors.text))
         name = p.fontMetrics().elidedText(self.item['name'], Qt.TextElideMode.ElideRight, self.width() - 20)
         p.drawText(QRectF(10, 14, self.width()-20, self.height()-44), Qt.AlignmentFlag.AlignCenter, name)
-        if self.item['hidden']:
-            font = QFont('DejaVu Sans', 8)
-            p.setFont(font)
-            p.setPen(QColor(self.colors.muted))
-            p.drawText(QRectF(10, self.height()-30, self.width()-20, 20), Qt.AlignmentFlag.AlignCenter, 'minimizada')
 
 
 class WindowSwitcher(QDialog):
@@ -90,7 +87,7 @@ class WindowSwitcher(QDialog):
             tile.current = (i == self.index)
             tile.update()
         item = self.items[self.index]
-        self.caption.setText(item['name'] + (' · minimizada' if item['hidden'] else ''))
+        self.caption.setText(item['name'])
 
     def check_alt(self):
         if self.isVisible() and not QGuiApplication.queryKeyboardModifiers() & Qt.KeyboardModifier.AltModifier:

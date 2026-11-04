@@ -604,7 +604,7 @@ Ideas para más adelante:
 ## 2026-11-04 — Alt+Tab con las ventanas a la vista, Tab dentro de cada ventana y botones para los atajos
 
 - Alt+Tab / Alt+Mayús+Tab (Sway: `nop prosperus-switch`): el escritorio enseña las aplicaciones y notas
-  abiertas del proyecto, minimizadas incluidas, con la última usada primero; al soltar Alt abre la elegida
+  abiertas del proyecto, minimizadas incluidas (apagadas a la mitad), con la última usada primero; al soltar Alt abre la elegida
   (también Intro o clic; Esc cancela). Una minimizada vuelve a su sitio. `window_switcher.py`.
   Super+Tab sigue pasando de proyecto.
 - Tab dentro de una nota, del tarjetero o del panel Sistema recorre solo sus controles y da la vuelta
