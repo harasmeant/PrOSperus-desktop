@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEd
                                QSizePolicy, QVBoxLayout, QWidget)
 
 from . import motion
+from .focus_trap import cycle_focus
 from .appearance import draw_symbol, paint_wallpaper, palette_for, symbol_icon, wallpaper_for
 
 MIN_CARD = 200  # ancho mínimo de cada tarjeta de la cuadrícula
@@ -423,6 +424,10 @@ class ProjectDrawer(QFrame):
         self.refresh()
 
     # Navegar entre proyectos filtrados
+    def focusNextPrevChild(self, next):
+        # El tarjetero flota sobre el mapa: Tab recorre sus controles y no los del escritorio.
+        return cycle_focus(self, next) or super().focusNextPrevChild(next)
+
     def step(self, direction):
         if self.filtered:
             self.index = (self.index + direction) % len(self.filtered)

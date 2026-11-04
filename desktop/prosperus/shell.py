@@ -3,6 +3,7 @@
 import argparse
 import itertools
 import os
+import time
 import math
 from pathlib import Path
 import subprocess
@@ -42,6 +43,8 @@ from .controls import ControlsDialog, SessionControls
 from .layout_settings import LayoutDialog
 from .accessibility import Accessibility, AccessibilityDialog
 from .hardware import HardwareDialog
+from .focus_trap import cycle_focus, focus_first
+from .window_switcher import WindowSwitcher
 
 STYLE = Palette().css()
 
@@ -255,6 +258,10 @@ class NotePanel(QFrame):
             return False
 
     # Maneja cierre con cambios no guardados
+    def focusNextPrevChild(self, next):
+        # La nota es un trozo del escritorio, no una ventana: sin esto Tab salta al mapa.
+        return cycle_focus(self, next) or super().focusNextPrevChild(next)
+
     def can_close(self):
         if not self.dirty:
             return True
@@ -1121,6 +1128,13 @@ class Desktop(QMainWindow):
         self.windows.windows_changed.connect(self.set_app_windows)
         self.windows.project_step.connect(self.step_project)
         self.windows.search_requested.connect(self.toggle_applications)
+        self.recent = {}  # ('app', id) o ('note', ruta) → última vez que tuvo el foco
+        self.switcher = WindowSwitcher(self)
+        self.switcher.chosen.connect(self.switch_to)
+        self.windows.switch_step.connect(self.switch_windows)
+        self.windows.focused.connect(lambda con_id: self.touch(('app', con_id)))
+        self.windows.note_command.connect(self.note_command)
+        QApplication.instance().focusChanged.connect(self.note_focused)
         # Arrastrar el hueco entre aplicaciones las deforma; doble clic en el fondo las minimiza.
         from .window_gaps import GapControl
         self.gaps = GapControl(self)
@@ -1178,12 +1192,16 @@ class Desktop(QMainWindow):
         quick_action = QWidgetAction(self.quick.menu); quick_action.setDefaultWidget(self.quick_panel)
         self.quick.menu.addAction(quick_action)
         self.quick.menu.aboutToShow.connect(self.quick_panel.refresh)
+        # Con teclado, el foco entra en el panel (si no, Tab recorre el menú y no sus controles).
+        self.quick.menu.aboutToShow.connect(lambda: QTimer.singleShot(0, lambda: focus_first(self.quick_panel)))
         self.quick.menu.setStyleSheet(f'QMenu {{ background: {self.colors.panel}; border: 1px solid {self.colors.border}; padding: 4px; }}')
         heading.addWidget(self.quick, 0, Qt.AlignmentFlag.AlignTop)
         layout.addLayout(heading)
         self.surface = Surface(self); layout.addWidget(self.surface, 1)
         page_row = QHBoxLayout()
         self.up = button('↑ Subir', self.go_up); page_row.addWidget(self.up)
+        for text, step, tip in (('← Atrás', -1, 'Carpeta anterior del historial · Alt+←'), ('Adelante →', 1, 'Carpeta siguiente del historial · Alt+→')):
+            item = button(text, lambda checked=False, d=step: self.history_step(d)); item.setToolTip(tip); page_row.addWidget(item)
         page_row.addStretch()
         self.previous = button('‹ Anterior', lambda: self.change_page(-1))
         self.next = button('Siguiente ›', lambda: self.change_page(1))
@@ -1501,6 +1519,42 @@ class Desktop(QMainWindow):
         if self.windows.mode == 'fibonacci':
             self.arrange_notes()
         self.update_dock()
+
+    def touch(self, key):
+        self.recent[key] = time.monotonic()
+
+    def note_focused(self, old, new):
+        while new is not None and not isinstance(new, NotePanel):
+            new = new.parentWidget()
+        if new is not None:
+            self.touch(('note', new.path))
+
+    def focused_note(self):
+        widget = QApplication.focusWidget()
+        while widget is not None and not isinstance(widget, NotePanel):
+            widget = widget.parentWidget()
+        return widget
+
+    def note_command(self, action):
+        """Super+↓ / Super+↑ cuando el escritorio está delante: actúan sobre la nota enfocada."""
+        panel = self.focused_note() if self.isActiveWindow() else None
+        if panel is not None:
+            panel.minimize() if action == 'minimize' else panel.toggle_maximized()
+
+    def switch_windows(self, direction):
+        """Alt+Tab: aplicaciones y notas del proyecto, minimizadas incluidas; la última usada primero."""
+        items = [{'kind': 'app', 'id': w['id'], 'name': w['name'], 'hidden': w['hidden']} for w in self.app_windows]
+        items += [{'kind': 'note', 'path': p.path, 'name': p.path.stem, 'hidden': p.minimized}
+                  for p in self.panels.values() if p.project == self.folder]
+        key = lambda item: ('app', item['id']) if item['kind'] == 'app' else ('note', item['path'])
+        items.sort(key=lambda item: -self.recent.get(key(item), 0))
+        self.switcher.step(items, direction, self.colors)
+
+    def switch_to(self, item):
+        if item['kind'] == 'app':
+            self.windows.focus(item['id'], item['hidden'])
+        else:
+            self.windows.focus_desktop(); self.open_note(item['path'])
 
     def set_app_windows(self, windows):
         if windows != self.app_windows:

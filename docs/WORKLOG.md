@@ -600,3 +600,21 @@ Ideas para más adelante:
 - Nueva nota/carpeta: `QComboBox.findData` no encontraba objetos `Path` y proponía siempre la raíz.
 - «Tus proyectos» → Inicio (raíz) y Proyectos (tarjetero). Versión 0.5.0. 205 pruebas correctas.
 - `output_of`/`other_outputs` los escribió qwen2.5-coder:7b; `output_of` solo miraba un nivel y se corrigió.
+
+## 2026-11-04 — Alt+Tab con las ventanas a la vista, Tab dentro de cada ventana y botones para los atajos
+
+- Alt+Tab / Alt+Mayús+Tab (Sway: `nop prosperus-switch`): el escritorio enseña las aplicaciones y notas
+  abiertas del proyecto, minimizadas incluidas, con la última usada primero; al soltar Alt abre la elegida
+  (también Intro o clic; Esc cancela). Una minimizada vuelve a su sitio. `window_switcher.py`.
+  Super+Tab sigue pasando de proyecto.
+- Tab dentro de una nota, del tarjetero o del panel Sistema recorre solo sus controles y da la vuelta
+  (`focus_trap.py`); antes saltaba a los nodos del mapa, o a las entradas del menú en el panel Sistema.
+- Solo con teclado → ahora también con ratón: fila «Sesión» en Sistema (Bloquear, Captura, Zona,
+  Portapapeles, Escritorio) y botones «← Atrás» / «Adelante →» del historial junto a «↑ Subir».
+- Solo con ratón → ahora también con teclado: Super+↓ / Super+↑ minimizan y amplían la nota enfocada
+  (antes solo los puntos de la nota).
+- Sin cambiar: reordenar nodos del mapa arrastrando y arrastrar archivos al mapa siguen siendo solo de
+  ratón (con teclado hay Ctrl+C/V); los puntos de ventana no son tabulables porque tienen atajo.
+- Base de `focus_trap.py` y `window_switcher.py` escrita por qwen2.5-coder:7b (local); corregidos un
+  import que faltaba, el recorte del nombre y Escape. Comprobado sin pantalla con el escritorio real;
+  sin probar en Sway real: falta ver que la ventana de Alt+Tab recibe la suelta de Alt. 207 pruebas correctas.

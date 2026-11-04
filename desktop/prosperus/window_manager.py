@@ -84,6 +84,12 @@ class WindowManager(QObject):
     project_step = Signal(int)
     # Super pulsada y soltada sola (Sway: bindsym --release Super_L).
     search_requested = Signal()
+    # Alt+Tab / Alt+Mayús+Tab (nop prosperus-switch next|prev).
+    switch_step = Signal(int)
+    # Aplicación que acaba de recibir el foco: orden de «última usada» en Alt+Tab.
+    focused = Signal(int)
+    # Super+↓ / Super+↑ con el escritorio delante: minimizar / ampliar la nota enfocada.
+    note_command = Signal(str)
 
     # Gestiona ventanas flotantes y organiza aplicaciones con IPC de Sway
     def __init__(self, parent=None, options_provider=None):
@@ -196,6 +202,12 @@ class WindowManager(QObject):
                 if not self.just_moved():
                     self.search_requested.emit()
                 return
+            elif cmd.endswith('prosperus-switch next') or cmd.endswith('prosperus-switch prev'):
+                self.switch_step.emit(1 if cmd.endswith('next') else -1)
+                return
+            elif cmd.endswith('prosperus-windows minimize') or cmd.endswith('prosperus-windows maximize'):
+                self.note_command.emit(cmd.rsplit(' ', 1)[1])
+                return
         change = e.get('change')
         c = e.get('container', {})
         if c.get('app_id') in (DESKTOP_ID, HANDLE_ID):
@@ -213,6 +225,8 @@ class WindowManager(QObject):
             self.refresh()
         elif change in ('title', 'move'):
             self.refresh()
+        elif change == 'focus':
+            self.focused.emit(c['id'])
 
     # Corrige tamaños iniciales de ventanas recién creadas
     def place(self, con_id):
@@ -347,6 +361,14 @@ class WindowManager(QObject):
         except (OSError, ValueError) as e:
             self.message.emit(f'No se pudo mostrar la aplicación: {e}')
         self.refresh()
+
+    def focus_desktop(self):
+        """Devuelve el foco al escritorio (para abrir una nota desde Alt+Tab)."""
+        if self.available:
+            try:
+                request(0, f'[app_id="{DESKTOP_ID}" title="^PrOSperus desktop$"] focus')
+            except (OSError, ValueError):
+                pass
 
     def minimize(self, con_id):
         """Sway no implementa minimizar: se lleva la ventana al espacio de ocultas del proyecto."""

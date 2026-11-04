@@ -44,6 +44,8 @@ Marca: `[x]` funciona · `[!]` falla (anota qué) · `[ ]` sin probar.
 | Aplicaciones (Ctrl+Espacio): lista y abre programas | [ ] | [x] 04-11 (VM) | [x] 04-11 (VM) |
 | Consola (Foot) abre en la carpeta del proyecto | [ ] | [ ] | [x] 04-11 (VM) |
 | Ventanas: Fibonacci, mover, minimizar, cerrar | [ ] | [ ] | [ ] |
+| Alt+Tab: enseña apps y notas (minimizadas incluidas) y abre la elegida al soltar Alt | [ ] | [ ] | [ ] |
+| Tab dentro de una nota, del tarjetero y del panel Sistema no sale al mapa | [ ] | [ ] | [ ] |
 | Captura de pantalla y portapapeles | [ ] | [ ] | [ ] |
 | Bloqueo de pantalla (Super+L) y desbloqueo | [ ] | [ ] | [ ] |
 | Fondo animado (Sistema › Fondo) con GPU | [ ] | [ ] | [ ] |

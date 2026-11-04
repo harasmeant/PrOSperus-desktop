@@ -16,7 +16,7 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 
 ## Navegación y ventanas
 - **Esc / Alt+↑ / Retroceso:** volver a la carpeta anterior (Retroceso con el mapa o la lista enfocados; Esc cierra antes la nota enfocada).
-- **Alt+← / Alt+→:** historial del mapa. **Ctrl+Inicio:** ir a Inicio.
+- **Alt+← / Alt+→:** historial del mapa (también los botones «← Atrás» y «Adelante →»). **Ctrl+Inicio:** ir a Inicio.
 - **Ctrl+B:** tarjetero. **Ctrl+1…9:** abrir un proyecto por su posición.
 - **Ctrl+F / Ctrl+L:** buscar notas (en el explorador, buscar en su carpeta).
 - **Ctrl+O:** abrir la primera nota del proyecto.
@@ -25,6 +25,8 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 - **Ctrl+Tab / Ctrl+Mayús+Tab:** siguiente/anterior nota abierta del proyecto.
 - **Flechas:** en el mapa, seleccionar la carpeta o nota más cercana en esa dirección. **Intro** abre. **Tab / Mayús+Tab:** siguiente/anterior control. **Espacio** activa el botón enfocado.
 - **Super+Tab / Super+Mayús+Tab:** pasar al proyecto siguiente/anterior, también con una aplicación delante.
+- **Alt+Tab / Alt+Mayús+Tab:** cambiar de ventana. Enseña las aplicaciones y notas abiertas del proyecto, minimizadas incluidas, con la última usada primero; al soltar Alt se abre la elegida (también Intro o clic; Esc cancela).
+- **Tab** dentro de una nota, del tarjetero o del panel Sistema recorre solo sus controles.
 - **Mayús+F10 / Menú:** menú contextual del mapa o de la lista de archivos.
 - **F1:** esta ayuda. **F5 / Ctrl+R:** actualizar. **F11:** pantalla completa.
 - **Alt+F4:** cerrar la ventana, con confirmación si hay notas sin guardar.
@@ -33,9 +35,10 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 ## Aplicaciones y controles
 - **Windows / Super:** abrir o cerrar Aplicaciones, cuando el sistema entrega esa tecla a PrOSperus.
 - **Ctrl+Espacio / Alt+F2:** Aplicaciones (Alt+F2 puede estar reservado por el sistema).
-- **Super+E:** explorador. **Super+D:** ocultar/restaurar notas y aplicaciones del proyecto. **Super+↑:** ampliar o restaurar la aplicación. **Super+↓ / Super+M:** minimizarla. **Super+F:** pantalla completa de la aplicación. **Alt+F4 / Super+Q:** cerrar la aplicación. **Super+Esc:** volver al escritorio. **Super+I:** controles.
+- **Super+E:** explorador. **Super+D:** ocultar/restaurar notas y aplicaciones del proyecto. **Super+↑:** ampliar o restaurar la aplicación (o la nota enfocada). **Super+↓ / Super+M:** minimizarla (o la nota enfocada). **Super+F:** pantalla completa de la aplicación. **Alt+F4 / Super+Q:** cerrar la aplicación. **Super+Esc:** volver al escritorio. **Super+I:** controles.
 - **Mover y redimensionar aplicaciones:** arrastra su barra de título, o **Super+arrastrar** (mover) y **Super+clic derecho+arrastrar** (tamaño) desde cualquier punto. **Super+Alt+flechas:** ensanchar/estrechar y alargar/acortar la ventana enfocada.
 - **Hueco entre aplicaciones:** arrastrarlo mueve ese borde en todas las ventanas que lo comparten (como un separador). **Doble clic en el fondo del escritorio:** minimiza las aplicaciones del proyecto (Super+D las devuelve). Al abrir o cerrar una aplicación, Fibonacci vuelve a repartirlas.
+- **Sistema → Sesión:** Bloquear (Super+L), Captura (Impr Pant), Zona (Mayús+Impr Pant), Portapapeles (Super+V) y Escritorio (Super+D) con el ratón.
 - Las teclas de volumen, brillo y reproducción se atienden en la sesión propia PrOSperus cuando están disponibles.
 
 ## Texto y accesibilidad

@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QComboBox, QFrame, QVBoxLayout, QHBoxLayout, QLab
 from PySide6.QtCore import QProcess, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter
 from .branches import flourish
+from .focus_trap import cycle_focus
 
 def run(argv):
     """Ejecuta un comando sin shell y captura la salida (None si falla)."""
@@ -224,7 +225,21 @@ class QuickSettings(QFrame):
         self.section('Fondo')
         self.box.addLayout(self.living_row)
 
-        # 7. Footer
+        # 7. Sesión: lo que antes solo tenía atajo de teclado, también con el ratón.
+        if getattr(shell, 'system_session', False):
+            self.section('Sesión')
+            self.session_row = QHBoxLayout()
+            for text, tip, argv in (('Bloquear', 'Super+L', ['prosperus-bloquear']),
+                                    ('Captura', 'Impr Pant · Mayús+Impr Pant: zona · Super+Mayús+S: zona y dibujar', ['prosperus-captura']),
+                                    ('Zona', 'Captura de una zona · Mayús+Impr Pant', ['prosperus-captura', 'zona']),
+                                    ('Portapapeles', 'Historial del portapapeles · Super+V', ['prosperus-portapapeles']),
+                                    ('Escritorio', 'Ocultar o devolver las ventanas del proyecto · Super+D', None)):
+                item = QPushButton(text); item.setToolTip(tip)
+                item.clicked.connect(lambda checked=False, a=argv: self.session_action(a))
+                self.session_row.addWidget(item)
+            self.box.addLayout(self.session_row)
+
+        # 8. Footer
         self.foot_row = QHBoxLayout()
         self.btn_ctrl = QPushButton("Controles")
         self.btn_ctrl.clicked.connect(lambda: self.shell.open_controls())
@@ -234,6 +249,15 @@ class QuickSettings(QFrame):
         self.foot_row.addWidget(self.btn_ctrl)
         self.foot_row.addWidget(self.btn_help)
         self.box.addLayout(self.foot_row)
+
+    def session_action(self, argv):
+        # Primero se cierra el menú: si no, saldría en la captura o tapando el bloqueo.
+        self.shell.quick.menu.close()
+        QTimer.singleShot(300, lambda: self.shell.toggle_desktop() if argv is None else QProcess.startDetached(argv[0], argv[1:]))
+
+    def focusNextPrevChild(self, next):
+        # Va dentro de un menú: sin esto Tab salta entre las entradas del menú y no entre los controles.
+        return cycle_focus(self, next) or super().focusNextPrevChild(next)
 
     def restyle(self, colors):
         """Colores del proyecto actual: el escritorio lo llama cada vez que cambia el tema o el fondo."""
