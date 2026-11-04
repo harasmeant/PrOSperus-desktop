@@ -17,6 +17,7 @@ Fibonacci, columnas y principal centrada, perfiles estándar, 21:9 y 32:9. Notas
    - **Pendiente (04-11-2026, prueba en el portátil):** las ventanas propias, como Buscar,
      que se abre al pulsar Super, no tienen botones de cerrar ni de minimizar; solo se cierran
      pulsando Super otra vez. Revisar los botones de todas las pantallas del escritorio.
+     Buscar ya tiene ✕ (y Esc); falta revisar el resto de diálogos.
 3. Asociar espacios y accesos a aplicaciones con proyectos.
 4. Multipantalla, desconexiones y recuperación; resolución/escala con confirmación y reversión.
 5. Integrar la sesión en una nueva ISO y comprobar el flujo completo.
