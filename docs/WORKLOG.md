@@ -547,3 +547,10 @@ Ideas para más adelante:
   Se para al ocultarse. Probado en Sway sin pantalla (grim): tarjetas y zona oscura idénticas entre fotogramas.
 - Sistema › Fondo › «Fondo animado» (apagado por defecto; se recuerda). `PROSPERUS_NO_LIVING=1` lo impide.
 - El panel Sistema y su menú se reestilan en cada cambio de proyecto/tono (antes se quedaban en verde).
+
+## 2026-11-04 — Versión sobre Arch Linux
+
+- ISO Live sobre Arch (`image/arch/`, `scripts/build-iso-arch.sh`, `docs/ARCH.md`); el escritorio
+  detecta Arch o Fedora (`distro.py`). Comprobada solo en QEMU sin red.
+- **Pendiente:** probar los dos sistemas (Arch y Fedora) en hardware real. Lista de pruebas mínimas en
+  `docs/PRUEBAS-MINIMAS.md`, para ir marcando.

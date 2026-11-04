@@ -39,6 +39,12 @@ El escritorio detecta el sistema leyendo `/etc/os-release`
 (`desktop/prosperus/distro.py`): Instalar programas, el asistente de
 controladores y los mensajes de dependencias usan pacman en Arch y dnf en Fedora.
 
+## Pendiente de probar
+
+Falta probar los dos sistemas (Arch y Fedora) en hardware real, y en Arch
+también la instalación de paquetes con red, el controlador NVIDIA y la
+persistencia en USB. La lista completa está en [PRUEBAS-MINIMAS.md](PRUEBAS-MINIMAS.md).
+
 ## Límites
 
 - Los paquetes del AUR y de Arch no están fijados por versión: cada construcción

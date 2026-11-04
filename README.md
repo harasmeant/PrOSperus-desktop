@@ -68,6 +68,7 @@ Consulta la [guía de instalación](docs/INSTALL.md). El complemento no necesita
 - [`demo/`](demo/): pequeñas carpetas y notas de ejemplo.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): alcance de la futura distro y siguientes hitos.
 - [`docs/VALIDATION.md`](docs/VALIDATION.md): comprobaciones y límites de la evidencia.
+- [`docs/PRUEBAS-MINIMAS.md`](docs/PRUEBAS-MINIMAS.md): lista de pruebas pendientes por sistema.
 - [`docs/BASELINE.md`](docs/BASELINE.md): procedencia del estado 0.0 y ajustes para publicarlo.
 - [`CHANGELOG.md`](CHANGELOG.md): historial de versiones.
 
