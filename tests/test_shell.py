@@ -74,6 +74,28 @@ class ShellTests(unittest.TestCase):
                 self.assertEqual(surface.selection, [focused.path])
                 self.assertEqual(highlighted, [focused])
 
+    def test_escape_goes_back_one_folder(self):
+        from PySide6.QtCore import Qt
+        from PySide6.QtTest import QTest
+        folder = next(p for p in self.root.iterdir() if p.is_dir() and any(c.is_dir() for c in p.iterdir()))
+        self.window.navigate(folder)
+        QTest.keyClick(self.window, Qt.Key.Key_Escape)
+        self.assertEqual(self.window.folder, self.root)
+
+    def test_only_one_card_highlighted_after_hover_and_arrows(self):
+        from PySide6.QtCore import QEvent, QPointF, Qt
+        from PySide6.QtGui import QEnterEvent
+        from PySide6.QtTest import QTest
+        surface = self.window.surface
+        first, second = surface.nodes[0], surface.nodes[1]
+        QTest.keyClick(surface, Qt.Key.Key_Right)
+        selected = surface.selection[0]
+        other = second if first.path == selected else first
+        QApplication.sendEvent(other, QEnterEvent(QPointF(5, 5), QPointF(5, 5), QPointF(5, 5)))
+        self.app.processEvents()
+        self.assertEqual(surface.selection, [other.path])
+        self.assertTrue(other.hasFocus())
+
     def test_kiosk_and_host_power_controls(self):
         self.window.kiosk = True
         self.window.close()

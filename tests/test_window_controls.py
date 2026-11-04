@@ -99,6 +99,26 @@ if __name__ == '__main__':
     unittest.main()
 
 
+class MaximizeShortcutTests(unittest.TestCase):
+    def test_super_up_toggles_like_the_pill(self):
+        import tempfile
+        from unittest import mock
+        app = con(7, 'foot', (100, 50, 800, 600), focused=True)
+        sent = []
+        def fake(kind, payload=''):
+            if kind == 4:
+                return tree(ws('1', app))
+            sent.append(payload); return [{'success': True}]
+        with tempfile.TemporaryDirectory() as run, mock.patch.dict(os.environ, {'XDG_RUNTIME_DIR': run}), \
+                mock.patch.object(wh, 'request', side_effect=fake):
+            self.assertTrue(wh.toggle_maximized())
+            self.assertIn(7, wh.load_saved())
+            self.assertTrue(wh.toggle_maximized())
+            self.assertEqual(wh.load_saved(), {})
+        self.assertIn('width 1920 px height 1080 px', sent[0])
+        self.assertIn('width 800 px height 600 px', sent[1])
+
+
 class WindowHeaderSwayTests(unittest.TestCase):
     def test_header_maximizes_through_sway(self):
         import os

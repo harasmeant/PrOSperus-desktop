@@ -352,8 +352,11 @@ class MapNode(QPushButton):
 
     # Asignar foco al widget al pasar el ratón si no está centrado ni arrastrado
     def enterEvent(self, event):
-        # Con el ratón encima, Enter abre esta tarjeta.
+        # Con el ratón encima, Enter abre esta tarjeta: pasa a ser la seleccionada (si no hay
+        # varias elegidas con Ctrl), para que nunca haya dos tarjetas resaltadas a la vez.
         if not self.center and self.surface.dragging is None:
+            if len(self.surface.selection) <= 1 and self.surface.selection != [self.path]:
+                self.surface.select(self.path)
             self.setFocus(Qt.FocusReason.MouseFocusReason)
         super().enterEvent(event)
 
@@ -428,7 +431,11 @@ class MapNode(QPushButton):
         p = QPainter(self); p.setRenderHint(QPainter.RenderHint.Antialiasing)
         colors = self.surface.shell.colors
         selected = self.path in self.surface.selection
-        fill = QColor(colors.hover if selected or self.underMouse() or self.hasFocus() else colors.card)
+        # Un solo resalte: la tarjeta con el foco (teclado o ratón). Las demás seleccionadas solo
+        # se resaltan cuando hay varias (Ctrl+clic); el ratón quieto encima no cuenta.
+        if len(self.surface.selection) == 1 and not self.hasFocus() and isinstance(QApplication.focusWidget(), MapNode):
+            selected = False
+        fill = QColor(colors.hover if selected or self.hasFocus() else colors.card)
         fill.setAlpha(255 if self.surface.shell.accessibility.high_contrast else (235 if self.center else 220))
         rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         p.setBrush(fill); p.setPen(QPen(QColor(colors.accent if selected or self.hasFocus() else colors.border), 2.5 if selected else 1.2))
@@ -955,8 +962,16 @@ class Explorer(QDialog):
         for key, action in [('Alt+Up', self.go_up), ('F5', self.refresh), ('Ctrl+N', self.new_note),
                             ('Ctrl+Shift+N', self.new_folder), ('Ctrl+Alt+N', self.new_project),
                             ('Ctrl+W', self.reject), ('Ctrl+L', self.search.setFocus),
-                            ('Ctrl+F', self.search.setFocus), ('Ctrl+R', self.refresh)]:
+                            ('Ctrl+F', self.search.setFocus), ('Ctrl+R', self.refresh),
+                            ('Escape', self.back_or_close)]:
             shortcut = QShortcut(QKeySequence(key), self); shortcut.activated.connect(action)
+
+    def back_or_close(self):
+        """Esc sube una carpeta; en Todos los proyectos cierra el explorador."""
+        if self.folder != self.shell.vault.root:
+            self.go_up()
+        else:
+            self.reject()
 
     def single_click(self, item):
         if self.shell.accessibility.single_click and QApplication.keyboardModifiers() == Qt.KeyboardModifier.NoModifier:
@@ -1809,10 +1824,15 @@ class Desktop(QMainWindow):
         for panel in visible:
             if focused == panel or (focused is not None and panel.isAncestorOf(focused)):
                 panel.close_note(); return
-        if visible:
+        # Sin nota enfocada, Esc vuelve a la carpeta anterior (como Retroceso, con animación).
+        if self.search.text():
+            self.search.clear(); self.power_box.hide()
+        elif self.folder != self.vault.root:
+            self.surface.close_node()
+        elif visible:
             visible[-1].close_note()
         else:
-            self.search.clear(); self.power_box.hide()
+            self.power_box.hide()
 
     def update_dock(self):
         while self.dock.count():

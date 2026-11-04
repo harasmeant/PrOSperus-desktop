@@ -559,3 +559,15 @@ Ideas para más adelante:
   toma el teclado al mostrarse; btop sale en Aplicaciones como «Monitor del sistema» con el título
   «Q para salir» (`/usr/share/prosperus/xdg/applications/btop.desktop`, primero en XDG_DATA_DIRS).
   Intro en Aplicaciones ya no lanza el programa dos veces. Comprobado en QEMU.
+
+## 2026-11-04 — Panel táctil, Esc para volver y atajos de ventana
+
+- Panel táctil (todas las ISO): Sway lo dejaba sin «tocar para hacer clic», así que dos toques no abrían
+  nada. Ahora tocar es clic (dos toques = doble clic), dos dedos = clic derecho, tocar y arrastrar,
+  sin cursor al escribir y aceleración adaptativa. Sin probar en hardware real.
+- Selección del mapa: el ratón quieto encima de una tarjeta la dejaba resaltada mientras las flechas
+  resaltaban otra. Ahora solo se resalta una (la del foco); pasar el ratón por encima la selecciona.
+- Esc vuelve a la carpeta anterior (antes de eso cierra la nota enfocada o el tarjetero); en el
+  explorador sube una carpeta y, en Todos los proyectos, lo cierra.
+- Ventanas: Super+↑ amplía/restaura (comparte estado con la píldora), Super+↓ minimiza, Alt+F4 cierra;
+  siguen Super+M, Super+Q y Super+F. Configuración comprobada con Sway sin pantalla. 197 pruebas correctas.

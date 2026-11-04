@@ -318,10 +318,13 @@ def main(argv=None):
     """Órdenes para atajos de Sway: actúan sobre el proyecto del espacio enfocado."""
     import sys
     args = sys.argv[1:] if argv is None else argv
-    if args not in (['show-desktop'], ['minimize']):
-        print('Uso: prosperus-windows show-desktop|minimize', file=sys.stderr); return 2
+    if args not in (['show-desktop'], ['minimize'], ['maximize']):
+        print('Uso: prosperus-windows show-desktop|minimize|maximize', file=sys.stderr); return 2
     manager = WindowManager()
     try:
+        if args == ['maximize']:
+            from .window_handle import toggle_maximized
+            toggle_maximized(); return 0
         current = next(w['name'] for w in request(1) if w.get('focused'))
         if args == ['minimize']:
             if current.endswith(' · ocultas'):

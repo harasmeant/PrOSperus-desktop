@@ -5,6 +5,9 @@ los espacios y sin foco al aparecer (ver /etc/sway/prosperus.conf). Sigue a la v
 enfocada consultando el árbol de Sway y actúa por con_id, nunca por título.
 """
 # SPDX-License-Identifier: GPL-3.0-only
+import json
+import os
+from pathlib import Path
 import sys
 
 from .window_session import DESKTOP_ID, HANDLE_ID, request, walk
@@ -64,6 +67,38 @@ def maximize_commands(node, workspace, saved):
             f'move absolute position {r["x"]} px {r["y"]} px, focus')
 
 
+def saved_path():
+    """Geometrías previas a ampliar, compartidas entre la píldora y el atajo Super+↑."""
+    return Path(os.environ.get('XDG_RUNTIME_DIR') or '/tmp') / 'prosperus' / 'ampliadas.json'
+
+
+def load_saved():
+    try:
+        return {int(k): v for k, v in json.loads(saved_path().read_text()).items()}
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+def store_saved(saved):
+    try:
+        saved_path().parent.mkdir(parents=True, exist_ok=True)
+        saved_path().write_text(json.dumps(saved))
+    except OSError:
+        pass
+
+
+def toggle_maximized():
+    """Atajo Super+↑: amplía o restaura la aplicación enfocada, como el botón de la píldora."""
+    node, ws = find_target(request(4))
+    if node is None:
+        return False
+    saved = load_saved()
+    command = maximize_commands(node, ws, saved)
+    store_saved(saved)
+    request(0, command)
+    return True
+
+
 def minimize_command(node, workspace):
     name = (workspace['name'] + HIDDEN_SUFFIX).replace('"', '').replace('\\', '')
     return f'[con_id={node["id"]}] move container to workspace "{name}"'
@@ -92,7 +127,6 @@ def main():
             self.setFixedSize(self.sizeHint())
             self.target = self.workspace = None
             self.position = None
-            self.saved = {}
             self.timer = QTimer(self, interval=250, timeout=self.follow); self.timer.start()
 
         def paintEvent(self, event):
@@ -109,7 +143,7 @@ def main():
             except (OSError, ValueError):
                 return
             self.target, self.workspace = node, ws
-            self.controls.set_maximized(node is not None and node['id'] in self.saved)
+            self.controls.set_maximized(node is not None and node['id'] in load_saved())
             if node is None:
                 self.position = None; self.hide(); return
             if not self.isVisible():
@@ -128,13 +162,15 @@ def main():
         def trigger(self, action):
             if self.target is None:
                 return
+            saved = load_saved()
             if action == 'close':
                 command = f'[con_id={self.target["id"]}] kill'
-                self.saved.pop(self.target['id'], None)
+                saved.pop(self.target['id'], None)
             elif action == 'minimize':
                 command = minimize_command(self.target, self.workspace)
             else:
-                command = maximize_commands(self.target, self.workspace, self.saved)
+                command = maximize_commands(self.target, self.workspace, saved)
+            store_saved(saved)
             try:
                 request(0, command)
             except (OSError, ValueError):

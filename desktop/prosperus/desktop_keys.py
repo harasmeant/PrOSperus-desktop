@@ -15,13 +15,13 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 - Las copias conservan los originales. Un nombre repetido añade « - copia»; no se sobrescribe.
 
 ## Navegación y ventanas
-- **Alt+↑ / Retroceso:** subir una carpeta (Retroceso con el mapa o la lista enfocados).
+- **Esc / Alt+↑ / Retroceso:** volver a la carpeta anterior (Retroceso con el mapa o la lista enfocados; Esc cierra antes la nota enfocada).
 - **Alt+← / Alt+→:** historial del mapa. **Ctrl+Inicio:** todos los proyectos.
 - **Ctrl+B:** tarjetero. **Ctrl+1…9:** abrir un proyecto por su posición.
 - **Ctrl+F / Ctrl+L:** buscar notas (en el explorador, buscar en su carpeta).
 - **Ctrl+O:** abrir la primera nota del proyecto.
 - **Ctrl+S:** guardar la nota enfocada. **Ctrl+W:** cerrar la nota enfocada.
-- **Esc:** recoger el tarjetero o cerrar la nota enfocada; en un diálogo, cerrarlo.
+- **Esc:** recoger el tarjetero, cerrar la nota enfocada o volver a la carpeta anterior; en el explorador sube una carpeta y, arriba del todo, lo cierra.
 - **Ctrl+Tab / Ctrl+Mayús+Tab:** siguiente/anterior nota abierta del proyecto.
 - **Flechas:** en el mapa, seleccionar la carpeta o nota más cercana en esa dirección. **Intro** abre. **Tab / Mayús+Tab:** siguiente/anterior control. **Espacio** activa el botón enfocado.
 - **Super+Tab / Super+Mayús+Tab:** pasar al proyecto siguiente/anterior, también con una aplicación delante.
@@ -33,7 +33,7 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 ## Aplicaciones y controles
 - **Windows / Super:** abrir o cerrar Aplicaciones, cuando el sistema entrega esa tecla a PrOSperus.
 - **Ctrl+Espacio / Alt+F2:** Aplicaciones (Alt+F2 puede estar reservado por el sistema).
-- **Super+E:** explorador. **Super+D:** ocultar/restaurar notas y aplicaciones del proyecto. **Super+F:** pantalla completa de la aplicación. **Super+Q:** cerrar la aplicación. **Super+Esc:** volver al escritorio. **Super+I:** controles.
+- **Super+E:** explorador. **Super+D:** ocultar/restaurar notas y aplicaciones del proyecto. **Super+↑:** ampliar o restaurar la aplicación. **Super+↓ / Super+M:** minimizarla. **Super+F:** pantalla completa de la aplicación. **Alt+F4 / Super+Q:** cerrar la aplicación. **Super+Esc:** volver al escritorio. **Super+I:** controles.
 - Las teclas de volumen, brillo y reproducción se atienden en la sesión propia PrOSperus cuando están disponibles.
 
 ## Texto y accesibilidad
