@@ -14,6 +14,9 @@ Fibonacci, columnas y principal centrada, perfiles estándar, 21:9 y 32:9. Notas
 
 1. Mapa como fondo permanente; foco y aplicaciones por encima.
 2. Super, Alt+Tab, atajos de distribución, maximizar, minimizar, cerrar y recuperar; distinguir diálogos.
+   - **Pendiente (04-11-2026, prueba en el portátil):** las ventanas propias, como Buscar,
+     que se abre al pulsar Super, no tienen botones de cerrar ni de minimizar; solo se cierran
+     pulsando Super otra vez. Revisar los botones de todas las pantallas del escritorio.
 3. Asociar espacios y accesos a aplicaciones con proyectos.
 4. Multipantalla, desconexiones y recuperación; resolución/escala con confirmación y reversión.
 5. Integrar la sesión en una nueva ISO y comprobar el flujo completo.
