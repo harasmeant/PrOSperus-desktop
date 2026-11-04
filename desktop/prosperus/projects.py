@@ -312,7 +312,7 @@ class ProjectDrawer(QFrame):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 24, 18, 16)
         row = QHBoxLayout()
-        title = QLabel('Tus proyectos'); title.setObjectName('noteTitle')
+        title = QLabel('Proyectos'); title.setObjectName('noteTitle')
         row.addWidget(title, 1)
         self.view = 'grid' if str(shell.settings.value(VIEW_KEY, 'stack')) == 'grid' else 'stack'
         self.view_button = QPushButton(); self.view_button.clicked.connect(self.toggle_view)
@@ -339,7 +339,7 @@ class ProjectDrawer(QFrame):
         self.hint = hint = QLabel()
         hint.setObjectName('muted'); hint.setWordWrap(True); hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(hint)
-        root = QPushButton('Todos los proyectos'); root.clicked.connect(self.open_root); layout.addWidget(root)
+        root = QPushButton('Inicio'); root.clicked.connect(self.open_root); layout.addWidget(root)
         actions = QHBoxLayout()
         create = QPushButton('Nuevo proyecto'); create.clicked.connect(shell.new_project); actions.addWidget(create)
         import_project = QPushButton('Importar proyecto…')

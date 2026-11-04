@@ -118,3 +118,22 @@ class LauncherCloseTests(unittest.TestCase):
         browser.close_button.click(); app.processEvents()
         self.assertIsNone(window.app_browser)
         window.close(); window.deleteLater(); app.processEvents()
+
+
+class NewNotePlaceTests(unittest.TestCase):
+    def test_new_note_proposes_the_current_folder(self):
+        from PySide6.QtCore import QTimer
+        from PySide6.QtWidgets import QComboBox, QDialog
+        from prosperus.model import Vault
+        from prosperus.shell import ask_place
+        app = QApplication.instance() or QApplication([])
+        root = Path(__file__).resolve().parents[1] / 'demo-system'
+        folder = root / 'Bienvenida' / 'Recursos'
+        seen = []
+
+        def inspect():
+            dialog = next(w for w in app.topLevelWidgets() if isinstance(w, QDialog) and w.isVisible())
+            seen.append(dialog.findChild(QComboBox).currentData()); dialog.reject()
+        QTimer.singleShot(50, inspect)
+        ask_place(None, Vault(root), 'Nueva nota', folder)
+        self.assertEqual(seen, [folder])

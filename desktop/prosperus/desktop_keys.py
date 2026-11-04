@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QApplication
 SHORTCUT_HELP = '''# Manejar PrOSperus
 
 ## Proyectos y archivos
-- **Ctrl+Alt+N:** nuevo proyecto, siempre en Tus proyectos.
+- **Ctrl+Alt+N:** nuevo proyecto, siempre en Inicio.
 - **Ctrl+N:** nueva nota. **Ctrl+Mayús+N:** nueva carpeta.
 - Un clic selecciona; **Ctrl+clic** amplía la selección; doble clic o **Intro** abre.
 - **Ctrl+C / Ctrl+V:** copiar / pegar carpetas y notas; también desde Archivos de Fedora.
@@ -16,7 +16,7 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 
 ## Navegación y ventanas
 - **Esc / Alt+↑ / Retroceso:** volver a la carpeta anterior (Retroceso con el mapa o la lista enfocados; Esc cierra antes la nota enfocada).
-- **Alt+← / Alt+→:** historial del mapa. **Ctrl+Inicio:** todos los proyectos.
+- **Alt+← / Alt+→:** historial del mapa. **Ctrl+Inicio:** ir a Inicio.
 - **Ctrl+B:** tarjetero. **Ctrl+1…9:** abrir un proyecto por su posición.
 - **Ctrl+F / Ctrl+L:** buscar notas (en el explorador, buscar en su carpeta).
 - **Ctrl+O:** abrir la primera nota del proyecto.

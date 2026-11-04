@@ -2,7 +2,7 @@
 
 Un proyecto puede ser un curso, una investigación o una idea.
 
-1. Pulsa **Nuevo proyecto** para crear un espacio en Tus proyectos.
+1. Pulsa **Nuevo proyecto** para crear un espacio en Inicio.
 2. Dentro, usa **Nueva nota** para escribir su propósito.
 3. Guarda los cambios y vuelve al mapa.
 

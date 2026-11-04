@@ -105,7 +105,7 @@ def unique_target(directory, name):
 
 
 def project_root(vault_root, folder):
-    """Proyecto (carpeta de primer nivel) al que pertenece `folder`; None en «Tus proyectos»."""
+    """Proyecto (carpeta de primer nivel) al que pertenece `folder`; None en «Inicio»."""
     vault_root, folder = Path(vault_root), Path(folder)
     try:
         parts = folder.relative_to(vault_root).parts

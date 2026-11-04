@@ -1,7 +1,7 @@
 # Manejar PrOSperus
 
 ## Proyectos y archivos
-- **Ctrl+Alt+N:** nuevo proyecto, siempre en Tus proyectos.
+- **Ctrl+Alt+N:** nuevo proyecto, siempre en Inicio.
 - **Ctrl+N:** nueva nota. **Ctrl+Mayús+N:** nueva carpeta.
 - Un clic selecciona; **Ctrl+clic** amplía la selección; doble clic o **Intro** abre.
 - **Ctrl+C / Ctrl+V:** copiar / pegar carpetas y notas; también desde Archivos de Fedora.

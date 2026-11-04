@@ -89,8 +89,9 @@ def ask_place(parent, vault, title, folder, ask_name=True):
         form.addRow('Nombre:', name)
     places = QComboBox(dialog)
     for path in vault.folders():
-        places.addItem('Tus proyectos' if path == vault.root else ' / '.join(path.relative_to(vault.root).parts), path)
-    places.setCurrentIndex(max(0, places.findData(folder)))
+        places.addItem('Inicio' if path == vault.root else ' / '.join(path.relative_to(vault.root).parts), path)
+    # findData no compara objetos Path (siempre daba -1 y caía en Inicio): se busca a mano.
+    places.setCurrentIndex(next((i for i in range(places.count()) if places.itemData(i) == Path(folder)), 0))
     form.addRow('Proyecto o carpeta:', places)
     buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, dialog)
     buttons.accepted.connect(dialog.accept); buttons.rejected.connect(dialog.reject)
@@ -929,7 +930,7 @@ class Explorer(QDialog):
         layout = QVBoxLayout(self)
         row = QHBoxLayout()
         row.addWidget(button('↑ Subir', self.go_up))
-        row.addWidget(button('Todos los proyectos', lambda: self.go(shell.vault.root)))
+        row.addWidget(button('Inicio', lambda: self.go(shell.vault.root)))
         row.addStretch()
         row.addWidget(button('Ver mapa', self.show_map)); layout.addLayout(row)
         self.location = label('', 'muted'); layout.addWidget(self.location)
@@ -967,7 +968,7 @@ class Explorer(QDialog):
             shortcut = QShortcut(QKeySequence(key), self); shortcut.activated.connect(action)
 
     def back_or_close(self):
-        """Esc sube una carpeta; en Todos los proyectos cierra el explorador."""
+        """Esc sube una carpeta; en Inicio cierra el explorador."""
         if self.folder != self.shell.vault.root:
             self.go_up()
         else:
@@ -1154,7 +1155,7 @@ class Desktop(QMainWindow):
             ('Importar notas', icon('note'), lambda: self.files.import_files(self.folder)),
             ('Importar carpeta', icon('folder'), lambda: self.files.import_folder(self.folder)),
             ('Pegar', icon('note'), lambda: self.files.paste(self.folder)), None,
-            ('Tus proyectos', icon('folders'), self.toggle_projects),
+            ('Proyectos', icon('folders'), self.toggle_projects),
             ('Explorador', icon('search'), self.open_explorer),
             ('Papelera', icon('trash'), self.open_trash),
             ('Actualizar', icon('refresh'), self.refresh_projects)])
@@ -1289,7 +1290,7 @@ class Desktop(QMainWindow):
                           wallpaper=self.background.wallpaper, project=self.current_project())
 
     def current_project(self):
-        """Proyecto que recibe descargas y capturas: el que se ve o, en «Tus proyectos», el último abierto."""
+        """Proyecto que recibe descargas y capturas: el que se ve o, en «Inicio», el último abierto."""
         project = getattr(self, 'last_project', None)
         return project if project is not None and project.is_dir() else None
 
@@ -1575,7 +1576,7 @@ class Desktop(QMainWindow):
             entries = self.vault.search(self.search.text(), self.folder) if self.search.text().strip() else self.vault.entries(self.folder)
         except (OSError, ValueError) as error:
             self.status.setText(str(error)); entries = []
-        self.title.setText(self.folder.name if self.folder != self.vault.root else 'Tus proyectos')
+        self.title.setText(self.folder.name if self.folder != self.vault.root else 'Inicio')
         relative = self.folder.relative_to(self.vault.root)
         self.breadcrumb.setText(' / '.join(relative.parts) if relative.parts else 'Carpetas, ideas y notas en un mismo lugar')
         self.up.setEnabled(self.folder != self.vault.root)
@@ -1769,7 +1770,7 @@ class Desktop(QMainWindow):
             items.clear()
             for path, origin in self.vault.trashed():
                 where = str(Path(origin).parent) if origin else ''
-                text = (path.stem if path.is_file() else path.name) + '   ·   ' + ('en ' + where if where not in ('', '.') else 'en Tus proyectos')
+                text = (path.stem if path.is_file() else path.name) + '   ·   ' + ('en ' + where if where not in ('', '.') else 'en Inicio')
                 item = QListWidgetItem(symbol_icon('folder' if path.is_dir() else 'note', self.colors.accent), text)
                 item.setData(Qt.ItemDataRole.UserRole, path.name); items.addItem(item)
             empty.setVisible(items.count() == 0)

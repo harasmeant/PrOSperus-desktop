@@ -89,7 +89,7 @@ QUÉ PROBAR
 - Las subcarpetas heredan el fondo del proyecto.
 - Abre dos notas, mueve y redimensiona; minimiza y recupera desde la barra.
 - Editar permite escribir Markdown; Ctrl+S guarda y Vista previa lo muestra.
-- Nuevo proyecto crea un espacio en Tus proyectos. Carpetas > Importar proyecto
+- Nuevo proyecto crea un espacio en Inicio. Carpetas > Importar proyecto
   copia una carpeta existente, conservando sus notas, subcarpetas y adjuntos.
 - Un clic selecciona, Ctrl+clic selecciona varios y doble clic o Intro abre.
 - Ctrl+C/Ctrl+V copia y pega; Ctrl+D duplica. Clic derecho ofrece más acciones.
