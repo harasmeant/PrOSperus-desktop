@@ -589,3 +589,14 @@ Ideas para más adelante:
   descarta la búsqueda si una aplicación cambió de geometría en el último segundo y medio.
   Super+Alt+flechas cambian el tamaño con el teclado. Configuración validada con `sway -C`.
 - Pruebas con árbol de Sway simulado; sin probar en hardware real ni con dos monitores. 203 pruebas correctas.
+
+## 2026-11-04 — 0.5.0: segunda pantalla, notas en la carpeta actual e Inicio
+
+- Pantallas secundarias: al arrancar, cada una abre una consola (app_id `org.prosperus.PantallaN`,
+  colocada con una regla `for_window` en caliente para no robar el foco). Las ventanas nuevas se reparten
+  en Fibonacci en la pantalla en la que aparecen; al cerrar se reorganizan todas. Comprobado en Sway
+  sin pantalla con dos salidas: escritorio en una, consola en la otra. `PROSPERUS_NO_SECONDARY_TERMINAL=1`
+  lo desactiva. Pendiente: el mapa con notas en la segunda pantalla (haría falta otra ventana del escritorio).
+- Nueva nota/carpeta: `QComboBox.findData` no encontraba objetos `Path` y proponía siempre la raíz.
+- «Tus proyectos» → Inicio (raíz) y Proyectos (tarjetero). Versión 0.5.0. 205 pruebas correctas.
+- `output_of`/`other_outputs` los escribió qwen2.5-coder:7b; `output_of` solo miraba un nivel y se corrigió.

@@ -116,3 +116,16 @@ class GapControlTests(unittest.TestCase):
         with patch.object(self.window.windows, 'minimize_all') as minimize:
             QTest.mouseDClick(target, Qt.MouseButton.LeftButton, pos=target.mapFrom(self.window, QPoint(800, 300)))
         minimize.assert_called_once()
+
+
+class OutputTests(unittest.TestCase):
+    def test_output_of_finds_nested_windows(self):
+        from prosperus.window_manager import other_outputs, output_of
+        tree = {'type': 'root', 'nodes': [
+            {'type': 'output', 'name': 'A', 'nodes': [{'type': 'workspace', 'nodes': [], 'floating_nodes': [{'id': 5}]}]},
+            {'type': 'output', 'name': 'B', 'nodes': [{'type': 'workspace', 'nodes': [{'id': 6, 'nodes': [{'id': 7}]}]}]}]}
+        self.assertEqual(output_of(tree, 5), 'A')
+        self.assertEqual(output_of(tree, 7), 'B')
+        self.assertIsNone(output_of(tree, 8))
+        self.assertEqual(other_outputs([{'name': 'A', 'active': True}, {'name': 'B', 'active': True},
+                                        {'name': 'C', 'active': False}], 'A'), ['B'])

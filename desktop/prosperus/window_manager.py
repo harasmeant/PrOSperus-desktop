@@ -65,6 +65,19 @@ def subscribe(events):
             yield json.loads(data)
 
 
+def output_of(tree, con_id):
+    """Pantalla (output de Sway) en la que está la ventana con_id, o None."""
+    for output in tree.get('nodes', []):
+        if output.get('type') == 'output' and any(n.get('id') == con_id for n in walk(output)):
+            return output['name']
+    return None
+
+
+def other_outputs(outputs, main):
+    """Pantallas activas distintas de la del escritorio, en el orden de Sway."""
+    return [output['name'] for output in outputs if output['name'] != main and output.get('active')]
+
+
 class WindowManager(QObject):
     windows_changed = Signal(list)
     message = Signal(str)
@@ -132,6 +145,8 @@ class WindowManager(QObject):
     # Mantener el escritorio organizado con eventos de Sway
     def _run(self):
         self._place_desktop()
+        # Con la suscripción ya en marcha, para que la consola nueva se reparta al aparecer.
+        threading.Timer(1.5, self._open_secondary).start()
         while not self._stopping:
             try:
                 for event in subscribe(['window', 'binding']):
@@ -141,6 +156,31 @@ class WindowManager(QObject):
             except (OSError, ValueError) as e:
                 self.message.emit(f'Conexión con Sway perdida, reintentando: {e}')
                 threading.Event().wait(2)
+
+    def _open_secondary(self):
+        """Al arrancar, cada pantalla secundaria abre una consola sobre el fondo del proyecto
+        (el mapa solo está en la principal); lo que se abra allí se reparte en Fibonacci."""
+        if os.environ.get('PROSPERUS_NO_SECONDARY_TERMINAL'):
+            return
+        try:
+            main = output_of(request(4), next((n['id'] for n in walk(request(4)) if n.get('app_id') == DESKTOP_ID
+                                               and n.get('name') == 'PrOSperus desktop'), None))
+            others = other_outputs(request(3), main)
+            if not others or not main:
+                return
+            commands = []
+            for i, name in enumerate(others):
+                if '"' in name or '\\' in name:
+                    continue
+                # Regla en caliente: la consola marcada aparece directamente en su pantalla, sin
+                # mover el foco (el escritorio sigue con el teclado).
+                app_id = f'org.prosperus.Pantalla{i + 2}'
+                commands += [f'for_window [app_id="{app_id}"] move container to output "{name}"',
+                             f'exec /usr/bin/prosperus-terminal --app-id={app_id}']
+            if commands:
+                request(0, '; '.join(commands))
+        except (OSError, ValueError, KeyError, StopIteration) as e:
+            self.message.emit(f'No se pudo abrir la consola en la otra pantalla: {e}')
 
     # Gestiona ventanas y proyectos con eventos Sway
     def _handle_event(self, e):
@@ -169,7 +209,7 @@ class WindowManager(QObject):
             self.refresh()
         elif change == 'close':
             if self.mode == 'fibonacci':
-                self.arrange()
+                self.arrange_all()
             self.refresh()
         elif change in ('title', 'move'):
             self.refresh()
@@ -184,14 +224,28 @@ class WindowManager(QObject):
         else:
             # Recién creada, la ventana aún no ha hecho su primer dibujo y Sway le impone su
             # tamaño flotante por defecto: la primera orden de tamaño se pierde. Se reintenta.
-            self.arrange(attempts=4)
+            # Se organiza la pantalla donde ha aparecido, que puede no ser la enfocada.
+            try:
+                output = output_of(request(4), con_id)
+            except (OSError, ValueError):
+                output = None
+            self.arrange(attempts=4, output=output)
 
-    # Organiza ventanas flotantes del output enfocado
-    def arrange(self, attempts=1):
+    def arrange_all(self):
+        """Todas las pantallas: al cerrar una ventana no se sabe ya en cuál estaba."""
+        try:
+            outputs = [o['name'] for o in request(3) if o.get('active')]
+        except (OSError, ValueError, KeyError):
+            outputs = [None]
+        for output in outputs:
+            self.arrange(output=output)
+
+    # Organiza ventanas flotantes de una pantalla (por defecto, la enfocada)
+    def arrange(self, attempts=1, output=None):
         for attempt in range(attempts):
             try:
-                focused_output = next(w['output'] for w in request(1) if w.get('focused'))
-                apply(focused_output, self.options_provider())
+                target = output or next(w['output'] for w in request(1) if w.get('focused'))
+                apply(target, self.options_provider())
                 return
             except ValueError as e:
                 # Sin aplicaciones visibles no hay nada que organizar: no es un error.

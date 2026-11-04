@@ -2,7 +2,7 @@
 
 **PrOSperus desktop · Prototipo de escritorio orientado a proyectos**
 
-## Escritorio independiente en desarrollo · 0.4.0-dev
+## Escritorio independiente en desarrollo · 0.5.0
 
 La rama de desarrollo incorpora [distribución Fibonacci y perfiles ultrawide](docs/WINDOW-LAYOUTS.md), con integración experimental Sway. Estos cambios aún no están en la ISO publicada.
 

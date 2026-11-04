@@ -1,5 +1,18 @@
 # Historial
 
+## 0.5.0 — 2026-11-04 · Ventanas deformables y segunda pantalla
+
+- Buscar (Super) con botón de cerrar (✕, también Esc).
+- Panel Ramas explicado: «Geométrica» (art déco), «Ondulada» (art nouveau) y «Brotes», cada una con
+  una línea que dice qué dibuja; «Trazo» aparte; en automático las barras muestran lo medido en el fondo.
+- Arrastrar el hueco entre aplicaciones mueve el borde compartido; doble clic en el fondo las minimiza.
+  Super+arrastrar ya no abre Buscar; Super+Alt+flechas cambian el tamaño con el teclado.
+- Pantallas secundarias: al arrancar abren una consola sobre el fondo del proyecto, y lo que se abre en
+  cualquier pantalla se reparte en Fibonacci en esa pantalla (antes, en la enfocada).
+- Nueva nota y nueva carpeta proponen la carpeta en la que estás (antes, siempre la raíz).
+- La raíz «Tus proyectos» pasa a llamarse Inicio; el tarjetero, Proyectos.
+- Mismos cambios en las ISO de Fedora, Arch y Debian (comparten `desktop/` e `image/rootfs/`).
+
 ## 0.4.0-dev — 2026-10-30 · Desarrollo, sin nueva ISO
 
 - 2026-11-04: instalador a disco para dual boot en la ISO de Arch (`prosperus-instalar-disco`,
