@@ -1120,6 +1120,9 @@ class Desktop(QMainWindow):
         self.windows.windows_changed.connect(self.set_app_windows)
         self.windows.project_step.connect(self.step_project)
         self.windows.search_requested.connect(self.toggle_applications)
+        # Arrastrar el hueco entre aplicaciones las deforma; doble clic en el fondo las minimiza.
+        from .window_gaps import GapControl
+        self.gaps = GapControl(self)
         self.project_paths = []
         self.watcher = QFileSystemWatcher(self)
         self.watch_timer = QTimer(self)

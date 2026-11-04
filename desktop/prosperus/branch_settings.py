@@ -20,8 +20,13 @@ from .branches import BUILTIN_ORNAMENTS, branch
 from .map_layout import map_metrics, radial_slots
 from .window_header import WindowHeader
 
-STYLE_LABELS = (('straight', 'Art déco'), ('magic', 'Art nouveau'), ('detail', 'Brotes'))
-TWEAK_LABELS = (('curl', 'Curvatura'), ('width', 'Grosor'), ('opacity', 'Opacidad'))
+# Cada barra de estilo suma un rasgo a la rama (0 = nada, 100 % = del todo); se pueden mezclar.
+STYLE_LABELS = (('straight', 'Geométrica', 'Art déco: arco de compás, trazo doble y hueco, grecas y rombos.'),
+                ('magic', 'Ondulada', 'Art nouveau: curva en latigazo, setas, lirios, plumas de pavo real y destellos.'),
+                ('detail', 'Brotes', 'Cuántas hojas y zarcillos salen de la rama.'))
+TWEAK_LABELS = (('curl', 'Curvatura', 'Cuánto se dobla la rama (1,00 = normal).'),
+                ('width', 'Grosor', 'Ancho del trazo (1,00 = normal).'),
+                ('opacity', 'Opacidad', 'Lo que se ve la rama sobre el fondo (1,00 = normal).'))
 PLACE_LABELS = (('rama', 'Sobre la rama'), ('brote', 'Al final de un tallo'))
 SIDE_LABELS = (('horario', 'Horario'), ('antihorario', 'Antihorario'), ('ambos', 'Ambos lados, alternando'))
 ORDER_LABELS = (('fuera', 'Del centro hacia fuera (la de fuera encima)'), ('dentro', 'De fuera hacia el centro (la de dentro encima)'))
@@ -174,14 +179,19 @@ class BranchSettings(QWidget):
         columns = QHBoxLayout(); columns.setSpacing(32); body.addLayout(columns)
         style_box = QVBoxLayout(); style_box.setSpacing(10); columns.addLayout(style_box, 1)
         style_box.addWidget(section('Estilo de la rama'))
-        form = QFormLayout(); airy(form); style_box.addLayout(form); style_box.addStretch(1)
+        self.style_hint = QLabel(); self.style_hint.setObjectName('muted'); self.style_hint.setWordWrap(True)
+        style_box.addWidget(self.style_hint)
+        form = QFormLayout(); airy(form); style_box.addLayout(form)
         self.sliders = {}
-        for key, label in STYLE_LABELS:
-            value = saved.get(key, self.auto_traits.get(key, .4 if key == 'detail' else 0))
-            self.sliders[key] = self.slider(form, label, 0, 100, value * 100)
-        for key, label in TWEAK_LABELS:
+        for key, label, caption in STYLE_LABELS:
+            value = self.auto_value(key) if saved.get('auto', True) else saved.get(key, self.auto_value(key))
+            self.sliders[key] = self.described(form, label, caption, 0, 100, '%', value * 100)
+        style_box.addWidget(section('Trazo'))
+        form = QFormLayout(); airy(form); style_box.addLayout(form); style_box.addStretch(1)
+        for key, label, caption in TWEAK_LABELS:
             low, high = branch_style.TWEAKS[key]
-            self.sliders[key] = self.slider(form, label, round(low * 100), round(high * 100), saved.get(key, 1) * 100)
+            self.sliders[key] = self.described(form, label, caption, round(low * 100), round(high * 100), '',
+                                               saved.get(key, 1) * 100)
         # Gradiente de la rama, aparte del de los adornos.
         self.branch_form = form
         self.branch_gradient = QCheckBox('Gradiente en la rama')
@@ -205,8 +215,26 @@ class BranchSettings(QWidget):
         for text, callback in (('Volver a automático', self.reset), ('Guardar en esta carpeta', self.save), ('Cerrar', self.close)):
             button = QPushButton(text); button.clicked.connect(callback); buttons.addWidget(button)
         layout.addLayout(buttons)
-        self.auto.toggled.connect(self.update_preview)
+        self.auto.toggled.connect(self.automatic_toggled)
         self.update_preview()
+
+    def auto_value(self, key):
+        return self.auto_traits.get(key, .4 if key == 'detail' else 0)
+
+    def automatic_toggled(self, automatic):
+        # En automático las barras de estilo enseñan lo medido en el fondo; al desmarcarlo se
+        # parte de esos valores para retocarlos.
+        if automatic:
+            for key in branch_style.STYLE_KEYS:
+                self.sliders[key].setValue(round(self.auto_value(key) * 100))
+        self.update_preview()
+
+    def described(self, form, label, caption, low, high, unit, value):
+        """Barra con su valor a la derecha y, debajo, una línea que explica qué cambia."""
+        slider = self.value_slider(form, label, low, high, 100, unit, caption)
+        slider.setValue(round(value)); slider.show_value(slider.value())
+        slider.valueChanged.connect(self.update_preview)
+        return slider
 
     def build_ornaments(self, saved):
         """Lista de adornos: cada uno con su frecuencia, sitio, tamaño y tinte."""
@@ -252,15 +280,20 @@ class BranchSettings(QWidget):
         self.refresh_ornaments()
         return box
 
-    def value_slider(self, form, label, low, high, scale, unit):
-        """Barra con su valor a la derecha."""
+    def value_slider(self, form, label, low, high, scale, unit, caption=None):
+        """Barra con su valor a la derecha (y, si se da, una explicación pegada debajo)."""
         row = QHBoxLayout()
         slider = QSlider(Qt.Orientation.Horizontal); slider.setRange(low, high)
         value = QLabel(); value.setMinimumWidth(42)
-        show = lambda v: value.setText(f'{v / scale:.2f}' if scale == 100 and not unit else f'{v}{unit}')
+        show = lambda v: value.setText(f'{v / scale:.2f}'.replace('.', ',') if scale == 100 and not unit else f'{v}{unit}')
         slider.valueChanged.connect(show); show(slider.value())
         row.addWidget(slider, 1); row.addWidget(value)
-        form.addRow(label, row)
+        if caption:
+            field = QVBoxLayout(); field.setSpacing(0); field.addLayout(row)
+            note = QLabel(caption); note.setObjectName('muted'); note.setWordWrap(True); field.addWidget(note)
+            form.addRow(label, field)
+        else:
+            form.addRow(label, row)
         slider.scale, slider.show_value = scale, show
         return slider
 
@@ -371,13 +404,6 @@ class BranchSettings(QWidget):
         if 0 <= row < len(self.ornaments):
             del self.ornaments[row]; self.refresh_ornaments(row); self.update_preview()
 
-    def slider(self, form, label, low, high, value):
-        slider = QSlider(Qt.Orientation.Horizontal)
-        slider.setRange(low, high); slider.setValue(round(value))
-        slider.valueChanged.connect(self.update_preview)
-        form.addRow(label, slider)
-        return slider
-
     def current(self, for_saving=False):
         data = {'auto': self.auto.isChecked()}
         for key in branch_style.STYLE_KEYS + tuple(branch_style.TWEAKS):
@@ -406,6 +432,9 @@ class BranchSettings(QWidget):
         automatic = self.auto.isChecked()
         for key in branch_style.STYLE_KEYS:
             self.sliders[key].setEnabled(not automatic)
+        self.style_hint.setText(
+            'Automático: las barras enseñan lo que se ha medido en el fondo. Desmárcalo arriba para moverlas.'
+            if automatic else 'Tres rasgos que se mezclan: cada barra va de nada (izquierda) a del todo (derecha).')
         if hasattr(self, 'branch_bars'):
             for slider in self.branch_bars.values():
                 row = self.row_in(self.branch_form, slider)
@@ -413,7 +442,7 @@ class BranchSettings(QWidget):
                     self.branch_form.setRowVisible(row, self.branch_gradient.isChecked())
         self.preview.traits = self.preview_traits()
         if self.auto_traits:
-            self.measured.setText('Según el fondo: art déco {:.0%} · art nouveau {:.0%} · brotes {:.0%}'.format(
+            self.measured.setText('Según el fondo: geométrica {:.0%} · ondulada {:.0%} · brotes {:.0%}'.format(
                 self.auto_traits['straight'], self.auto_traits['magic'], self.auto_traits['detail']))
         else:
             self.measured.setText('Esta carpeta no tiene fondo: en automático se usa la enredadera.')

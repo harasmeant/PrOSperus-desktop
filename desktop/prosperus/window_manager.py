@@ -82,6 +82,8 @@ class WindowManager(QObject):
         self._placed = False
         self.available = bool(os.environ.get('SWAYSOCK'))
         self._stopping = False
+        # Última vez que se movió o cambió de tamaño una aplicación (ver _watch_geometry).
+        self._moved_at = 0.0
 
     # Inicia hilo que gestiona ventanas flotantes en Sway
     def start(self):
@@ -89,6 +91,27 @@ class WindowManager(QObject):
             return
         self._stopping = False
         threading.Thread(target=self._run, daemon=True).start()
+        threading.Thread(target=self._watch_geometry, daemon=True).start()
+
+    def _watch_geometry(self):
+        """Super+arrastrar mueve una ventana (y Super+clic derecho la redimensiona), pero al soltar
+        Super Sway también lanza «Buscar»: no distingue el clic de ratón de «Super sola».
+        Se apunta cuándo cambió la geometría de alguna aplicación para descartar esa búsqueda."""
+        last = None
+        while not self._stopping:
+            try:
+                rects = {n['id']: (n['rect']['x'], n['rect']['y'], n['rect']['width'], n['rect']['height'])
+                         for n in walk(request(4)) if n.get('type') == 'floating_con'
+                         and n.get('app_id') not in (DESKTOP_ID, HANDLE_ID)}
+                if last is not None and any(last.get(i, r) != r for i, r in rects.items()):
+                    self._moved_at = time.monotonic()
+                last = rects
+            except (OSError, ValueError, KeyError):
+                pass
+            time.sleep(.25)
+
+    def just_moved(self, within=1.5):
+        return time.monotonic() - self._moved_at < within
 
     # Colocar escritorio en espacio de trabajo correcto
     def _place_desktop(self):
@@ -130,7 +153,8 @@ class WindowManager(QObject):
                 self.project_step.emit(-1)
                 return
             elif cmd.endswith('prosperus-search'):
-                self.search_requested.emit()
+                if not self.just_moved():
+                    self.search_requested.emit()
                 return
         change = e.get('change')
         c = e.get('container', {})
@@ -309,6 +333,15 @@ class WindowManager(QObject):
         except (OSError, ValueError) as e:
             self.message.emit(f'No se pudo mostrar el escritorio: {e}')
         self.refresh()
+
+    def minimize_all(self):
+        """Doble clic en el escritorio: oculta las aplicaciones visibles del proyecto (no las devuelve)."""
+        try:
+            visible = any(not hidden for _, hidden in self._windows())
+        except (OSError, ValueError):
+            return
+        if visible:
+            self.show_desktop()
 
     def stop(self):
         self._stopping = True

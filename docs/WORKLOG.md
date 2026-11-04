@@ -573,3 +573,19 @@ Ideas para más adelante:
   siguen Super+M, Super+Q y Super+F. Configuración comprobada con Sway sin pantalla. 194 pruebas correctas.
 - Cursor: Bibata no gustaba; ahora Breeze (el de KDE) desde los repos de cada sistema
   (`breeze-cursor-theme` en Fedora y Debian, `breeze-cursors` en Arch). ISO de Debian de las 19:03.
+
+## 2026-11-04 — Cerrar Buscar, panel Ramas más claro y ventanas deformables
+
+- Buscar (Super) tiene botón ✕ arriba a la derecha (también se cierra con Esc o Super).
+- Ramas: las barras «Art déco / Art nouveau» pasan a «Geométrica» y «Ondulada», cada una con una
+  línea debajo que dice qué dibuja; «Trazo» (curvatura, grosor, opacidad) va aparte. En automático las
+  barras muestran lo medido en el fondo y un aviso explica que hay que desmarcarlo para moverlas.
+- Hueco entre aplicaciones (`window_gaps.py`): arrastrarlo mueve ese borde en todas las ventanas que lo
+  comparten (como un separador de mosaico); el margen exterior agranda o encoge una sola. Mínimo 200×140.
+  Doble clic en el fondo del escritorio minimiza las aplicaciones del proyecto (Super+D las devuelve).
+  Al abrir o cerrar una aplicación, Fibonacci vuelve a repartirlas. Solo en la pantalla de PrOSperus:
+  en las otras el fondo es swaybg y no recibe clics.
+- Super+arrastrar (mover) y Super+clic derecho (tamaño) ya no abren Buscar al soltar Super: el escritorio
+  descarta la búsqueda si una aplicación cambió de geometría en el último segundo y medio.
+  Super+Alt+flechas cambian el tamaño con el teclado. Configuración validada con `sway -C`.
+- Pruebas con árbol de Sway simulado; sin probar en hardware real ni con dos monitores. 211 pruebas correctas.

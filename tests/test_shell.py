@@ -106,3 +106,15 @@ class ShellTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class LauncherCloseTests(unittest.TestCase):
+    def test_search_window_has_a_close_button(self):
+        app = QApplication.instance() or QApplication([])
+        window = Desktop(Path(__file__).resolve().parents[1] / 'demo-system')
+        window.show(); window.open_applications(); app.processEvents()
+        browser = window.app_browser
+        self.assertTrue(browser.close_button.isVisible())
+        browser.close_button.click(); app.processEvents()
+        self.assertIsNone(window.app_browser)
+        window.close(); window.deleteLater(); app.processEvents()

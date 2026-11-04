@@ -34,6 +34,8 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 - **Windows / Super:** abrir o cerrar Aplicaciones, cuando el sistema entrega esa tecla a PrOSperus.
 - **Ctrl+Espacio / Alt+F2:** Aplicaciones (Alt+F2 puede estar reservado por el sistema).
 - **Super+E:** explorador. **Super+D:** ocultar/restaurar notas y aplicaciones del proyecto. **Super+↑:** ampliar o restaurar la aplicación. **Super+↓ / Super+M:** minimizarla. **Super+F:** pantalla completa de la aplicación. **Alt+F4 / Super+Q:** cerrar la aplicación. **Super+Esc:** volver al escritorio. **Super+I:** controles.
+- **Mover y redimensionar aplicaciones:** arrastra su barra de título, o **Super+arrastrar** (mover) y **Super+clic derecho+arrastrar** (tamaño) desde cualquier punto. **Super+Alt+flechas:** ensanchar/estrechar y alargar/acortar la ventana enfocada.
+- **Hueco entre aplicaciones:** arrastrarlo mueve ese borde en todas las ventanas que lo comparten (como un separador). **Doble clic en el fondo del escritorio:** minimiza las aplicaciones del proyecto (Super+D las devuelve). Al abrir o cerrar una aplicación, Fibonacci vuelve a repartirlas.
 - Las teclas de volumen, brillo y reproducción se atienden en la sesión propia PrOSperus cuando están disponibles.
 
 ## Texto y accesibilidad

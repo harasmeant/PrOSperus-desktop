@@ -136,6 +136,17 @@ class ApplicationBrowser(QDialog):
             self.mode_group.addButton(btn)
             btn.setCheckable(True)
             mode_layout.addWidget(btn)
+        # Sin marco no hay botón de cerrar de la ventana: uno propio (también Esc o Super).
+        mode_layout.addStretch()
+        self.close_button = QPushButton('✕')
+        self.close_button.setObjectName('launcherClose')
+        self.close_button.setToolTip('Cerrar (Esc o Super)')
+        self.close_button.setAccessibleName('Cerrar')
+        self.close_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.close_button.setFixedSize(36, 36)
+        self.close_button.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        self.close_button.clicked.connect(self.reject)
+        mode_layout.addWidget(self.close_button)
         self.mode_group.buttonToggled.connect(self.on_mode_changed)
         layout.addLayout(mode_layout)
 
@@ -199,6 +210,15 @@ class ApplicationBrowser(QDialog):
         background-color: {self.shell.colors.panel};
         border: 1px solid {self.shell.colors.border};
         border-radius: 14px;
+    }}
+    #launcherClose {{
+        border-radius: 18px;
+        font-size: 16px;
+        padding: 0;
+    }}
+    #launcherClose:hover {{
+        background-color: {self.shell.colors.hover};
+        border-color: {self.shell.colors.accent};
     }}
     #launcherTitle {{
         font-size: 20px;
