@@ -53,6 +53,7 @@ class FrameOverlay(QWidget):
 
     colors() y traits() se consultan al pintar: si el proyecto cambia, el marco también."""
 
+    # Crea marco con filigrana en esquinas y color de resalte
     def __init__(self, window, colors, traits=lambda: None, radius=10, seed=0):
         super().__init__(window)
         self.colors, self.traits, self.radius, self.seed = colors, traits, radius, seed
@@ -63,6 +64,7 @@ class FrameOverlay(QWidget):
         window.installEventFilter(self.follower)
         self.setGeometry(window.rect()); self.raise_(); self.show()
 
+    # Dibuja marco con colores y patrones procedurales
     def paintEvent(self, event):
         colors = self.colors()
         if colors is None:
@@ -78,6 +80,7 @@ class _Follower(QObject):
         super().__init__(overlay)
         self.overlay = overlay
 
+    # Sincronizar overlay con eventos de ventana
     def eventFilter(self, watched, event):
         if event.type() in (QEvent.Type.Resize, QEvent.Type.Show):
             self.overlay.setGeometry(watched.rect()); self.overlay.raise_()

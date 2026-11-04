@@ -2,6 +2,7 @@
 import math
 import bisect
 
+# Genera puntos equiespaciados en el perímetro de una elipse
 def ellipse_points(count, cx, cy, rx, ry):
     if count == 0:
         return []
@@ -44,6 +45,7 @@ def ellipse_points(count, cx, cy, rx, ry):
             result.append((x, y))
     return result
 
+# Distribuir ventanas con espacios en el layout
 def separate(rects, fixed, bounds, gap, iterations=60):
     # rects and fixed are lists of (x, y, w, h)
     mov = [list(r) for r in rects]
@@ -128,6 +130,7 @@ def separate(rects, fixed, bounds, gap, iterations=60):
             break
     return [tuple(round(v) for v in r) for r in mov]
 
+# Encontrar punto más cercano en dirección específica con penalización de desplazamiento
 def nearest_in_direction(points, origin, direction):
     dir_angle = {
         'right': 0,

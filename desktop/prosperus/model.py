@@ -10,6 +10,7 @@ import unicodedata
 from urllib.parse import quote, unquote, urlsplit
 
 
+# Búsquedas insensibles a mayúsculas y acentos
 def searchable(value):
     # Normalizar consulta y texto del mismo modo permite buscar sin tildes ni
     # distinguir mayúsculas, conservando intacto el contenido de los archivos.
@@ -94,11 +95,13 @@ def rename_markdown_links(text, note_dir, old_path, new_path):
 class Vault:
     MAX_NOTE_BYTES = 2 * 1024 * 1024
 
+    # Valida que el proyecto sea una carpeta válida
     def __init__(self, root):
         self.root = Path(root).expanduser().resolve(strict=True)
         if not self.root.is_dir():
             raise ValueError('El proyecto debe ser una carpeta.')
 
+    # Valida rutas dentro de proyectos sin carpetas ocultas
     def checked(self, path):
         path = Path(path)
         result = (path if path.is_absolute() else self.root / path).resolve(strict=True)
@@ -108,6 +111,7 @@ class Vault:
             raise ValueError('Las carpetas ocultas no forman parte de esta vista.')
         return result
 
+    # Lista archivos visibles no carpetas ni wallpapers
     def entries(self, folder):
         folder = self.checked(folder)
         entries = []
@@ -126,6 +130,7 @@ class Vault:
     def notes(self, folder=None):
         return (path for path in self.files(folder) if path.suffix.lower() == '.md')
 
+    # Listar archivos sin ocultos ni enlaces
     def files(self, folder=None):
         # Do not follow directory symlinks or descend hidden directories.
         pending = [self.checked(folder or self.root)]
@@ -179,6 +184,7 @@ class Vault:
         return [path for path in self.entries(self.root) if path.is_dir() and
                 (all(term in searchable(path.name) for term in terms) or self.search(query, path))]
 
+    # Lee notas Markdown hasta 2 MiB
     def read(self, path):
         path = self.checked(path)
         if path.suffix.lower() != '.md' or not path.is_file():
@@ -189,6 +195,7 @@ class Vault:
             raise ValueError('La nota supera el límite de lectura de 2 MiB.')
         return data.decode('utf-8-sig')
 
+    # Valida rutas únicas y válidas
     def child_path(self, folder, name, note=False):
         folder = self.checked(folder)
         name = name.strip()
@@ -203,12 +210,14 @@ class Vault:
             raise FileExistsError('Ya existe un elemento con ese nombre.')
         return path
 
+    # Crear notas con título automático
     def create_note(self, folder, name):
         path = self.child_path(folder, name, note=True)
         with path.open('x', encoding='utf-8') as handle:
             handle.write('# ' + path.stem + '\n\n')
         return path
 
+    # Crea carpetas para proyectos
     def create_folder(self, folder, name):
         path = self.child_path(folder, name)
         path.mkdir()
@@ -284,6 +293,7 @@ class Vault:
         self._save_origins(origins)
         return target
 
+    # Obtiene orígenes almacenados en JSON
     def _origins(self):
         try:
             data = json.loads((self.root / self.TRASH / ORIGINS).read_text(encoding='utf-8'))
@@ -291,6 +301,7 @@ class Vault:
         except (OSError, ValueError):
             return {}
 
+    # Guardar orígenes en JSON seguro
     def _save_origins(self, origins):
         file = self.root / self.TRASH / ORIGINS
         temporary = file.with_name(ORIGINS + '.tmp')
@@ -330,6 +341,7 @@ class Vault:
         self._save_origins(origins)
         return target
 
+    # Evitar sobrescribir archivos modificados al guardar
     def save_note(self, path, text, expected):
         path = self.checked(path)
         if self.read(path) != expected:
@@ -384,6 +396,7 @@ class Vault:
                 raise ValueError('Hay varias notas con ese nombre; utiliza su ruta.')
         raise FileNotFoundError('No se encontró la nota enlazada.')
 
+    # Convertir enlaces wikilink a enlaces normales en Markdown
     def markdown(self, path):
         text = self.read(path)
         if text.startswith('---\n'):

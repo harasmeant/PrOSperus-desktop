@@ -20,6 +20,7 @@ class HoverControls(QWidget):
     """
     triggered = Signal(str)
 
+    # Gestiona controles de ventana con efecto de hover
     def __init__(self, parent=None, watch=None, actions=('minimize', 'maximize', 'close')):
         super().__init__(parent)
         self.buttons = [b for b in BUTTONS if b[0] in actions]
@@ -46,6 +47,7 @@ class HoverControls(QWidget):
     def expanded(self):
         return self.progress > .5
 
+    # Animación de expansión de controles de ventana
     def expand(self, on):
         target = 1.0 if on else 0.0
         if self.animation.endValue() == target and self.animation.state() == QVariantAnimation.State.Running:
@@ -71,6 +73,7 @@ class HoverControls(QWidget):
     def _set_progress(self, value):
         self.progress = float(value); self.update()
 
+    # Controla expansión de botones al pasar el ratón
     def eventFilter(self, obj, event):
         # Qt puede entregar eventos antes de que __init__ fije watched.
         if obj is getattr(self, 'watched', None):
@@ -83,6 +86,7 @@ class HoverControls(QWidget):
     def enterEvent(self, event):
         self.expand(True)
 
+    # Colapsar controles al salir el ratón
     def leaveEvent(self, event):
         self.hovered = self.pressed = None
         self._update_tooltip()
@@ -90,6 +94,7 @@ class HoverControls(QWidget):
             self.expand(False)
         self.update()
 
+    # Calcula rectángulos de botones que crecen al pasar el ratón
     def _rects(self):
         size = SMALL + (LARGE - SMALL) * self.progress
         y = (self.height() - size) / 2
@@ -101,22 +106,26 @@ class HoverControls(QWidget):
             rects.insert(0, QRectF(cx - size / 2, y, size, size))
         return rects
 
+    # Detecta botón de ventana bajo cursor
     def action_at(self, pos):
         for (action, _, _), rect in zip(self.buttons, self._rects()):
             if rect.adjusted(-3, -3, 3, 3).contains(pos):
                 return action
         return None
 
+    # Actualiza tooltip y redibuja ventana al pasar el ratón sobre botones
     def mouseMoveEvent(self, event):
         hovered = self.action_at(event.position())
         if hovered != self.hovered:
             self.hovered = hovered; self._update_tooltip(); self.update()
 
+    # Identifica el botón activo al hacer clic izquierdo y actualiza la ventana
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.pressed = self.action_at(event.position()); self.update()
         event.accept()  # que el clic no empiece a arrastrar la ventana
 
+    # Activar acción al soltar el botón en zona activa
     def mouseReleaseEvent(self, event):
         action = self.action_at(event.position())
         pressed, self.pressed = self.pressed, None
@@ -127,6 +136,7 @@ class HoverControls(QWidget):
             self.triggered.emit(action)
         event.accept()
 
+    # Mostrar controles de ventana con efecto hover
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)

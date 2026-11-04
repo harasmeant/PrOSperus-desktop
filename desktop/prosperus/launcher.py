@@ -47,6 +47,7 @@ class ApplicationService(QObject):
     failed = Signal(str)
     favorites_changed = Signal()
 
+    # Carga favoritos globales y prepara lanzador
     def __init__(self, parent=None, settings=None):
         super().__init__(parent)
         self.settings = settings if settings is not None else QSettings('PrOSperus', 'Desktop')
@@ -63,6 +64,7 @@ class ApplicationService(QObject):
         self.process.finished.connect(self.finished)
         self.process.errorOccurred.connect(self.process_error)
 
+    # Ejecuta aplicaciones con favoritos globales
     def run(self, action, desktop_id=None):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             self.failed.emit('Hay una operación de aplicaciones en curso.'); return
@@ -76,6 +78,7 @@ class ApplicationService(QObject):
     def process_error(self, error):
         self.failed.emit('No se pudo ejecutar el servicio de aplicaciones: ' + self.process.errorString())
 
+    # Procesar resultados de comandos ejecutados
     def finished(self, code, status):
         error = bytes(self.process.readAllStandardError()).decode('utf-8', errors='replace').strip()
         output = bytes(self.process.readAllStandardOutput()).decode('utf-8', errors='replace')
@@ -91,6 +94,7 @@ class ApplicationService(QObject):
         except (ValueError, TypeError) as error:
             self.failed.emit('No se pudo leer la respuesta: ' + str(error))
 
+    # Alternar aplicaciones en favoritos
     def toggle_favorite(self, app):
         pinned = any(a['id'] == app['id'] for a in self.favorites)
         next_favorites = [a for a in self.favorites if a['id'] != app['id']]
@@ -105,6 +109,7 @@ class ApplicationService(QObject):
 
 
 class ApplicationBrowser(QDialog):
+    # Permite buscar aplicaciones y archivos en el sistema
     def __init__(self, shell, mode='apps'):
         super().__init__(shell)
         # Imported here to keep the shell/launcher dependency one-way at load time.
@@ -244,11 +249,13 @@ class ApplicationBrowser(QDialog):
         if not self.service.catalogue:
             self.refresh()
 
+    # Detener señales del servicio para evitar llamadas adicionales
     def disconnect_service(self):
         self.service.completed.disconnect(self.completed)
         self.service.failed.disconnect(self.report_error)
         self.service.favorites_changed.disconnect(self.render)
 
+    # Mostrar error al faltar python3-gobject en Fedora
     def report_error(self, message):
         if 'gi' in message and 'module' in message:
             message = 'Falta el componente de aplicaciones. Instala python3-gobject dentro de Fedora y pulsa Actualizar lista.'
@@ -257,12 +264,14 @@ class ApplicationBrowser(QDialog):
     def refresh(self):
         self.status.setText('Buscando aplicaciones instaladas…'); self.service.run('list')
 
+    # Procesa acciones completadas para renderizar o lanzar
     def completed(self, action, data):
         if action == 'list':
             self.render()
         elif action == 'launch':
             self.accept()
 
+    # Mostrar resultados de búsqueda en aplicaciones y proyectos
     def render(self):
         selected = self.selected()
         selected_id = selected.get('id') if selected else None
@@ -346,6 +355,7 @@ class ApplicationBrowser(QDialog):
         item = self.list.currentItem()
         return item.data(Qt.ItemDataRole.UserRole) if item else None
 
+    # Actualiza botones según app seleccionada
     def selection_changed(self, *args):
         app = self.selected()
         self.open.setEnabled(app is not None)
@@ -355,11 +365,13 @@ class ApplicationBrowser(QDialog):
         else:
             self.favorite.setText('Fijar')
 
+    # Alternar favorito global de la app seleccionada
     def toggle_favorite(self):
         app = self.selected()
         if app:
             self.service.toggle_favorite(app)
 
+    # Abre aplicaciones y rutas seleccionadas
     def launch(self):
         app = self.selected()
         if not app:
@@ -375,12 +387,14 @@ class ApplicationBrowser(QDialog):
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(app['path'])))
             self.accept()
 
+    # Enfoca lista de favoritos con flecha abajo
     def eventFilter(self, obj, event):
         if obj is self.search and event.type() == QEvent.KeyPress and event.key() == Qt.Key_Down:
             self.list.setFocus()
             return True
         return super().eventFilter(obj, event)
 
+    # Actualiza el modo y refresca la vista
     def on_mode_changed(self, btn, checked):
         if checked:
             if btn == self.btn_files:
@@ -392,6 +406,7 @@ class ApplicationBrowser(QDialog):
             self.set_mode(self.mode)
             self.render()
 
+    # Permite cambiar el modo de búsqueda entre archivos apps y todos
     def set_mode(self, mode):
         placeholders = {
             'files': 'Carpetas y notas de tus proyectos…',
@@ -404,6 +419,7 @@ class ApplicationBrowser(QDialog):
         self.btn_apps.setChecked(mode == 'apps')
         self.btn_all.setChecked(mode == 'all')
 
+    # Añade rutas del sistema no mostradas previamente
     def handle_locate_finished(self, proc, exitCode, exitStatus):
         if proc != self.locate:
             return
@@ -423,6 +439,7 @@ class ApplicationBrowser(QDialog):
         self.status.setText(f'{self.list.count()} resultados · {len(paths)} del sistema')
         self.locate = None
 
+    # Indica plocate faltante para solo programas y notas
     def handle_locate_error(self, proc, error):
         if proc != self.locate:
             return

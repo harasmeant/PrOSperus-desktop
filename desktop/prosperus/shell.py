@@ -62,6 +62,7 @@ ICONS = {
     'Reiniciar': 'restart',
 }
 
+# Crea botones estilizados con iconos y acciones
 def button(text, callback, parent=None):
     widget = QPushButton(text, parent)
     widget.clicked.connect(callback)
@@ -71,6 +72,7 @@ def button(text, callback, parent=None):
     return widget
 
 
+# Crear etiquetas con nombre para widgets
 def label(text, name=None):
     widget = QLabel(text)
     if name:
@@ -105,6 +107,7 @@ class SafeReader(QTextBrowser):
 
 
 class DragTitle(QLabel):
+    # Inicializa widget de título de notas con cursor de redimensionamiento
     def __init__(self, text, panel):
         super().__init__(text, panel)
         self.panel = panel
@@ -112,11 +115,13 @@ class DragTitle(QLabel):
         self.setObjectName('noteTitle')
         self.setCursor(Qt.CursorShape.SizeAllCursor)
 
+    # Permite mover el panel al hacer clic izquierdo
     def mousePressEvent(self, event):
         self.panel.raise_()
         if event.button() == Qt.MouseButton.LeftButton:
             self.offset = event.globalPosition().toPoint() - self.panel.pos()
 
+    # Arrastrar panel con ratón izquierdo dentro de límites
     def mouseMoveEvent(self, event):
         if self.offset is not None and event.buttons() & Qt.MouseButton.LeftButton:
             pos = event.globalPosition().toPoint() - self.offset
@@ -133,6 +138,7 @@ NOTE_OPACITY = .6
 
 
 class NotePanel(QFrame):
+    # Inicializa ventana de nota con modo lectura y edición
     def __init__(self, shell, path):
         super().__init__(shell.surface)
         self.shell, self.path, self.project = shell, path, shell.folder
@@ -188,6 +194,7 @@ class NotePanel(QFrame):
     def dirty(self):
         return self.editor.toPlainText() != self.original
 
+    # Dibuja las gráficas y colorea los bloques de código de la nota
     def render_markdown(self, markdown):
         # El nombre ya está en la cabecera del panel: no repetir un primer título igual.
         first, _, rest = markdown.lstrip().partition('\n')
@@ -218,6 +225,7 @@ class NotePanel(QFrame):
         self.caption.setText(self.path.stem + (' *' if self.dirty else ''))
         self.state.setText('Cambios sin guardar · Ctrl+S' if self.dirty else 'Guardado · ' + self.path.name)
 
+    # Alternar entre editar y vista previa de markdown
     def toggle_edit(self):
         editing = self.pages.currentWidget() != self.editor
         if not editing:
@@ -229,6 +237,7 @@ class NotePanel(QFrame):
         if not self.dirty:
             self.state.setText('Markdown · Ctrl+S para guardar' if editing else 'Lectura · ' + self.path.name)
 
+    # Guarda la nota sin pisar cambios hechos desde fuera
     def save(self):
         if not self.dirty:
             return True
@@ -244,6 +253,7 @@ class NotePanel(QFrame):
             self.state.setText(str(error))
             return False
 
+    # Maneja cierre con cambios no guardados
     def can_close(self):
         if not self.dirty:
             return True
@@ -265,17 +275,20 @@ class NotePanel(QFrame):
         self.controls.set_maximized(self.normal_geometry is not None)
         self.raise_()
 
+    # Ocultar la ventana y actualizar el dock
     def minimize(self):
         self.minimized = True
         self.hide()
         self.shell.update_dock()
 
+    # Hace visible ventana minimizada
     def restore(self):
         self.minimized = False
         self.show(); self.raise_()
         self.pages.currentWidget().setFocus()
         self.shell.update_dock()
 
+    # Cerrar nota y actualizar el dock
     def close_note(self):
         if not self.can_close():
             return
@@ -286,6 +299,7 @@ class NotePanel(QFrame):
         self.shell.update_dock()
         self.shell.surface.setFocus()
 
+    # Fondo translúcido de la nota con su marco y filigrana
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
@@ -316,6 +330,7 @@ class NotePanel(QFrame):
 
 
 class MapNode(QPushButton):
+    # Tarjeta del mapa: una carpeta o nota, o el centro con la carpeta actual
     def __init__(self, surface, path=None, center=False):
         super().__init__(surface)
         self.surface, self.path, self.center = surface, path, center
@@ -328,18 +343,21 @@ class MapNode(QPushButton):
     def compact(self):
         return not self.center and self.path.is_dir() and not self.surface.expanding
 
+    # Seleccionar ruta con Control al hacer clic izquierdo
     def mousePressEvent(self, event):
         if not self.center and event.button() == Qt.MouseButton.LeftButton:
             self.surface.select(self.path, bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier))
             self.press = event.position().toPoint()
         super().mousePressEvent(event)
 
+    # Asignar foco al widget al pasar el ratón si no está centrado ni arrastrado
     def enterEvent(self, event):
         # Con el ratón encima, Enter abre esta tarjeta.
         if not self.center and self.surface.dragging is None:
             self.setFocus(Qt.FocusReason.MouseFocusReason)
         super().enterEvent(event)
 
+    # Permite arrastrar tarjetas y encajar en hueco más cercano al soltar
     def mouseMoveEvent(self, event):
         press = getattr(self, 'press', None)
         if (press is not None and event.buttons() & Qt.MouseButton.LeftButton
@@ -350,6 +368,7 @@ class MapNode(QPushButton):
             return
         super().mouseMoveEvent(event)
 
+    # Volver a carpeta anterior o abrir nodo al doble clic izquierdo
     def mouseDoubleClickEvent(self, event):
         if event.button() != Qt.MouseButton.LeftButton:
             super().mouseDoubleClickEvent(event); return
@@ -360,6 +379,7 @@ class MapNode(QPushButton):
             self.surface.open_node(self)
         event.accept()
 
+    # Abrir nodo al soltar botón izquierdo sin arrastrar
     def mouseReleaseEvent(self, event):
         self.press = None
         if self.surface.dragging is self:
@@ -372,6 +392,7 @@ class MapNode(QPushButton):
         if open_path:
             self.surface.open_node(self)
 
+    # Procesa teclas para navegar y seleccionar nodos
     def keyPressEvent(self, event):
         if not self.center and event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.surface.open_node(self)
@@ -388,11 +409,13 @@ class MapNode(QPushButton):
         else:
             super().keyPressEvent(event)
 
+    # Selecciona ruta no seleccionada y muestra menú contextual
     def contextMenuEvent(self, event):
         if self.path and self.path not in self.surface.selection:
             self.surface.select(self.path)
         self.surface.show_menu(event.globalPos())
 
+    # Dibujar elementos del escritorio con estilo y estado actual
     def paintEvent(self, event):
         p = QPainter(self); p.setRenderHint(QPainter.RenderHint.Antialiasing)
         colors = self.surface.shell.colors
@@ -423,6 +446,7 @@ class MapNode(QPushButton):
 
 class LeafNode(QPushButton):
     """Archivo o subcarpeta que sale de una carpeta del mapa."""
+    # Hoja del mapa: nota o carpeta pequeña que cuelga de su rama
     def __init__(self, surface, parent_node, path=None, more=0):
         super().__init__(surface)
         self.surface, self.parent_node, self.path = surface, parent_node, path
@@ -437,6 +461,7 @@ class LeafNode(QPushButton):
         # «+N más» entra en la carpeta; el resto abre el archivo o la subcarpeta.
         self.surface.open_node(self.parent_node) if self.path is None else self.surface.shell.activate(self.path)
 
+    # Dibujar elementos visuales del escritorio
     def paintEvent(self, event):
         p = QPainter(self); p.setRenderHint(QPainter.RenderHint.Antialiasing)
         colors = self.surface.shell.colors
@@ -454,6 +479,7 @@ class LeafNode(QPushButton):
 
 class Surface(QWidget):
     LEAVES = 4
+    # Inicializa escritorio con nodos y soporte de arrastrar
     def __init__(self, shell):
         super().__init__()
         self.shell = shell
@@ -490,6 +516,7 @@ class Surface(QWidget):
             leaf.show()
         self.compute_links()
 
+    # Animar transición al abrir directorio
     def open_node(self, node):
         if not node.path.is_dir():
             self.shell.activate(node.path)
@@ -554,6 +581,7 @@ class Surface(QWidget):
             motion.slide_in(widget, QPoint(90 * direction, 0), 300).valueChanged.connect(lambda *_: self.update())
         motion.fade_in(moving, 240, 14, self.update)
 
+    # Seleccionar elementos para copiar, pegar o abrir
     def select(self, path, toggle=False):
         if toggle:
             if path in self.selection:
@@ -566,11 +594,13 @@ class Surface(QWidget):
             node.update()
         self.shell.status.setText(f'{len(self.selection)} seleccionados · Ctrl+C copiar · Ctrl+V pegar · Doble clic para abrir')
 
+    # Selecciona todos los nodos del escritorio
     def select_all(self):
         self.selection = [node.path for node in self.nodes]
         for node in self.nodes:
             node.update()
 
+    # Maneja teclas de dirección y activa elementos seleccionados
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down):
             dir_map = {
@@ -585,6 +615,7 @@ class Surface(QWidget):
         else:
             super().keyPressEvent(event)
 
+    # Deselecciona y enfoca al presionar botón izquierdo
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.select(None); self.setFocus()
@@ -601,6 +632,7 @@ class Surface(QWidget):
         if event.mimeData().hasUrls():
             event.setDropAction(Qt.DropAction.CopyAction); event.accept()
 
+    # Copiar archivos arrastrados a la carpeta correcta
     def dropEvent(self, event):
         try:
             paths = local_paths(event.mimeData())
@@ -612,6 +644,7 @@ class Surface(QWidget):
         except ValueError as error:
             self.shell.status.setText(str(error))
 
+    # Organiza tarjetas y hojas en disposición radial ajustada al espacio
     def arrange(self):
         width, height = self.width(), self.height()
         m = map_metrics(width, height)
@@ -671,6 +704,7 @@ class Surface(QWidget):
             panel.move(max(0, min(panel.x(), width - panel.width())), max(0, min(panel.y(), height - panel.height())))
         self.update()
 
+    # Determina el destino del widget al soltarlo
     def drop(self, widget):
         self.dragging = None
         here = widget.geometry().center()
@@ -691,6 +725,7 @@ class Surface(QWidget):
     def resizeEvent(self, event):
         self.arrange()
 
+    # Dibuja el escritorio con estructura de árbol procedimental
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -737,6 +772,7 @@ class Surface(QWidget):
             pearl.setAlpha(alpha(140 * min(faded(wa), faded(wb))))
             branch(p, QPointF(wa.geometry().center()), QPointF(wb.geometry().center()), width, width * .6, pearl, k, 2, .25, traits)
 
+    # Mover foco al siguiente nodo en dirección dada
     def focus_direction(self, path, direction):
         centers = []
         for node in self.nodes:
@@ -870,6 +906,7 @@ class Surface(QWidget):
 
 
 class Explorer(QDialog):
+    # Explorar proyectos en el escritorio
     def __init__(self, shell):
         super().__init__(shell)
         self.shell, self.folder = shell, shell.folder
@@ -920,6 +957,7 @@ class Explorer(QDialog):
     def selected_paths(self):
         return [item.data(Qt.ItemDataRole.UserRole) for item in self.items.selectedItems()]
 
+    # Mostrar menú contextual para operaciones en escritorio
     def context_menu(self, position):
         menu = self.shell.files.menu(self.items, self.selected_paths(), self.folder,
                                     open_path=self.open_path, create_note=self.new_note,
@@ -934,6 +972,7 @@ class Explorer(QDialog):
         if self.folder != self.shell.vault.root:
             self.go(self.folder.parent)
 
+    # Actualiza la lista de proyectos en el explorador
     def refresh(self):
         self.items.clear()
         self.location.setText('Proyectos / ' + str(self.folder.relative_to(self.shell.vault.root)))
@@ -947,12 +986,14 @@ class Explorer(QDialog):
         except (OSError, ValueError) as error:
             self.location.setText(str(error))
 
+    # Abrir ruta asociada al elemento activado
     def activate(self, item):
         if item is None:
             return
         path = item.data(Qt.ItemDataRole.UserRole)
         self.open_path(path)
 
+    # Abre rutas en shell, navega y activa elementos
     def open_path(self, path):
         if path.is_dir():
             self.go(path)
@@ -962,6 +1003,7 @@ class Explorer(QDialog):
     def show_map(self):
         self.shell.navigate(self.folder); self.accept()
 
+    # Crear nueva nota en carpeta actual
     def new_note(self):
         if self.shell.new_note(folder=self.folder):
             self.accept()
@@ -975,6 +1017,7 @@ class Explorer(QDialog):
     def _open_under(self, paths):
         return [p for p in self.panels if any(p == q or p.is_relative_to(q) for q in paths)]
 
+    # Renombra notas o carpetas y actualiza los enlaces que apuntan a ellas
     def rename_path(self, path):
         if self._open_under([path]):
             self.status.setText('Cierra primero la nota abierta para renombrarla.'); return
@@ -991,6 +1034,7 @@ class Explorer(QDialog):
         self.refresh_projects()
         self.status.setText(f'Renombrado a {target.name}' + (f' · enlaces actualizados en {len(updated)} notas' if updated else ''))
 
+    # Mover selección a papelera con validación y estado actualizado
     def trash_paths(self, paths):
         if not paths:
             return
@@ -1023,6 +1067,7 @@ class Desktop(QMainWindow):
     """Coordina mapa, notas y diálogos; Vault concentra el acceso a los archivos."""
     PAGE_SIZE = 8
 
+    # Inicializa el entorno de escritorio con gestión de proyectos y notas
     def __init__(self, root, kiosk=False, system_session=False, settings=None):
         super().__init__()
         self.settings = settings if settings is not None else QSettings('PrOSperus', 'Desktop')
@@ -1172,6 +1217,7 @@ class Desktop(QMainWindow):
         super().resizeEvent(event)
         self.position_overlays()
 
+    # Posiciona capas según tamaño pantalla y escalado de texto
     def position_overlays(self):
         if hasattr(self, 'drawer'):
             self.drawer.setGeometry(0, 0, min(round(self.drawer.panel_width() * self.accessibility.text_scale / 100), self.width() - 100), self.background.height())
@@ -1181,6 +1227,7 @@ class Desktop(QMainWindow):
     def shortcut(self, key, callback):
         item = QShortcut(QKeySequence(key), self); item.activated.connect(callback); self.shortcuts.append(item)
 
+    # Aplica el tema del proyecto a la interfaz
     def apply_appearance(self):
         self.colors = self.accessibility.palette(palette_for(self.vault, self.folder))
         self.setStyleSheet(self.accessibility.css(self.colors))
@@ -1217,6 +1264,7 @@ class Desktop(QMainWindow):
                 and not self.accessibility.high_contrast):
             attach_frame(watched, lambda: self.colors, self.frame_traits)
 
+    # Ajusta el entorno visual para accesibilidad
     def apply_accessibility(self):
         self.apply_appearance()
         self.dock_scroll.setFixedHeight(max(62, round(62 * self.accessibility.text_scale / 100),

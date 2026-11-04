@@ -6,6 +6,7 @@ import shutil
 import stat
 
 
+# Valida rutas sin enlaces simbólicos ni archivos especiales
 def validate_source(path):
     path = Path(path).expanduser().absolute()
     if path.is_symlink():
@@ -23,6 +24,7 @@ def validate_source(path):
     return path.resolve(strict=True)
 
 
+# Genera nombres únicos para evitar sobrescribir archivos o enlaces simbólicos
 def available_name(folder, source, directory=False):
     name = source.name
     candidate = folder / name
@@ -36,6 +38,7 @@ def available_name(folder, source, directory=False):
     return candidate
 
 
+# Copiar archivos locales sin sobrescribir ni seguir enlaces simbólicos
 def copy_to_handle(source, outgoing):
     # O_NOFOLLOW also checks a source replaced with a symlink after preflight.
     descriptor = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
@@ -52,6 +55,7 @@ def copy_file(source, destination):
         copy_to_handle(source, outgoing)
 
 
+# Copiar directorios sin sobrescribir ni seguir enlaces simbólicos
 def copy_tree(source, destination):
     if source.is_symlink():
         raise ValueError('La carpeta de origen se ha convertido en un enlace.')

@@ -38,6 +38,7 @@ def settings_file(folder, stop=None):
         current = current.parent
 
 
+# Lee y cachea estilos de ramas en JSON
 @lru_cache(maxsize=32)
 def _read(path, modified):
     try:
@@ -145,6 +146,7 @@ def merge(traits, overrides):
     return merged
 
 
+# Guarda estilos de ramas por carpeta en JSON
 def save(folder, data):
     folder = Path(folder)
     if folder == Path.home() or folder == Path('/') or not folder.is_dir():

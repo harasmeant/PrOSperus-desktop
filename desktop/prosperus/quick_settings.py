@@ -97,6 +97,7 @@ def terminal(argv):
 class QuickSettings(QFrame):
     state_ready = Signal(dict)
 
+    # Ajustes de sistema rápidos
     def __init__(self, shell):
         super().__init__()
         self.state_ready.connect(self.apply)
@@ -249,6 +250,7 @@ class QuickSettings(QFrame):
         self.box.addWidget(title)
         return title
 
+    # Remate floral decorativo del panel
     def paintEvent(self, event):
         super().paintEvent(event)
         # Remate floral sobre los botones del pie, como las ramas del mapa.
@@ -258,11 +260,13 @@ class QuickSettings(QFrame):
         y = self.btn_ctrl.geometry().top() - 22
         flourish(painter, 30, self.width() - 30, y, color, 3)
 
+    # Establece el brillo de la pantalla con el valor seleccionado
     def _set_br(self):
         ok, _ = attempt(['brightnessctl', '-q', '-c', 'backlight', 'set', f'{self.brightness.value()}%'])
         self.br_err.setText('No se pudo cambiar el brillo (detalles en el registro).')
         self.br_err.setVisible(not ok)
 
+    # Ajusta el volumen del sistema
     def _set_vol(self):
         ok, _ = attempt(['wpctl', 'set-volume', '-l', '1.0', '@DEFAULT_AUDIO_SINK@', f'{self.volume.value()/100:.2f}'])
         self.vol_err.setText('No se pudo cambiar el volumen (detalles en el registro).')
@@ -282,6 +286,7 @@ class QuickSettings(QFrame):
         # Las órdenes del sistema pueden tardar: se consultan en otro hilo y el panel se abre al instante.
         threading.Thread(target=lambda: self.state_ready.emit(collect()), daemon=True).start()
 
+    # Actualiza el panel rápido con el estado del sistema
     def apply(self, state):
         val_br = state['brightness']
         self.brightness.setEnabled(val_br is not None); self.br_err.setVisible(val_br is None)

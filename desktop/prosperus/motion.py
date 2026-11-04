@@ -30,6 +30,7 @@ def fade_in(widgets, duration=220, stagger=30, on_step=None):
         QTimer.singleShot(i * stagger, animation, animation.start)
         widget._fade = animation
 
+# Animar widgets suavemente hacia el escritorio
 def slide_in(widget, offset, duration=260):
     previous = getattr(widget, '_slide', None)
     if previous is not None and previous.state() == QAbstractAnimation.State.Running:
@@ -46,6 +47,7 @@ def slide_in(widget, offset, duration=260):
     animation.start()
     return animation
 
+# Desaparición suave de widget con efecto fantasma
 def ghost_out(widget, offset, duration=180):
     # QWidget.hide directo: funciona aunque la clase sobrescriba hide() para llamar aquí.
     if widget.parentWidget() is None or not widget.isVisible():

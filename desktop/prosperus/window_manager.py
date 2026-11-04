@@ -21,6 +21,7 @@ HEADER_SIZE = 14
 MAX_SIZE = 8 * 1024 * 1024
 
 
+# Lee datos de socket hasta tamaño exacto para IPC
 def _exact(sock, size):
     # recv puede devolver menos bytes de los pedidos: leer hasta completar.
     data = bytearray()
@@ -71,6 +72,7 @@ class WindowManager(QObject):
     # Super pulsada y soltada sola (Sway: bindsym --release Super_L).
     search_requested = Signal()
 
+    # Gestiona ventanas flotantes y organiza aplicaciones con IPC de Sway
     def __init__(self, parent=None, options_provider=None):
         super().__init__(parent)
         self.options_provider = options_provider or (lambda: LayoutOptions())
@@ -81,12 +83,14 @@ class WindowManager(QObject):
         self.available = bool(os.environ.get('SWAYSOCK'))
         self._stopping = False
 
+    # Inicia hilo que gestiona ventanas flotantes en Sway
     def start(self):
         if not self.available:
             return
         self._stopping = False
         threading.Thread(target=self._run, daemon=True).start()
 
+    # Colocar escritorio en espacio de trabajo correcto
     def _place_desktop(self):
         # La orden de mover solo afecta a ventanas ya mapeadas: esperar a que
         # el escritorio exista en el árbol antes de llevarlo a su espacio.
@@ -102,6 +106,7 @@ class WindowManager(QObject):
             time.sleep(.2)
         self.message.emit('No se pudo colocar el escritorio en su espacio de trabajo.')
 
+    # Mantener el escritorio organizado con eventos de Sway
     def _run(self):
         self._place_desktop()
         while not self._stopping:
@@ -114,6 +119,7 @@ class WindowManager(QObject):
                 self.message.emit(f'Conexión con Sway perdida, reintentando: {e}')
                 threading.Event().wait(2)
 
+    # Gestiona ventanas y proyectos con eventos Sway
     def _handle_event(self, e):
         if 'binding' in e:
             cmd = e['binding'].get('command', '')
@@ -144,6 +150,7 @@ class WindowManager(QObject):
         elif change in ('title', 'move'):
             self.refresh()
 
+    # Corrige tamaños iniciales de ventanas recién creadas
     def place(self, con_id):
         if self.mode == 'fullscreen':
             try:
@@ -155,6 +162,7 @@ class WindowManager(QObject):
             # tamaño flotante por defecto: la primera orden de tamaño se pierde. Se reintenta.
             self.arrange(attempts=4)
 
+    # Organiza ventanas flotantes del output enfocado
     def arrange(self, attempts=1):
         for attempt in range(attempts):
             try:
@@ -172,6 +180,7 @@ class WindowManager(QObject):
                 self.message.emit(f'No se pudo organizar: {e}')
             return
 
+    # Cambia el modo de colocación (pantalla completa o Fibonacci)
     def set_mode(self, mode):
         if mode not in ('fibonacci', 'fullscreen'):
             raise ValueError('Modo no válido')
@@ -190,6 +199,7 @@ class WindowManager(QObject):
         except (OSError, ValueError) as e:
             self.message.emit(f'Error al cambiar modo: {e}')
 
+    # Prepara nombres de ventanas para IPC eliminando caracteres especiales
     @staticmethod
     def _quoted(name):
         # Los nombres de carpeta llegan a órdenes de Sway: sin comillas ni barras.
@@ -211,6 +221,7 @@ class WindowManager(QObject):
                     found.append((n, ws.get('name') == self._hidden()))
         return found
 
+    # Actualiza lista de ventanas y emite cambios
     def refresh(self):
         try:
             windows = [{'id': n['id'], 'name': n.get('name') or n.get('app_id') or 'Aplicación', 'hidden': hidden}
@@ -248,6 +259,7 @@ class WindowManager(QObject):
         except (OSError, ValueError) as e:
             self.message.emit(f'No se pudo poner el fondo en las otras pantallas: {e}')
 
+    # Enfocar ventana en workspace Sway
     def focus(self, con_id, hidden):
         try:
             if hidden:

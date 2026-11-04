@@ -10,6 +10,7 @@ from functools import lru_cache
 from PySide6.QtGui import QColor, QImage, QLinearGradient, QPainter, QPainterPath, QPen
 
 
+# Genera puntos para curvas cúbicas en ramas del mapa
 def cubic_points(p0, c1, c2, p1, steps=32):
     points = []
     for i in range(steps + 1):
@@ -289,6 +290,7 @@ def place_ornaments(painter, items, points, start_width, end_width, color, size,
             ornament(painter, item, base, heading, angle, turn, size * lerp('size', t), width, tone, soft)
 
 
+# Determina índice de inserción en lista ordenada de longitudes
 def bisect_index(lengths, position):
     low, high = 0, len(lengths) - 1
     while low < high:
