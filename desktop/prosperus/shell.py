@@ -1294,7 +1294,10 @@ class Desktop(QMainWindow):
         # Cada poco: si cambia la imagen o el tono que manda, se rehace el tema; si solo avanza el fundido, se repinta.
         if self.accessibility.high_contrast:
             return
-        previous, current, mix, tone = wallpaper_scene(self.vault, self.folder)
+        try:
+            previous, current, mix, tone = wallpaper_scene(self.vault, self.folder)
+        except (OSError, ValueError):
+            return  # la carpeta acaba de desaparecer: el escritorio se encarga al refrescar
         if (previous, current, tone, mix >= .5) != getattr(self, 'scene_key', None):
             self.apply_appearance()
         elif mix != self.background.mix:
