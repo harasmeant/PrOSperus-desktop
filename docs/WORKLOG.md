@@ -637,3 +637,16 @@ Ideas para más adelante:
 - ISO de Debian de las 10:20 (SHA-256 `94462c28…9afd`) en QEMU con el disco falso del portátil: instala
   en el hueco libre, arranca el escritorio desde el disco y xboot, «bazzite» y el cargador de Fedora
   quedan idénticos. Falta grabarla en el USB y probarla en el portátil.
+
+## 2026-11-05 — Pantalla negra en el disco tras instalar NVIDIA (Debian)
+
+- Primer arranque desde el NVMe (12:43) correcto. Después se instaló `nvidia-open-kernel-dkms` 550.163.01
+  (parcheado a mano: el núcleo 6.12.115 añadió un argumento a `pci_resize_resource`) y la sesión pasó
+  a esperar a la NVIDIA. Al reiniciar, pantalla negra en las dos pantallas.
+- Causa probable: Debian renombra los módulos (`nvidia-current-open-drm`) y las opciones van por ese
+  nombre, así que `options nvidia-drm modeset=1` no se aplicaba; en la 550 el KMS viene apagado
+  (`nv_drm_modeset_module_param = false`). Sway recibía una NVIDIA sin salidas. Sin registro para
+  confirmarlo: el journal era volátil.
+- `prosperus-nvidia.conf` con los nombres de Debian; la sesión descarta gráficas sin salidas y, si Sway
+  cae al arrancar con varias, reintenta solo con la de arranque. El instalador a disco deja el journal
+  persistente. Copiado a la partición desde Bazzite; falta probar en el portátil.

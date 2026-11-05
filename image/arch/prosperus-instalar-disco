@@ -162,6 +162,9 @@ printf '%%%s ALL=(ALL:ALL) ALL\n' "$admin" > "$target/etc/sudoers.d/prosperus"
 chmod 0440 "$target/etc/sudoers.d/prosperus"
 printf 'prosperus:%s\n' "$password" | chpasswd -R "$target"
 date -u +%Y-%m-%dT%H:%M:%SZ > "$target/usr/share/prosperus/instalado"
+# El registro del Live va en memoria; en disco se guarda para poder ver qué falló al arrancar.
+mkdir -p "$target/etc/systemd/journald.conf.d" "$target/var/log/journal"
+printf '[Journal]\nStorage=persistent\n' > "$target/etc/systemd/journald.conf.d/zz-prosperus-disco.conf"
 
 # Initramfs para arrancar desde disco (el de la imagen es el del Live).
 # rslave: desmontarlos después no debe propagarse a /dev, /proc y /sys de la Live.

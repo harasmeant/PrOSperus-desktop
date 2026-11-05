@@ -27,11 +27,16 @@ export XDG_DATA_DIRS="/usr/share/prosperus/xdg:${XDG_DATA_HOME:-$HOME/.local/sha
 # driver de la gráfica; si Sway lo toma, la pantalla queda negra al cargar amdgpu/i915.
 # Se espera a las gráficas reales y se usan todas, la de arranque (boot_vga) primero:
 # en portátiles híbridos el HDMI suele colgar de la NVIDIA.
+# NVIDIA solo cuenta con el controlador propietario instalado (nouveau está bloqueado).
+# Debian lo llama nvidia-current(-open); ruta completa porque /usr/sbin no está en su PATH.
+nvidia_module=
+for name in nvidia nvidia-current-open nvidia-current; do
+    /usr/sbin/modinfo -n "$name" >/dev/null 2>&1 && { nvidia_module=$name; break; }
+done
 expected=0
 for dev in /sys/bus/pci/devices/*; do
     case $(cat "$dev/class" 2>/dev/null) in 0x0300*|0x0302*) ;; *) continue ;; esac
-    # NVIDIA solo cuenta con el controlador propietario instalado (nouveau está bloqueado).
-    [ "$(cat "$dev/vendor")" = 0x10de ] && ! modinfo -n nvidia >/dev/null 2>&1 && continue
+    [ "$(cat "$dev/vendor")" = 0x10de ] && [ -z "$nvidia_module" ] && continue
     expected=$((expected + 1))
 done
 i=0
@@ -41,6 +46,8 @@ while [ $i -lt 30 ]; do
         case $card in *-*) continue ;; esac
         driver=$(basename "$(readlink -f "$card/device/driver" 2>/dev/null)")
         case $driver in ''|simple-framebuffer|simpledrm|efi-framebuffer) continue ;; esac
+        # Sin salidas (NVIDIA sin modo KMS) Sway no puede usarla y no arranca: se deja fuera.
+        ls -d "$card"-* >/dev/null 2>&1 || continue
         count=$((count + 1))
         if [ -z "$boot" ] && [ "$(cat "$card/device/boot_vga" 2>/dev/null)" = 1 ]; then
             boot=/dev/dri/${card##*/}
@@ -62,4 +69,15 @@ flags=
 grep -q '^nvidia ' /proc/modules && flags=--unsupported-gpu
 echo "Gráficas para Sway: ${WLR_DRM_DEVICES:-automático} ($count de $expected); ${flags:-sin opciones}" | systemd-cat -t prosperus-diag
 # Sway sustituye a Cage: permite varias ventanas sobre el mapa de proyectos.
-exec dbus-run-session -- systemd-cat --identifier=prosperus-session sway $flags --config /etc/sway/prosperus.conf
+run_sway() {
+    dbus-run-session -- systemd-cat --identifier=prosperus-session sway $flags --config /etc/sway/prosperus.conf
+}
+# Si Sway cae al arrancar con varias gráficas, se vuelve a probar solo con la de
+# arranque: mejor sin el monitor externo que con la pantalla negra.
+started=$(date +%s)
+run_sway && exit 0
+case $WLR_DRM_DEVICES in *:*) ;; *) exit 1 ;; esac
+[ $(( $(date +%s) - started )) -lt 20 ] || exit 1
+export WLR_DRM_DEVICES=${WLR_DRM_DEVICES%%:*}
+echo "Sway no arrancó con varias gráficas; reintento solo con $WLR_DRM_DEVICES" | systemd-cat -t prosperus-diag
+run_sway
