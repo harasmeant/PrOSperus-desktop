@@ -3,9 +3,14 @@
 export XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=PrOSperus
 export QT_QPA_PLATFORM=wayland
+# pixman (software) basta con una gráfica, pero no puede copiar la imagen a una segunda
+# (HDMI en la NVIDIA): "Renderer did not support importing DMA-BUFs" y esa salida no enciende.
 export WLR_RENDERER=pixman
 export XKB_DEFAULT_LAYOUT=es
 export XCURSOR_THEME=breeze_cursors XCURSOR_SIZE=24
+# El plano de cursor de la NVIDIA no acepta el formato que pide wlroots ("Failed to pick
+# cursor plane format"): el puntero parpadea o se queda congelado en el HDMI. Cursor por software.
+export WLR_NO_HARDWARE_CURSORS=1
 # greetd arranca en /: sin esto, todo lo que abre Sway (Foot incluido) empieza en la raíz.
 cd "$HOME" || true
 # Las descargas llegan a una carpeta de entrada y el escritorio las reparte en el proyecto
@@ -69,7 +74,7 @@ flags=
 grep -q '^nvidia ' /proc/modules && flags=--unsupported-gpu
 # Sway sustituye a Cage: permite varias ventanas sobre el mapa de proyectos.
 run_sway() {
-    echo "Gráficas para Sway: ${WLR_DRM_DEVICES:-automático} ($count de $expected); ${flags:-sin opciones}" | systemd-cat -t prosperus-diag
+    echo "Gráficas para Sway: ${WLR_DRM_DEVICES:-automático} [$WLR_RENDERER] ($count de $expected); ${flags:-sin opciones}" | systemd-cat -t prosperus-diag
     dbus-run-session -- systemd-cat --identifier=prosperus-session sway $flags --config /etc/sway/prosperus.conf
 }
 case $WLR_DRM_DEVICES in *:*) ;; *) run_sway; exit ;; esac
@@ -80,8 +85,11 @@ case $WLR_DRM_DEVICES in *:*) ;; *) run_sway; exit ;; esac
 flag=${XDG_RUNTIME_DIR:-/tmp}/prosperus-sin-pantallas
 export PROSPERUS_GPU_FLAG=$flag
 first=${WLR_DRM_DEVICES%%:*} others=${WLR_DRM_DEVICES#*:}
+# Con varias gráficas se usa GLES2 (sí copia entre gráficas); el último intento,
+# solo la de arranque, vuelve a pixman como red de seguridad.
 for devices in "$WLR_DRM_DEVICES" "$others:$first" "$first"; do
     export WLR_DRM_DEVICES=$devices
+    case $devices in *:*) export WLR_RENDERER=gles2 ;; *) export WLR_RENDERER=pixman ;; esac
     rm -f "$flag"
     started=$(date +%s)
     run_sway

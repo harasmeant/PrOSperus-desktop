@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 import unittest
 import tempfile
 from pathlib import Path
@@ -101,6 +102,7 @@ class TestDriverAssistant(unittest.TestCase):
         cmds = da.plan_for(gpu, secure_boot=True, system=DEBIAN).options[0].commands
         text = ' '.join(cmds)
         self.assertIn('nvidia-open-kernel-dkms', text)
+        self.assertIn('libnvidia-allocator1', text)
         self.assertIn('linux-headers-$(uname -r)', text)
         self.assertNotIn('dnf', text)
         self.assertNotIn('pacman', text)

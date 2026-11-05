@@ -34,8 +34,12 @@ ARCH_NVIDIA = 'sudo pacman -S --needed --noconfirm gcc make nvidia-open-dkms nvi
 DEBIAN_OPEN_STACK = ('sudo apt-get update && sudo apt-get install -y firmware-misc-nonfree firmware-amd-graphics '
                      'firmware-intel-graphics mesa-vulkan-drivers')
 # Módulos abiertos de NVIDIA (contrib/non-free de Debian), compilados con DKMS para el núcleo que arranca.
+# libnvidia-egl-gbm1 y libnvidia-allocator1 (el backend GBM, gbm/nvidia-drm_gbm.so) son solo
+# «recomendados» y la imagen no instala recomendados: sin ellos Sway no puede crear búferes en la
+# NVIDIA («gbm_bo_create failed», «EGLImage not supported») y el HDMI de los híbridos queda negro.
 DEBIAN_NVIDIA = ('sudo apt-get update && sudo apt-get install -y "linux-headers-$(uname -r)" '
-                 'nvidia-open-kernel-dkms nvidia-driver libcuda1 nvidia-smi firmware-misc-nonfree')
+                 'nvidia-open-kernel-dkms nvidia-driver libnvidia-egl-gbm1 libnvidia-allocator1 libcuda1 nvidia-smi '
+                 'firmware-misc-nonfree')
 
 
 def open_stack(system):
