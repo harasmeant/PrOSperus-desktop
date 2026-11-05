@@ -28,16 +28,17 @@ La ISO de Arch trae `prosperus-instalar-disco`, que instala PrOSperus en el
 Ahora el NVMe lo ocupa entero Bazzite (btrfs). Hay que encoger su partición
 para dejar espacio libre al final. **Antes, copia de seguridad de lo importante.**
 
-Desde Bazzite (btrfs se puede encoger estando montado):
+Desde Bazzite (btrfs se puede encoger estando montado), en una terminal:
 
 ```bash
-# 1. Encoger el sistema de archivos (ejemplo: dejar 150 GiB libres).
-sudo btrfs filesystem resize -150G /sysroot
-# 2. Encoger la partición algo menos de lo que se encogió el sistema de archivos,
-#    con margen. Mira primero el tamaño nuevo:
-sudo btrfs filesystem show /sysroot
-#    y ajusta la partición 3 a ese tamaño + 1 GiB con GNOME Discos o con parted.
+sudo bash scripts/hacer-sitio-bazzite.sh 150 --simular   # solo enseña el plan
+sudo bash scripts/hacer-sitio-bazzite.sh 150             # pide escribir ENCOGER
 ```
+
+Encoge el btrfs `bazzite` (GiB pedidos + 1), luego la partición 3 dejando
+1 GiB de margen sobre el sistema de archivos, y guarda antes la tabla en
+`~/tabla-particiones-antes-*.sfdisk`. Se niega si Bazzite se quedaría con
+menos de 30 GiB de margen o si `nvme0n1p3` no es la última partición.
 
 Este paso es el único con riesgo para Bazzite: hazlo con calma, y si hay
 dudas, pide ayuda antes de pulsar. El instalador no lo hace por ti a propósito.
