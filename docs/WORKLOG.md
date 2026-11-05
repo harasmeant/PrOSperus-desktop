@@ -626,3 +626,5 @@ Ideas para más adelante:
   800,28 GiB y `nvme0n1p3` a 801,3 GiB (1680410624 sectores, mismo inicio y UUID). Quedan 150 GiB sin
   particionar al final del disco (sectores 1685835776–2000409230). Copia de la tabla anterior en
   `~/tabla-particiones-antes.sfdisk`. Siguiente: `prosperus-instalar-disco` desde el USB.
+- Reiniciado: Bazzite arranca normal tras el cambio (`nvme0n1p3` 801,3 GiB montada, 426 GiB libres
+  dentro del btrfs). El hueco de 150 GiB sigue ahí.
