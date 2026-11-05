@@ -67,17 +67,27 @@ done
 # --unsupported-gpu (pantalla negra tras instalarlo).
 flags=
 grep -q '^nvidia ' /proc/modules && flags=--unsupported-gpu
-echo "Gráficas para Sway: ${WLR_DRM_DEVICES:-automático} ($count de $expected); ${flags:-sin opciones}" | systemd-cat -t prosperus-diag
 # Sway sustituye a Cage: permite varias ventanas sobre el mapa de proyectos.
 run_sway() {
+    echo "Gráficas para Sway: ${WLR_DRM_DEVICES:-automático} ($count de $expected); ${flags:-sin opciones}" | systemd-cat -t prosperus-diag
     dbus-run-session -- systemd-cat --identifier=prosperus-session sway $flags --config /etc/sway/prosperus.conf
 }
-# Si Sway cae al arrancar con varias gráficas, se vuelve a probar solo con la de
-# arranque: mejor sin el monitor externo que con la pantalla negra.
-started=$(date +%s)
-run_sway && exit 0
-case $WLR_DRM_DEVICES in *:*) ;; *) exit 1 ;; esac
-[ $(( $(date +%s) - started )) -lt 20 ] || exit 1
-export WLR_DRM_DEVICES=${WLR_DRM_DEVICES%%:*}
-echo "Sway no arrancó con varias gráficas; reintento solo con $WLR_DRM_DEVICES" | systemd-cat -t prosperus-diag
-run_sway
+case $WLR_DRM_DEVICES in *:*) ;; *) run_sway; exit ;; esac
+# Con varias gráficas la copia entre ellas puede fallar (amdgpu + NVIDIA 550: ninguna
+# pantalla se enciende, Sway sigue vivo sin salidas y cae al abrir el escritorio).
+# La configuración de Sway avisa con este archivo si no hay ninguna pantalla activa;
+# entonces se prueba con la NVIDIA de principal y, si tampoco, solo con la de arranque.
+flag=${XDG_RUNTIME_DIR:-/tmp}/prosperus-sin-pantallas
+export PROSPERUS_GPU_FLAG=$flag
+first=${WLR_DRM_DEVICES%%:*} others=${WLR_DRM_DEVICES#*:}
+for devices in "$WLR_DRM_DEVICES" "$others:$first" "$first"; do
+    export WLR_DRM_DEVICES=$devices
+    rm -f "$flag"
+    started=$(date +%s)
+    run_sway
+    status=$?
+    # Sin aviso y tras más de 20 s, es una salida normal (cerrar sesión).
+    [ ! -e "$flag" ] && [ $(( $(date +%s) - started )) -ge 20 ] && exit $status
+    echo "Sin pantallas con $devices; se prueba otra combinación" | systemd-cat -t prosperus-diag
+done
+exit 1

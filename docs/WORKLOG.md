@@ -650,3 +650,15 @@ Ideas para más adelante:
 - `prosperus-nvidia.conf` con los nombres de Debian; la sesión descarta gráficas sin salidas y, si Sway
   cae al arrancar con varias, reintenta solo con la de arranque. El instalador a disco deja el journal
   persistente. Copiado a la partición desde Bazzite; falta probar en el portátil.
+
+## 2026-11-05 — Sin escritorio con AMD + NVIDIA: Sway prueba otras combinaciones
+
+- Registro del arranque de las 14:28 (journal ya persistente): la NVIDIA ya tiene KMS y la sesión ve
+  las dos gráficas (`card1` amdgpu con `eDP-1`, `card0` nvidia con `HDMI-A-1`). Sway renderiza en la
+  AMD y la copia a la NVIDIA falla (`gbm_bo_create failed`, «Failed to begin render pass with
+  multi-GPU destination buffer»); al fallar esa salida, ninguna se enciende. Sway sigue vivo sin
+  pantallas, cae al abrir el escritorio (~47 s) y greetd vuelve a empezar: bucle sin escritorio.
+- Ahora la configuración de Sway mira a los 5 s si hay alguna pantalla activa; si no, sale y
+  `prosperus-session` prueba con la NVIDIA de principal y, si tampoco, solo con la de arranque
+  (portátil sin monitor externo). Comprobado con Sway sin pantalla (salida apagada → aviso y salida;
+  encendida → sigue). Falta probar en el portátil.
