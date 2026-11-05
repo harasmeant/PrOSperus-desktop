@@ -66,13 +66,12 @@ class ApplicationService(QObject):
         self.process.errorOccurred.connect(self.process_error)
 
     # Ejecuta aplicaciones con favoritos globales
-    def run(self, action, desktop_id=None):
+    def run(self, action, *args):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             self.failed.emit('Hay una operación de aplicaciones en curso.'); return
         self.action = action
         arguments = [str(Path(__file__).with_name('applications.py')), action]
-        if desktop_id is not None:
-            arguments.append(desktop_id)
+        arguments += [str(a) for a in args if a is not None]
         self.process.setWorkingDirectory(self.working_directory)
         self.process.start(sys.executable, arguments)
 
@@ -194,6 +193,7 @@ class ApplicationBrowser(QDialog):
         self.open = button('Abrir', self.launch)
         row.addWidget(self.open)
         if self.shell.system_session:
+            row.addWidget(button('Cerrar sesión', lambda: (self.accept(), self.shell.ask_power('logout'))))
             row.addWidget(button('Reiniciar', lambda: (self.accept(), self.shell.ask_power('reboot'))))
             row.addWidget(button('Apagar', lambda: (self.accept(), self.shell.ask_power('poweroff'))))
         layout.addLayout(row)
@@ -272,9 +272,13 @@ class ApplicationBrowser(QDialog):
 
     # Detener señales del servicio para evitar llamadas adicionales
     def disconnect_service(self):
-        self.service.completed.disconnect(self.completed)
-        self.service.failed.disconnect(self.report_error)
-        self.service.favorites_changed.disconnect(self.render)
+        for signal, slot in ((self.service.completed, self.completed),
+                             (self.service.failed, self.report_error),
+                             (self.service.favorites_changed, self.render)):
+            try:
+                signal.disconnect(slot)
+            except (TypeError, RuntimeError):
+                pass  # ya desconectada en un cierre anterior
 
     # Mostrar error al faltar PyGObject
     def report_error(self, message):

@@ -1,7 +1,8 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
 # Usage: prosperus-osd subir|bajar|silenciar|micro|brillo-mas|brillo-menos
-# Teclas multimedia: cambia volumen o brillo y lo enseña en la barra de wob (tubería de la sesión).
+# Teclas multimedia: cambia volumen o brillo y lo enseña en la barra de wob (tubería de la sesión)
+# con el número encima, en un aviso de mako que se reemplaza a sí mismo (sección app-name=prosperus-osd).
 # Escrito por qwen2.5-coder (local), revisado.
 fifo=${XDG_RUNTIME_DIR:-/tmp}/prosperus/wob.fifo
 
@@ -11,23 +12,45 @@ show() {
     fi
 }
 
+# Número encima de la barra: reutiliza el mismo aviso para que no se apilen al mantener la tecla.
+label() {
+    command -v notify-send >/dev/null 2>&1 || return 0
+    idfile=${fifo%/*}/osd.id
+    id=$(cat "$idfile" 2>/dev/null)
+    case $id in ''|*[!0-9]*) id=0 ;; esac
+    new=$(timeout 1 notify-send -a prosperus-osd -t 1200 -p -r "$id" "$1" 2>/dev/null) &&
+        mkdir -p "${idfile%/*}" && printf '%s\n' "$new" > "$idfile"
+}
+
 volume() {
     output=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
-    percent=$(echo "$output" | awk '{printf "%d", $2 * 100 + 0.5}')
+    percent=$(echo "$output" | LC_ALL=C awk '{printf "%d", $2 * 100 + 0.5}')
     if echo "$output" | grep -q "MUTED"; then
         # wob 0.14 (Debian) no tiene estilos: la barra vacía indica silencio.
         if grep -qs '^\[style.muted\]' "${fifo%/*}/wob.ini"; then show "$percent muted"; else show 0; fi
+        label "Silencio · $percent %"
     else
         show "$percent"
+        label "Volumen $percent %"
     fi
+}
+
+brightness() {
+    percent=$(($(brightnessctl -c backlight get) * 100 / $(brightnessctl -c backlight max)))
+    show "$percent"
+    label "Brillo $percent %"
+}
+
+microphone() {
+    if wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | grep -q MUTED; then label "Micrófono apagado"; else label "Micrófono encendido"; fi
 }
 
 case "$1" in
     subir)      wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ && volume ;;
     bajar)      wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && volume ;;
     silenciar)  wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && volume ;;
-    micro)      wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle ;;
-    brillo-mas)   brightnessctl -q -c backlight set 5%+ && show "$(($(brightnessctl -c backlight get) * 100 / $(brightnessctl -c backlight max)))" ;;
-    brillo-menos) brightnessctl -q -c backlight set 5%- && show "$(($(brightnessctl -c backlight get) * 100 / $(brightnessctl -c backlight max)))" ;;
+    micro)      wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle && microphone ;;
+    brillo-mas)   brightnessctl -q -c backlight set 5%+ && brightness ;;
+    brillo-menos) brightnessctl -q -c backlight set 5%- && brightness ;;
     *) echo "uso: prosperus-osd subir|bajar|silenciar|micro|brillo-mas|brillo-menos" >&2; exit 2 ;;
 esac

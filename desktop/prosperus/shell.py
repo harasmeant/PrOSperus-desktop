@@ -9,9 +9,9 @@ from pathlib import Path
 import subprocess
 import sys
 
-from PySide6.QtCore import QEasingCurve, QEvent, QFileSystemWatcher, QParallelAnimationGroup, QPoint, QPointF, QPropertyAnimation, QRect, QRectF, QSettings, Qt, QTimer, QUrl
-from PySide6.QtGui import QColor, QFont, QKeySequence, QPainter, QPainterPath, QPen, QShortcut, QTextCharFormat, QTextCursor
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame, QGraphicsOpacityEffect, QHBoxLayout, QInputDialog,
+from PySide6.QtCore import QEasingCurve, QEvent, QFileSystemWatcher, QParallelAnimationGroup, QPoint, QPointF, QPropertyAnimation, QRect, QRectF, QSettings, QSizeF, Qt, QTimer, QUrl
+from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPainterPath, QPen, QPixmap, QShortcut, QTextCharFormat, QTextCursor
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame, QGraphicsOpacityEffect, QHBoxLayout, QInputDialog,
     QLabel, QLayout, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
     QPlainTextEdit, QPushButton, QScrollArea, QSizeGrip, QStackedWidget,
     QTextBrowser, QVBoxLayout, QWidget, QStyle)
@@ -21,6 +21,8 @@ from .appearance import (Palette, Wallpaper, draw_symbol, paint_wallpaper,
                          palette_for, symbol_icon, wallpaper_for, wallpaper_scene, wallpaper_traits)
 from .model import Vault
 from .corner_menu import HoverMenuButton
+from .clock_calendar import ClockButton
+from . import hidden_items
 from .quick_settings import QuickSettings
 from PySide6.QtWidgets import QWidgetAction
 from . import motion
@@ -343,6 +345,7 @@ class MapNode(QPushButton):
         super().__init__(surface)
         self.surface, self.path, self.center = surface, path, center
         self.title, self.subtitle = '', ''
+        self.hidden = False
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAccessibleName('Carpeta actual' if center else path.name)
         if not center:
@@ -437,6 +440,8 @@ class MapNode(QPushButton):
     # Dibujar elementos del escritorio con estilo y estado actual
     def paintEvent(self, event):
         p = QPainter(self); p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        if self.hidden:
+            p.setOpacity(.55)  # carpeta oculta vista con «Mostrar ocultos»
         colors = self.surface.shell.colors
         selected = self.path in self.surface.selection
         # Un solo resalte: la tarjeta con el foco (teclado o ratón). Las demás seleccionadas solo
@@ -527,7 +532,7 @@ class Surface(QWidget):
             if not node.path.is_dir():
                 continue
             try:
-                inside = self.shell.vault.entries(node.path)
+                inside = self.shell.desktop_entries(node.path)
             except (OSError, ValueError):
                 continue
             shown = inside[:self.LEAVES]
@@ -645,7 +650,7 @@ class Surface(QWidget):
         super().mousePressEvent(event)
 
     def show_menu(self, position):
-        menu = self.shell.files.menu(self, list(self.selection), self.shell.folder)
+        menu = self.shell.files.menu(self, list(self.selection), self.shell.folder, desktop=True)
         menu.exec(position); menu.deleteLater()
 
     def contextMenuEvent(self, event):
@@ -748,13 +753,7 @@ class Surface(QWidget):
     def resizeEvent(self, event):
         self.arrange()
 
-    # Dibuja el escritorio con estructura de árbol procedimental
-    def paintEvent(self, event):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Enredadera monocroma (tono nácar): troncos en S que se afinan, zarcillos y hojas.
-        origin = QPointF(self.center.geometry().center())
-        pearl = QColor(self.shell.colors.text)
+    def branch_traits(self):
         # Estilo procedural: sale del fondo de la carpeta y solo cambia si cambia el archivo.
         source = self.shell.background.wallpaper
         try:
@@ -762,7 +761,48 @@ class Surface(QWidget):
         except OSError:
             traits = None
         # Ajustes personales de la carpeta (aplicación «Ramas») encima de lo que dice el fondo.
-        traits = branch_style.merge(traits, branch_style.load(self.shell.folder, self.shell.vault.root))
+        return branch_style.merge(traits, branch_style.load(self.shell.folder, self.shell.vault.root))
+
+    def animating(self):
+        """Hay una transición en marcha: las ramas siguen a las tarjetas fotograma a fotograma."""
+        if getattr(self, 'morph', None) is not None:
+            return True
+        return any(isinstance(w.graphicsEffect(), QGraphicsOpacityEffect)
+                   for w in [self.center] + self.nodes + self.leaves)
+
+    # Dibuja el escritorio con estructura de árbol procedimental
+    def paintEvent(self, event):
+        traits = self.branch_traits()
+        if self.animating():
+            self.branch_cache = None
+            p = QPainter(self)
+            self.draw_branches(p, traits)
+            return
+        # Quietas: se dibujan una vez en una imagen y luego solo se copia la parte que Qt pide.
+        visible = [self.center] + self.nodes + [leaf for leaf in self.leaves if leaf.isVisible()]
+        ratio = self.devicePixelRatioF()
+        key = (self.size().toTuple(), ratio, str(self.shell.colors.text), repr(sorted(traits.items(), key=str)),
+               tuple((id(w), w.geometry().getRect()) for w in visible),
+               tuple((id(a), id(b)) for a, b in getattr(self, 'link_pairs', [])),
+               repr(sorted(getattr(self, 'link_weights', {}).items())))
+        cache = getattr(self, 'branch_cache', None)
+        if cache is None or cache[0] != key:
+            pixmap = QPixmap((QSizeF(self.size()) * ratio).toSize())
+            pixmap.setDevicePixelRatio(ratio)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            self.draw_branches(painter, traits)
+            painter.end()
+            cache = self.branch_cache = (key, pixmap)
+        p = QPainter(self)
+        p.setClipRegion(event.region())
+        p.drawPixmap(0, 0, cache[1])
+
+    def draw_branches(self, p, traits):
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        # Enredadera monocroma (tono nácar): troncos en S que se afinan, zarcillos y hojas.
+        origin = QPointF(self.center.geometry().center())
+        pearl = QColor(self.shell.colors.text)
         opacity = traits.get('opacity', 1)
         alpha = lambda value: max(0, min(255, round(value * opacity)))
         # Las ramas nacen en el borde de las tarjetas: no se ven a través de ellas.
@@ -878,10 +918,10 @@ class Surface(QWidget):
                 files[i] = {node.path}
             elif node.path.is_dir():
                 try:
-                    notes = self.shell.vault.notes(node.path)
+                    notes = self.shell.vault.notes_under(node.path)
                 except (OSError, ValueError):
                     notes = []
-                files[i] = set(itertools.islice(notes, 200))
+                files[i] = set(notes[:200])
             else:
                 files[i] = set()
         shown = {}
@@ -1005,6 +1045,8 @@ class Explorer(QDialog):
 
     # Actualiza la lista de proyectos en el explorador
     def refresh(self):
+        while not self.folder.is_dir() and self.folder != self.shell.vault.root:
+            self.folder = self.folder.parent
         self.items.clear()
         self.location.setText('Proyectos / ' + str(self.folder.relative_to(self.shell.vault.root)))
         try:
@@ -1045,50 +1087,6 @@ class Explorer(QDialog):
         path = self.shell.new_folder(folder=self.folder)
         self.go(path) if path else self.refresh()
 
-    def _open_under(self, paths):
-        return [p for p in self.panels if any(p == q or p.is_relative_to(q) for q in paths)]
-
-    # Renombra notas o carpetas y actualiza los enlaces que apuntan a ellas
-    def rename_path(self, path):
-        if self._open_under([path]):
-            self.status.setText('Cierra primero la nota abierta para renombrarla.'); return
-        current = path.stem if path.is_file() else path.name
-        name, ok = QInputDialog.getText(self, 'Renombrar', 'Nuevo nombre:', text=current)
-        if not ok or not name.strip() or name.strip() == current:
-            return
-        try:
-            target, updated = self.vault.rename(path, name)
-        except (OSError, ValueError) as error:
-            QMessageBox.warning(self, 'No se pudo renombrar', str(error)); return
-        self.surface.selection = []
-        self.navigate(target if target.is_dir() and path == self.folder else self.folder if self.folder.exists() else target.parent)
-        self.refresh_projects()
-        self.status.setText(f'Renombrado a {target.name}' + (f' · enlaces actualizados en {len(updated)} notas' if updated else ''))
-
-    # Mover selección a papelera con validación y estado actualizado
-    def trash_paths(self, paths):
-        if not paths:
-            return
-        if self._open_under(paths):
-            self.status.setText('Cierra primero las notas abiertas.'); return
-        names = ', '.join(p.name for p in paths[:4]) + ('…' if len(paths) > 4 else '')
-        if QMessageBox.question(self, 'Mover a la papelera', f'¿Mover a la papelera {names}?\n'
-                                'Puedes recuperarlos desde Crear › Papelera.') != QMessageBox.StandardButton.Yes:
-            return
-        moved = []
-        for path in paths:
-            try:
-                self.vault.trash(path); moved.append(path.name)
-            except (OSError, ValueError) as error:
-                QMessageBox.warning(self, 'No se pudo mover ' + path.name, str(error))
-        if moved:
-            self.surface.selection = []
-            folder = self.folder
-            while not folder.exists():
-                folder = folder.parent
-            self.navigate(folder); self.refresh_projects()
-            self.status.setText('En la papelera: ' + ', '.join(moved))
-
     def new_project(self):
         if self.shell.new_project():
             self.accept()
@@ -1114,10 +1112,12 @@ class Desktop(QMainWindow):
         self.history = [self.folder]
         self.history_index = 0
         self.desktop_hidden = []
+        self.show_hidden = False  # «Mostrar ocultos» del menú del escritorio; solo esta sesión
         self.page = 0
         self.colors = Palette()
         self.apps = ApplicationService(self)
         self.apps.failed.connect(lambda error: self.status.setText(error))
+        self.apps.completed.connect(self.apps_completed)
         self.apps.favorites_changed.connect(self.update_dock)
         self.apps.working_directory = str(self.folder)
         # Con Sway, las aplicaciones flotan sobre el mapa: pantalla completa o
@@ -1186,6 +1186,9 @@ class Desktop(QMainWindow):
         self.search.setAccessibleName('Buscar notas')
         self.search.textChanged.connect(self.search_changed); actions.addWidget(self.search); self.search.hide()
         heading.addLayout(actions)
+        # Reloj; al pulsarlo, el calendario con las tareas de las notas.
+        self.clock = ClockButton(self)
+        heading.addWidget(self.clock, 0, Qt.AlignmentFlag.AlignTop)
         # Esquina derecha: brillo, volumen, wifi, bluetooth y notificaciones.
         self.quick = HoverMenuButton('Sistema', icon('sliders'), [])
         self.quick_panel = QuickSettings(self)
@@ -1295,6 +1298,8 @@ class Desktop(QMainWindow):
         if hasattr(self, 'quick_panel'):
             self.quick_panel.restyle(self.colors)
             self.quick.menu.setStyleSheet(f'QMenu {{ background: {self.colors.panel}; border: 1px solid {self.colors.border}; padding: 4px; }}')
+        if hasattr(self, 'clock'):
+            self.clock.restyle()
         self.show_scene()
         self.surface.update()
         # Con dos pantallas, la que no tiene el mapa muestra el fondo del proyecto (no un color liso).
@@ -1396,7 +1401,39 @@ class Desktop(QMainWindow):
                      -1 if direction == 1 else 0)
         panels[(index + direction) % len(panels)].restore()
 
+    def desktop_entries(self, folder):
+        """Lo que dibuja el mapa: sin las carpetas ocultas, salvo con «Mostrar ocultos»."""
+        entries = self.vault.entries(folder)
+        if self.show_hidden:
+            return entries
+        hidden = hidden_items.hidden_names(folder)
+        return [p for p in entries if not (p.is_dir() and p.name in hidden)]
+
+    def hide_from_desktop(self, paths):
+        folders = [p for p in paths if p.is_dir()]
+        try:
+            hidden_items.hide(self.folder, folders)
+        except OSError as error:
+            self.status.setText('No se ha podido ocultar: ' + str(error)); return
+        self.render()
+        self.status.setText(f'{len(folders)} carpetas ocultas del escritorio. Clic derecho en el fondo → Mostrar ocultos.')
+
+    def show_on_desktop(self, paths):
+        try:
+            hidden_items.unhide(self.folder, paths)
+        except OSError as error:
+            self.status.setText('No se ha podido mostrar: ' + str(error)); return
+        self.render()
+        self.status.setText(f'{len(paths)} carpetas vuelven a verse en el escritorio.')
+
+    def toggle_show_hidden(self):
+        self.show_hidden = not self.show_hidden
+        self.render()
+        self.status.setText('Se ven también las carpetas ocultas.' if self.show_hidden
+                            else 'Las carpetas ocultas ya no se ven.')
+
     def refresh_projects(self):
+        self.vault.forget_index()  # F5, Actualizar y las órdenes de archivo leen la bóveda de nuevo
         self.project_paths = [p for p in self.vault.entries(self.vault.root) if p.is_dir()]
         self.render(); self.update_dock()
         if self.drawer.isVisible():
@@ -1424,6 +1461,9 @@ class Desktop(QMainWindow):
         self.app_browser.search.setFocus()
 
     def applications_closed(self):
+        # finished puede llegar dos veces (Esc y Ctrl+Espacio a la vez): solo se cierra una.
+        if self.app_browser is None:
+            return
         self.app_browser.deleteLater(); self.app_browser = None
         self.activateWindow(); self.surface.setFocus()
 
@@ -1627,7 +1667,7 @@ class Desktop(QMainWindow):
 
     def render(self):
         try:
-            entries = self.vault.search(self.search.text(), self.folder) if self.search.text().strip() else self.vault.entries(self.folder)
+            entries = self.vault.search(self.search.text(), self.folder) if self.search.text().strip() else self.desktop_entries(self.folder)
         except (OSError, ValueError) as error:
             self.status.setText(str(error)); entries = []
         self.title.setText(self.folder.name if self.folder != self.vault.root else 'Inicio')
@@ -1645,6 +1685,10 @@ class Desktop(QMainWindow):
             item.setText(item.title)
             item.subtitle = ('Carpeta · Doble clic' if path.is_dir() else 'Nota · Doble clic'
                              if path.suffix.lower() == '.md' else 'Archivo · Abrir con su aplicación')
+            item.hidden = path.is_dir() and hidden_items.is_hidden(path)
+            if item.hidden:
+                item.subtitle = 'Oculta · ' + item.subtitle
+                item.setAccessibleName(path.name + ' (oculta)')
             item.show(); self.surface.nodes.append(item)
         self.surface.center.title = self.title.text()
         self.surface.center.subtitle = f'{len(entries)} archivos y carpetas' if entries else 'Crea tu primera nota'
@@ -1684,9 +1728,9 @@ class Desktop(QMainWindow):
         if not self.folder.is_dir():
             # La carpeta abierta se borró desde fuera: volver a la raíz.
             self.navigate(self.vault.root); return
-        # Un fondo nuevo en la carpeta cambia también la paleta.
+        self.vault.forget_index()
+        # Un fondo nuevo en la carpeta cambia también la paleta (refresh_projects ya dibuja el mapa).
         self.apply_appearance(); self.refresh_projects()
-        self.render()
 
     def activate(self, path):
         if path.is_dir():
@@ -1695,6 +1739,45 @@ class Desktop(QMainWindow):
             self.open_note(path)
         else:
             self.status.setText('Abriendo ' + path.name + '…'); self.apps.run('open', str(path))
+
+    def apps_completed(self, action, data):
+        if action in ('open', 'choose') and isinstance(data, dict) and data.get('choose'):
+            self.choose_app(data)
+        elif action in ('open', 'open_with'):
+            self.status.setText('')
+
+    def open_with(self, path):
+        """«Abrir con…» del menú: pregunta siempre, aunque el archivo tenga programa predeterminado."""
+        self.status.setText('Buscando programas para ' + path.name + '…')
+        self.apps.run('choose', str(path))
+
+    def choose_app(self, data):
+        """Archivo sin programa predeterminado: pregunta con cuál abrirlo."""
+        path = Path(data['path'])
+        dialog = QDialog(self); dialog.setWindowTitle('Abrir con')
+        layout = QVBoxLayout(dialog)
+        kind = data.get('type_name') or data.get('type') or 'desconocido'
+        layout.addWidget(QLabel(f'¿Con qué programa abro «{path.name}»?\nTipo: {kind}'))
+        apps = QListWidget(); apps.setMinimumSize(360, 300)
+        for app in data['choose']:
+            item = QListWidgetItem(QIcon.fromTheme(app.get('icon') or ''), app['name'])
+            item.setData(Qt.ItemDataRole.UserRole, app['id'])
+            if app.get('group') == 'suggested':
+                font = item.font(); font.setBold(True); item.setFont(font)
+            apps.addItem(item)
+        apps.setCurrentRow(0)
+        layout.addWidget(apps)
+        remember = QCheckBox(f'Usar siempre este programa para archivos de tipo {kind}')
+        layout.addWidget(remember)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept); buttons.rejected.connect(dialog.reject)
+        apps.itemDoubleClicked.connect(lambda *_: dialog.accept())
+        layout.addWidget(buttons)
+        if dialog.exec() != QDialog.DialogCode.Accepted or apps.currentItem() is None:
+            self.status.setText(''); return
+        app_id = apps.currentItem().data(Qt.ItemDataRole.UserRole)
+        self.status.setText('Abriendo ' + path.name + ' con ' + apps.currentItem().text() + '…')
+        self.apps.run('open_with', app_id, str(path), 'remember' if remember.isChecked() else None)
 
     def open_note(self, path, edit=False):
         try:
@@ -1787,6 +1870,50 @@ class Desktop(QMainWindow):
         elif moved:
             self.status.setText(f'Ordenados {len(moved)}: ' + ', '.join(sorted({p.parent.name for p in moved})))
         self.files_changed()
+
+    def _open_under(self, paths):
+        return [p for p in self.panels if any(p == q or p.is_relative_to(q) for q in paths)]
+
+    # Renombra notas o carpetas y actualiza los enlaces que apuntan a ellas
+    def rename_path(self, path):
+        if self._open_under([path]):
+            self.status.setText('Cierra primero la nota abierta para renombrarla.'); return
+        current = path.stem if path.is_file() else path.name
+        name, ok = QInputDialog.getText(self, 'Renombrar', 'Nuevo nombre:', text=current)
+        if not ok or not name.strip() or name.strip() == current:
+            return
+        try:
+            target, updated = self.vault.rename(path, name)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, 'No se pudo renombrar', str(error)); return
+        self.surface.selection = []
+        self.navigate(target if target.is_dir() and path == self.folder else self.folder if self.folder.exists() else target.parent)
+        self.refresh_projects()
+        self.status.setText(f'Renombrado a {target.name}' + (f' · enlaces actualizados en {len(updated)} notas' if updated else ''))
+
+    # Mover selección a papelera con validación y estado actualizado
+    def trash_paths(self, paths):
+        if not paths:
+            return
+        if self._open_under(paths):
+            self.status.setText('Cierra primero las notas abiertas.'); return
+        names = ', '.join(p.name for p in paths[:4]) + ('…' if len(paths) > 4 else '')
+        if QMessageBox.question(self, 'Mover a la papelera', f'¿Mover a la papelera {names}?\n'
+                                'Puedes recuperarlos desde Crear › Papelera.') != QMessageBox.StandardButton.Yes:
+            return
+        moved = []
+        for path in paths:
+            try:
+                self.vault.trash(path); moved.append(path.name)
+            except (OSError, ValueError) as error:
+                QMessageBox.warning(self, 'No se pudo mover ' + path.name, str(error))
+        if moved:
+            self.surface.selection = []
+            folder = self.folder
+            while not folder.exists():
+                folder = folder.parent
+            self.navigate(folder); self.refresh_projects()
+            self.status.setText('En la papelera: ' + ', '.join(moved))
 
     def move_to(self, paths, destination=None):
         """Mueve notas o carpetas a otro proyecto; las notas abiertas deben cerrarse antes."""
@@ -1936,18 +2063,20 @@ class Desktop(QMainWindow):
             item = self.power_row.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        self.power_row.addWidget(label('¿Reiniciar el equipo?' if action == 'reboot' else '¿Apagar el equipo?'))
+        self.power_row.addWidget(label({'reboot': '¿Reiniciar el equipo?', 'logout': '¿Cerrar sesión?'}.get(action, '¿Apagar el equipo?')))
         self.power_row.addWidget(button('Cancelar', self.power_box.hide))
         self.power_row.addWidget(button('Confirmar', lambda: self.power(action))); self.power_box.show()
 
     def power(self, action):
-        if not self.system_session or action not in ('reboot', 'poweroff'):
+        if not self.system_session or action not in ('reboot', 'poweroff', 'logout'):
             return
         if self.files.busy:
             self.status.setText('Espera a que termine la copia antes de apagar.'); return
         if not all(panel.can_close() for panel in list(self.panels.values())):
             return
-        result = subprocess.run(['systemctl', action], capture_output=True, text=True, timeout=15)
+        # Cerrar sesión sale de Sway; greetd vuelve a abrir el escritorio solo.
+        argv = ['swaymsg', 'exit'] if action == 'logout' else ['systemctl', action]
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=15)
         if result.returncode:
             self.status.setText(result.stderr.strip() or 'No se pudo completar la acción.')
 

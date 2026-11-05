@@ -38,7 +38,7 @@ SHORTCUT_HELP = '''# Manejar PrOSperus
 - **Super+E:** explorador. **Super+D:** ocultar/restaurar notas y aplicaciones del proyecto. **Super+↑:** ampliar o restaurar la aplicación (o la nota enfocada). **Super+↓ / Super+M:** minimizarla (o la nota enfocada). **Super+F:** pantalla completa de la aplicación. **Alt+F4 / Super+Q:** cerrar la aplicación. **Super+Esc:** volver al escritorio. **Super+I:** controles.
 - **Mover y redimensionar aplicaciones:** arrastra su barra de título, o **Super+arrastrar** (mover) y **Super+clic derecho+arrastrar** (tamaño) desde cualquier punto. **Super+Alt+flechas:** ensanchar/estrechar y alargar/acortar la ventana enfocada.
 - **Hueco entre aplicaciones:** arrastrarlo mueve ese borde en todas las ventanas que lo comparten (como un separador). **Doble clic en el fondo del escritorio:** minimiza las aplicaciones del proyecto (Super+D las devuelve). Al abrir o cerrar una aplicación, Fibonacci vuelve a repartirlas.
-- **Sistema → Sesión:** Bloquear (Super+L), Captura (Impr Pant), Zona (Mayús+Impr Pant), Portapapeles (Super+V) y Escritorio (Super+D) con el ratón.
+- **Sistema → Sesión:** Bloquear (Super+L), Captura (Impr Pant), Zona (Mayús+Impr Pant), Portapapeles (Super+V), Escritorio (Super+D) y Cerrar sesión (Super+Mayús+E) con el ratón.
 - Las teclas de volumen, brillo y reproducción se atienden en la sesión propia PrOSperus cuando están disponibles.
 
 ## Texto y accesibilidad
@@ -71,6 +71,12 @@ class DesktopKeys(QObject):
     def detach(self):
         # Elimina el filtro de eventos cuando la shell se destruye.
         QApplication.instance().removeEventFilter(self)
+
+    def _refresh_list(self, target):
+        """La lista del explorador no vigila el disco: tras renombrar o borrar desde ella se vuelve a leer."""
+        window = target.window()
+        if window is not self.shell and hasattr(window, 'refresh'):
+            window.refresh()
 
     def eventFilter(self, target, event):
         # Intercepta teclas para atajos de escritorio antes de que lleguen a los widgets.
@@ -165,9 +171,9 @@ class DesktopKeys(QObject):
             if key == Qt.Key.Key_A:
                 select_all(); return True
         if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_F2 and len(paths) == 1:
-            self.shell.rename_path(paths[0]); return True
+            self.shell.rename_path(paths[0]); self._refresh_list(target); return True
         if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Delete and paths:
-            self.shell.trash_paths(paths); return True
+            self.shell.trash_paths(paths); self._refresh_list(target); return True
         if modifiers == Qt.KeyboardModifier.NoModifier and key == Qt.Key.Key_Backspace:
             # Retroceso sin modificadores sube un nivel de carpeta.
             go_up(); return True

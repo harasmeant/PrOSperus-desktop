@@ -6,6 +6,7 @@ import re
 import os
 import stat
 import tempfile
+import time
 import unicodedata
 from urllib.parse import quote, unquote, urlsplit
 
@@ -98,6 +99,17 @@ def is_wallpaper_name(stem):
     stem = stem.lower()
     return stem == 'wallpaper' or (stem.startswith('wallpaper-') and stem[10:].isdigit())
 
+def _changes_files(method):
+    """Los métodos que crean, mueven o borran notas descartan el índice de nombres (note_index)."""
+    def wrapper(self, *args, **kwargs):
+        try:
+            return method(self, *args, **kwargs)
+        finally:
+            self._index = None
+    wrapper.__name__, wrapper.__doc__ = method.__name__, method.__doc__
+    return wrapper
+
+
 class Vault:
     MAX_NOTE_BYTES = 2 * 1024 * 1024
 
@@ -106,6 +118,7 @@ class Vault:
         self.root = Path(root).expanduser().resolve(strict=True)
         if not self.root.is_dir():
             raise ValueError('El proyecto debe ser una carpeta.')
+        self._index = None  # (instante, {nombre: [notas]}) para los wikilinks por nombre
 
     # Valida rutas dentro de proyectos sin carpetas ocultas
     def checked(self, path):
@@ -217,6 +230,7 @@ class Vault:
         return path
 
     # Crear notas con título automático
+    @_changes_files
     def create_note(self, folder, name):
         path = self.child_path(folder, name, note=True)
         with path.open('x', encoding='utf-8') as handle:
@@ -224,6 +238,7 @@ class Vault:
         return path
 
     # Crea carpetas para proyectos
+    @_changes_files
     def create_folder(self, folder, name):
         path = self.child_path(folder, name)
         path.mkdir()
@@ -237,6 +252,7 @@ class Vault:
             found += [Path(current) / n for n in names]
         return sorted(found, key=lambda p: str(p.relative_to(self.root)).lower() if p != self.root else '')
 
+    @_changes_files
     def move(self, path, folder):
         """Mueve una nota o carpeta a otra carpeta conservando el nombre; nunca sobrescribe."""
         path, folder = self.checked(path), self.checked(folder)
@@ -257,6 +273,7 @@ class Vault:
 
     TRASH = '.papelera'
 
+    @_changes_files
     def rename(self, path, name):
         """Renombra una nota o carpeta en su sitio. Al renombrar una nota, los wikilinks que la
         nombran se actualizan en todas las notas. Devuelve (nueva ruta, notas actualizadas)."""
@@ -282,6 +299,7 @@ class Vault:
                 continue  # una nota ilegible no impide renombrar
         return target, updated
 
+    @_changes_files
     def trash(self, path):
         """Mueve a .papelera (oculta, en la raíz) sin borrar nada; nunca sobrescribe."""
         path = self.checked(path)
@@ -324,6 +342,7 @@ class Vault:
         items.sort(key=lambda p: p.stat().st_mtime, reverse=True)
         return [(p, origins.get(p.name)) for p in items]
 
+    @_changes_files
     def restore(self, name):
         """Devuelve un elemento de la papelera a su carpeta (o a la raíz si ya no existe); nunca sobrescribe."""
         bin_ = self.root / self.TRASH
@@ -348,6 +367,7 @@ class Vault:
         return target
 
     # Evitar sobrescribir archivos modificados al guardar
+    @_changes_files
     def save_note(self, path, text, expected):
         path = self.checked(path)
         if self.read(path) != expected:
@@ -372,9 +392,39 @@ class Vault:
             if temporary and os.path.exists(temporary):
                 os.unlink(temporary)
 
+    INDEX_SECONDS = 10.0
+
+    def note_index(self):
+        """Todas las notas (en el orden de files()) y las mismas por nombre. Recorrer la bóveda cuesta
+        ~0,2 s (cada archivo pasa por realpath) y el mapa lo hacía por cada carpeta y por cada wikilink
+        sin ruta: 10 s con la interfaz congelada. Se reutiliza unos segundos; forget_index() lo descarta
+        cuando cambian los archivos (vigilante, F5 y las órdenes del propio escritorio)."""
+        now = time.monotonic()
+        if self._index is None or now - self._index[0] > self.INDEX_SECONDS:
+            notes = list(self.notes())
+            by_name = {}
+            for note in notes:
+                by_name.setdefault(note.name, []).append(note)
+            self._index = (now, notes, by_name, set(notes))
+        return self._index[1], self._index[2]
+
+    def known_note(self, candidate):
+        """La nota del índice en esa ruta, sin realpath (la mayoría de los enlaces); None si hay que mirar en disco."""
+        self.note_index()
+        path = Path(os.path.normpath(candidate))
+        return path if path in self._index[3] else None
+
+    def notes_under(self, folder):
+        folder = self.checked(folder)
+        prefix = os.path.join(str(folder), '')  # comparar texto: is_relative_to es lento con miles de notas
+        return [note for note in self.note_index()[0] if str(note).startswith(prefix)]
+
+    def forget_index(self):
+        self._index = None
+
     def resolve_note(self, target, source):
         """Resolve relative Markdown links and unique wikilink names, within root."""
-        source = self.checked(source)
+        source = self.known_note(source) or self.checked(source)
         parsed = urlsplit(target)
         if parsed.scheme not in ('', 'file') or parsed.netloc:
             raise ValueError('Este lector no abre enlaces externos.')
@@ -388,6 +438,11 @@ class Vault:
             raise ValueError('El enlace no apunta a una nota Markdown.')
         candidates = [path] if path.is_absolute() else [source.parent / path, self.root / path]
         for candidate in candidates:
+            known = self.known_note(candidate)
+            if known is not None:
+                return known
+            if not os.path.lexists(candidate):
+                continue  # no existe: realpath solo hace falta con enlaces simbólicos o rutas raras
             try:
                 result = self.checked(candidate)
                 if result.is_file():
@@ -395,7 +450,7 @@ class Vault:
             except FileNotFoundError:
                 continue
         if len(path.parts) == 1:
-            matches = [p for p in self.notes() if p.name == path.name]
+            matches = self.note_index()[1].get(path.name, [])
             if len(matches) == 1:
                 return matches[0]
             if len(matches) > 1:

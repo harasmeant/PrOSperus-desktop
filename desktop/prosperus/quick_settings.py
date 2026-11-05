@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Panel rápido de la esquina derecha: brillo, volumen, wifi, bluetooth y notificaciones."""
+import json
 import os
 import subprocess
 import sys
@@ -90,6 +91,25 @@ def parse_powered(text):
         if line.strip().startswith("Powered:"):
             return line.split(":", 1)[1].strip() == "yes"
     return None
+
+def builtin_inputs(text):
+    """Teclado y touchpad integrados según `swaymsg -t get_inputs --raw`: [(identificador, activo)].
+    El teclado del portátil va por el controlador PS/2 (i8042), que Linux llama «AT Translated
+    Set 2 keyboard»; el touchpad trae además un «ratón» con su mismo fabricante:modelo."""
+    try:
+        devices = json.loads(text or '[]')
+    except ValueError:
+        return []
+    pads = {d['identifier'].rsplit(':', 1)[0] for d in devices if d.get('type') == 'touchpad'}
+    found = []
+    for d in devices:
+        ident = d.get('identifier', '')
+        if (d.get('type') == 'touchpad' or 'AT_Translated_Set_2_keyboard' in ident
+                or (d.get('type') == 'pointer' and ident.rsplit(':', 1)[0] in pads)):
+            if ident not in (i for i, _ in found):
+                found.append((ident, (d.get('libinput') or {}).get('send_events', 'enabled') != 'disabled'))
+    return found
+
 
 def terminal(argv):
     """Abre una herramienta de texto (nmtui, bluetoothctl) en la consola."""
@@ -213,6 +233,21 @@ class QuickSettings(QFrame):
         self.section('Notificaciones')
         self.box.addLayout(self.notif_row)
 
+        # 5b. Teclado y touchpad del portátil: se apagan para que los gatos no escriban encima.
+        # Solo se ve en portátiles; al reiniciar la sesión vuelven a funcionar.
+        self.builtin = []
+        self.kbd_title = self.section('Teclado del portátil')
+        self.kbd_row = QHBoxLayout()
+        self.kbd = QPushButton('Activado')
+        self.kbd.setCheckable(True)
+        self.kbd.setToolTip('Teclado y touchpad integrados. Apágalos si usas un teclado externo '
+                            '(o hay gatos cerca). Vuelven solos al reiniciar la sesión.')
+        self.kbd.clicked.connect(self._set_builtin)
+        self.kbd_note = QLabel('Teclado y touchpad integrados', objectName='hint')
+        self.kbd_row.addWidget(self.kbd); self.kbd_row.addWidget(self.kbd_note); self.kbd_row.addStretch(1)
+        self.box.addLayout(self.kbd_row)
+        self.kbd_title.hide(); self.kbd.hide(); self.kbd_note.hide()
+
         # 6. Fondo animado: opcional, usa la GPU.
         self.living_row = QHBoxLayout()
         self.living = QPushButton('Fondo animado')
@@ -233,7 +268,8 @@ class QuickSettings(QFrame):
                                     ('Captura', 'Impr Pant · Mayús+Impr Pant: zona · Super+Mayús+S: zona y dibujar', ['prosperus-captura']),
                                     ('Zona', 'Captura de una zona · Mayús+Impr Pant', ['prosperus-captura', 'zona']),
                                     ('Portapapeles', 'Historial del portapapeles · Super+V', ['prosperus-portapapeles']),
-                                    ('Escritorio', 'Ocultar o devolver las ventanas del proyecto · Super+D', None)):
+                                    ('Escritorio', 'Ocultar o devolver las ventanas del proyecto · Super+D', None),
+                                    ('Cerrar sesión', 'Sale y vuelve a entrar al escritorio · Super+Mayús+E', 'logout')):
                 item = QPushButton(text); item.setToolTip(tip)
                 item.clicked.connect(lambda checked=False, a=argv: self.session_action(a))
                 self.session_row.addWidget(item)
@@ -253,6 +289,8 @@ class QuickSettings(QFrame):
     def session_action(self, argv):
         # Primero se cierra el menú: si no, saldría en la captura o tapando el bloqueo.
         self.shell.quick.menu.close()
+        if argv == 'logout':
+            self.shell.ask_power('logout'); return
         QTimer.singleShot(300, lambda: self.shell.toggle_desktop() if argv is None else QProcess.startDetached(argv[0], argv[1:]))
 
     def focusNextPrevChild(self, next):
@@ -325,6 +363,12 @@ class QuickSettings(QFrame):
     def _set_bt(self): run(['bluetoothctl', 'power', 'on' if self.bluetooth.isChecked() else 'off']); self.refresh()
     def _set_dnd(self): run(['makoctl', 'mode', '-a' if self.dnd.isChecked() else '-r', 'do-not-disturb']); self.refresh()
 
+    def _set_builtin(self):
+        state = 'enabled' if self.kbd.isChecked() else 'disabled'
+        for ident, _ in self.builtin:
+            run(['swaymsg', f'input "{ident}" events {state}'])
+        self.refresh()
+
     def refresh(self):
         # Las órdenes del sistema pueden tardar: se consultan en otro hilo y el panel se abre al instante.
         threading.Thread(target=lambda: self.state_ready.emit(collect()), daemon=True).start()
@@ -369,6 +413,11 @@ class QuickSettings(QFrame):
         self.bluetooth.setText('No disponible' if bt_st is None else ('Activado' if bt_st else 'Desactivado'))
         self.bluetooth.setChecked(bool(bt_st))
         self.dnd.setChecked('do-not-disturb' in (state['mode'] or ''))
+        self.builtin = state.get('builtin') or []
+        for widget in (self.kbd_title, self.kbd, self.kbd_note):
+            widget.setVisible(bool(self.builtin))
+        on = any(active for _, active in self.builtin)
+        self.kbd.setChecked(on); self.kbd.setText('Activado' if on else 'Desactivado')
 
 
 def collect():
@@ -381,6 +430,7 @@ def collect():
             'connections': run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active']),
             'bluetooth': parse_powered(run(['bluetoothctl', 'show'])) if adapter else None,
             'mode': run(['makoctl', 'mode']),
+            'builtin': builtin_inputs(quiet(['swaymsg', '-t', 'get_inputs', '--raw'])),
             'sinks': parse_sinks(run(['wpctl', 'status'])),
             'track': parse_track(quiet(['playerctl', 'metadata', '--format', '{{status}}|{{artist}}|{{title}}']))}
 

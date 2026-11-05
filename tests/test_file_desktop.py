@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,7 +10,7 @@ from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QEvent, QMimeData, QPointF, QUrl, Qt
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeyEvent, QCloseEvent
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from prosperus.controls import SessionControls
 from prosperus.file_actions import local_paths
@@ -115,6 +116,36 @@ class FileDesktopTests(unittest.TestCase):
         self.assertEqual(explorer.folder, self.project)
         self.assertEqual(self.window.folder, self.project)
         explorer.reject(); explorer.deleteLater()
+
+    def test_delete_key_trashes_folder_from_map_and_explorer(self):
+        # Supr llamaba a un método que solo existía en el explorador y no hacía nada.
+        yes = patch('prosperus.shell.QMessageBox.question', return_value=QMessageBox.StandardButton.Yes)
+        folder = self.project / 'Carpeta'
+        node = next(n for n in self.window.surface.nodes if n.path == folder)
+        QTest.mouseClick(node, Qt.MouseButton.LeftButton)
+        with yes:
+            QTest.keyClick(node, Qt.Key.Key_Delete)
+        self.assertFalse(folder.exists())
+        self.assertEqual([origin for _, origin in self.window.vault.trashed()], ['Proyecto/Carpeta'])
+        explorer = Explorer(self.window); explorer.show(); explorer.activateWindow()
+        explorer.go(self.project); explorer.items.setFocus()
+        row = next(i for i in range(explorer.items.count())
+                   if explorer.items.item(i).data(Qt.ItemDataRole.UserRole) == self.note)
+        explorer.items.setCurrentRow(row); self.app.processEvents()
+        with yes:
+            QTest.keyClick(explorer.items, Qt.Key.Key_Delete)
+        self.assertFalse(self.note.exists())
+        self.assertEqual(explorer.items.count(), 0)
+        explorer.reject(); explorer.deleteLater()
+
+    def test_f2_renames_folder_from_map(self):
+        folder = self.project / 'Carpeta'
+        node = next(n for n in self.window.surface.nodes if n.path == folder)
+        QTest.mouseClick(node, Qt.MouseButton.LeftButton)
+        with patch('prosperus.shell.QInputDialog.getText', return_value=('Renombrada', True)):
+            QTest.keyClick(node, Qt.Key.Key_F2)
+        self.assertTrue((self.project / 'Renombrada').is_dir())
+        self.assertFalse(folder.exists())
 
     def test_external_clipboard_import_and_remote_rejection(self):
         source = Path(self.temp.name) / 'Desde archivos.md'; source.write_text('Imported')

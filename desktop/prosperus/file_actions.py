@@ -124,10 +124,13 @@ class FileActions(QObject):
             self.transfer([Path(p) for p in paths], destination)
 
     # Construye menú contextual con opciones de copiar/pegar/mover/imports
-    def menu(self, parent, paths, destination, open_path=None, create_note=None, create_folder=None, create_project=None):
+    def menu(self, parent, paths, destination, open_path=None, create_note=None, create_folder=None, create_project=None,
+             desktop=False):
         menu = QMenu(parent)
         if len(paths) == 1:
             menu.addAction('Abrir', lambda: (open_path or self.shell.activate)(paths[0]))
+            if paths[0].is_file():
+                menu.addAction('Abrir con…', lambda: self.shell.open_with(paths[0]))
         copy = menu.addAction('Copiar\tCtrl+C', lambda: self.copy(paths)); copy.setEnabled(bool(paths))
         duplicate = menu.addAction('Duplicar\tCtrl+D', lambda: self.transfer(paths, destination))
         duplicate.setEnabled(bool(paths) and not self.busy)
@@ -151,6 +154,8 @@ class FileActions(QObject):
             sort.setEnabled(not self.busy)
         if len(paths) == 1 and paths[0].is_dir():
             menu.addAction('Pegar dentro de esta carpeta', lambda: self.paste(paths[0]))
+        if desktop:
+            self.hidden_actions(menu, paths, destination)
         menu.addSeparator()
         menu.addAction('Nueva nota', create_note or (lambda: self.shell.new_note(folder=destination)))
         menu.addAction('Nueva carpeta', create_folder or (lambda: self.shell.new_folder(folder=destination)))
@@ -161,3 +166,21 @@ class FileActions(QObject):
         menu.addAction('Importar carpeta…', lambda: self.import_folder(destination))
         menu.addAction('Importar notas…', lambda: self.import_files(destination))
         return menu
+
+    # Ocultar carpetas del escritorio y, en el fondo, ver también las ocultas
+    def hidden_actions(self, menu, paths, destination):
+        from . import hidden_items
+        folders = [p for p in paths if p.is_dir() and p.parent == destination]
+        if paths and len(folders) == len(paths):
+            hidden = hidden_items.hidden_names(destination)
+            shown = [p for p in folders if p.name not in hidden]
+            if shown:
+                menu.addAction('Ocultar del escritorio', lambda: self.shell.hide_from_desktop(shown))
+            concealed = [p for p in folders if p.name in hidden]
+            if concealed:
+                menu.addAction('Volver a mostrar en el escritorio', lambda: self.shell.show_on_desktop(concealed))
+        elif not paths:
+            count = len(hidden_items.hidden_names(destination))
+            toggle = menu.addAction(f'Mostrar ocultos ({count})' if count else 'Mostrar ocultos',
+                                    self.shell.toggle_show_hidden)
+            toggle.setCheckable(True); toggle.setChecked(self.shell.show_hidden)
