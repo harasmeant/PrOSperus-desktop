@@ -30,9 +30,33 @@ def parse_outputs(text):
     return outputs
 
 
+# Pantallas del propio portátil: sin principal elegida, el escritorio va a una externa.
+BUILT_IN = ('eDP', 'LVDS', 'DSI')
+
+
 def _primary(outputs, primary):
     names = [o['name'] for o in outputs]
-    return primary if primary in names else names[0]
+    if primary in names:
+        return primary
+    return next((n for n in names if not n.startswith(BUILT_IN)), names[0])
+
+
+def primary_output(outputs, config=None):
+    """Pantalla principal entre las activas (la elegida o, si no está, la primera externa)."""
+    active = [o for o in outputs if o.get('active') and o.get('name')]
+    return _primary(active, (config or load_config())['primary']) if active else None
+
+
+def desktop_to_primary(primary):
+    """Lleva el proyecto que se ve (con el escritorio) a la pantalla principal."""
+    if '"' in primary or '\\' in primary:
+        return
+    try:
+        # Sin escritorio (al arrancar Sway) falla el criterio y no se mueve nada.
+        subprocess.run(['swaymsg', '[app_id="org.prosperus.Desktop"] focus; move workspace to output "%s"' % primary],
+                       capture_output=True, timeout=5)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 
 def plan_commands(outputs, mode, primary, position):
@@ -118,6 +142,7 @@ def apply(config):
         return str(error)
     if result.returncode:
         return result.stderr.strip() or 'Sway rechazó la configuración.'
+    desktop_to_primary(_primary(outputs, config['primary']))
     if config['mode'] == 'mirror':
         try:
             for argv in mirror_commands(outputs, config['primary']):

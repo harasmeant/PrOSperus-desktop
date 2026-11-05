@@ -39,9 +39,39 @@ class DisplaySettingsTests(unittest.TestCase):
         self.assertEqual(ds.plan_commands(self.outputs[:2], 'extend', 'eDP-1', 'above'),
                          ['output "eDP-1" enable pos 0 0', 'output "HDMI-A-1" enable pos 0 -1080'])
 
-    def test_single_disables_others_and_unknown_primary_falls_back(self):
+    def test_single_disables_others_and_unknown_primary_falls_back_to_external(self):
         self.assertEqual(ds.plan_commands(self.outputs[:2], 'single', 'nope', 'right'),
-                         ['output "eDP-1" enable pos 0 0', 'output "HDMI-A-1" disable'])
+                         ['output "HDMI-A-1" enable pos 0 0', 'output "eDP-1" disable'])
+        self.assertEqual(ds.plan_commands(self.outputs[:1], 'single', '', 'right'),
+                         ['output "eDP-1" enable pos 0 0'])
+
+    def test_primary_output_only_among_active(self):
+        config = dict(ds.DEFAULTS)
+        self.assertEqual(ds.primary_output(self.outputs, config), 'HDMI-A-1')
+        self.assertEqual(ds.primary_output(self.outputs, dict(config, primary='eDP-1')), 'eDP-1')
+        # DP-2 está apagada: no puede llevarse el escritorio.
+        self.assertEqual(ds.primary_output(self.outputs, dict(config, primary='DP-2')), 'HDMI-A-1')
+        self.assertIsNone(ds.primary_output([], config))
+
+    def test_window_manager_moves_project_to_primary(self):
+        from prosperus import window_manager as wm
+        manager = wm.WindowManager()
+        manager.available = True
+        sent = []
+
+        def fake(kind, payload=''):
+            if kind == 3:
+                return json.loads(SWAY)
+            if kind == 1:
+                return [{'name': 'General', 'output': 'eDP-1', 'focused': True}]
+            if kind == 0:
+                sent.append(payload)
+                return [{'success': True}, {'success': True}]
+            return {'nodes': []}
+
+        with mock.patch.object(wm, 'request', fake), mock.patch.object(ds, 'load_config', return_value=dict(ds.DEFAULTS)):
+            manager.switch_workspace('General')
+        self.assertEqual(sent[-1], 'move workspace to output "HDMI-A-1"')
 
     def test_mirror_targets_secondary_outputs(self):
         self.assertEqual(ds.mirror_commands(self.outputs[:2], 'eDP-1'),

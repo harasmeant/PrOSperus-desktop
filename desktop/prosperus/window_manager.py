@@ -15,6 +15,7 @@ from PySide6.QtCore import QObject, Signal
 
 from .window_session import request, walk, DESKTOP_ID, HANDLE_ID, apply
 from .window_layouts import LayoutOptions
+from .display_settings import primary_output
 
 SUBSCRIBE_TYPE = 2
 HEADER_SIZE = 14
@@ -332,9 +333,19 @@ class WindowManager(QObject):
             replies = request(0, f'[app_id="{DESKTOP_ID}"] move container to workspace {target}; workspace {target}')
             # Sin ventana que coincida, Sway cambiaría de espacio sin el escritorio.
             self._placed = all(reply.get('success') for reply in replies)
+            if self._placed:
+                self._keep_on_primary()
         except (OSError, ValueError) as e:
             self.message.emit(f'No se pudo cambiar de escritorio: {e}')
         self.refresh()
+
+    def _keep_on_primary(self):
+        """El proyecto se crea en la pantalla con el foco (al arrancar, la del portátil):
+        se lleva a la principal elegida en Monitores, o a la externa si no hay ninguna."""
+        primary = primary_output(request(3))
+        current = next((w for w in request(1) if w.get('focused')), {})
+        if primary and current.get('output') not in (None, primary) and '"' not in primary and '\\' not in primary:
+            request(0, f'move workspace to output "{primary}"')
 
     def set_wallpaper(self, path, color):
         """Fondo de Sway (lo que se ve en las demás pantallas): el del proyecto actual.
