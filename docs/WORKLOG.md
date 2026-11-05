@@ -619,3 +619,10 @@ Ideas para más adelante:
   import que faltaba, el recorte del nombre y Escape. Comprobado sin pantalla con el escritorio real;
   207 pruebas correctas. ISO de Debian de las 22:35 (SHA-256 `3e22e652…eee3`) en QEMU: con Alt pulsado sale el selector
   (dos consolas, la minimizada apagada), Tab cambia la marcada y al soltar Alt se abre. Sin probar en hardware real.
+
+## 05-11-2026 · Sitio en el NVMe para PrOSperus
+
+- Hecho a mano con sudo (los pasos de `scripts/hacer-sitio-bazzite.sh`): btrfs `bazzite` encogido a
+  800,28 GiB y `nvme0n1p3` a 801,3 GiB (1680410624 sectores, mismo inicio y UUID). Quedan 150 GiB sin
+  particionar al final del disco (sectores 1685835776–2000409230). Copia de la tabla anterior en
+  `~/tabla-particiones-antes.sfdisk`. Siguiente: `prosperus-instalar-disco` desde el USB.
