@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# SUDO_ASKPASS de PrOSperus: ventana que pide la contraseña para «sudo -A».
+export PYTHONPATH=/usr/lib/prosperus
+exec /usr/bin/python3 -m prosperus.askpass "$@"

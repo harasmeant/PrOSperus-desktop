@@ -54,21 +54,21 @@ class Distro:
         return found
 
     def install_command(self, packages):
-        # shortcut: sudo -n usa el sudo sin contraseña de la imagen de desarrollo; usar pkexec en la de uso diario.
+        # sudo -A: sin contraseña en la imagen Live (NOPASSWD); instalado, la pide con prosperus-askpass.
         if self.key == 'arch':
             # Arch no admite actualizaciones parciales: -Syu actualiza a la vez que instala.
-            return ['sudo', '-n', 'pacman', '-Syu', '--noconfirm', '--needed', *packages]
+            return ['sudo', '-A', 'pacman', '-Syu', '--noconfirm', '--needed', *packages]
         if self.key == 'debian':
-            return ['sudo', '-n', 'sh', '-c', APT_INSTALL, 'sh', *packages]
-        return ['sudo', '-n', 'dnf5', 'install', '-y', *packages]
+            return ['sudo', '-A', 'sh', '-c', APT_INSTALL, 'sh', *packages]
+        return ['sudo', '-A', 'dnf5', 'install', '-y', *packages]
 
     def install_file_command(self, path):
         if self.key == 'arch':
-            return ['sudo', '-n', 'pacman', '-U', '--noconfirm', path]
+            return ['sudo', '-A', 'pacman', '-U', '--noconfirm', path]
         if self.key == 'debian':
             # apt solo toma un archivo si la ruta lleva «/»; si no, lo busca en los repositorios.
-            return ['sudo', '-n', 'sh', '-c', APT_INSTALL, 'sh', os.path.abspath(path)]
-        return ['sudo', '-n', 'dnf5', 'install', '-y', path]
+            return ['sudo', '-A', 'sh', '-c', APT_INSTALL, 'sh', os.path.abspath(path)]
+        return ['sudo', '-A', 'dnf5', 'install', '-y', path]
 
     def installed_command(self):
         if self.key == 'arch':

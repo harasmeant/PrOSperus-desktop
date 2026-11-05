@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 """Instalador de programas: aviso de qué se conserva al apagar."""
 import unittest
 
@@ -47,9 +48,9 @@ class RecommendedTests(unittest.TestCase):
         from prosperus.recommended import is_installed, recommended
         piper = next(e for e in recommended() if e['name'] == 'Piper')
         self.assertEqual(install_command(piper, FEDORA)[-2:], ['piper', 'libratbag-ratbagd'])
-        self.assertEqual(install_command(piper, ARCH), ['sudo', '-n', 'pacman', '-Syu', '--noconfirm', '--needed',
+        self.assertEqual(install_command(piper, ARCH), ['sudo', '-A', 'pacman', '-Syu', '--noconfirm', '--needed',
                                                         'piper', 'libratbag'])
-        self.assertEqual(after_commands(piper), [['sudo', '-n', 'systemctl', 'enable', '--now', 'ratbagd']])
+        self.assertEqual(after_commands(piper), [['sudo', '-A', 'systemctl', 'enable', '--now', 'ratbagd']])
         self.assertFalse(is_installed(piper, set(), {'piper'}, FEDORA))
         self.assertTrue(is_installed(piper, set(), {'piper', 'libratbag-ratbagd'}, FEDORA))
         self.assertTrue(is_installed(piper, set(), {'piper', 'libratbag'}, ARCH))
@@ -89,7 +90,7 @@ class DistroTests(unittest.TestCase):
                          [('blender', 'Very fast and versatile 3D modeller/renderer'),
                           ('blender-data', 'Very fast and versatile 3D modeller/renderer - data package')])
         cmd = install_command({'source': 'system', 'id': 'htop'}, DEBIAN)
-        self.assertEqual(cmd[:4], ['sudo', '-n', 'sh', '-c'])
+        self.assertEqual(cmd[:4], ['sudo', '-A', 'sh', '-c'])
         self.assertIn('apt-get update', cmd[4])
         self.assertEqual(cmd[-2:], ['sh', 'htop'])
         self.assertEqual(install_command({'source': 'file', 'id': '/tmp/x.deb'}, DEBIAN)[-1], '/tmp/x.deb')
@@ -107,7 +108,7 @@ class DistroTests(unittest.TestCase):
         from prosperus.distro import ARCH, FEDORA
         from prosperus.installer import install_command
         pkg = {'source': 'file', 'id': '/tmp/x.pkg.tar.zst'}
-        self.assertEqual(install_command(pkg, ARCH)[:4], ['sudo', '-n', 'pacman', '-U'])
+        self.assertEqual(install_command(pkg, ARCH)[:4], ['sudo', '-A', 'pacman', '-U'])
         with self.assertRaises(ValueError):
             install_command(pkg, FEDORA)
         self.assertIn('dnf5', install_command({'source': 'file', 'id': '/tmp/x.rpm'}, FEDORA))

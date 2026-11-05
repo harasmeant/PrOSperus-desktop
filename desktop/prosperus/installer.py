@@ -5,7 +5,7 @@ import re
 import subprocess
 import sys
 
-from PySide6.QtCore import QProcess, Qt
+from PySide6.QtCore import QProcess, QProcessEnvironment, Qt
 from PySide6.QtGui import QColor, QFont
 from .window_header import WindowHeader
 from .theme_state import current_palette
@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit, QLi
                                QMessageBox, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget)
 
 # Expresión regular que define los caracteres permitidos en el término de búsqueda para evitar inyección en shell.
+ASKPASS = '/usr/bin/prosperus-askpass'
 SAFE = re.compile(r'^[\w .+-]+$')
 
 
@@ -49,12 +50,12 @@ def install_command(item, system=None):
     if item['source'] == 'system':
         return system.install_command(package_ids(item, system).split())
     if item['source'] == 'flathub':
-        return ['sudo', '-n', 'flatpak', 'install', '-y', '--noninteractive', 'flathub', item['id']]
+        return ['sudo', '-A', 'flatpak', 'install', '-y', '--noninteractive', 'flathub', item['id']]
     path = str(item['id'])
     if path.lower().endswith(system.package_suffixes):
         return system.install_file_command(path)
     if path.lower().endswith('.flatpakref'):
-        return ['sudo', '-n', 'flatpak', 'install', '-y', '--noninteractive', '--from', path]
+        return ['sudo', '-A', 'flatpak', 'install', '-y', '--noninteractive', '--from', path]
     raise ValueError(f"Solo se instalan archivos {' o '.join(system.package_suffixes)} o .flatpakref.")
 
 
@@ -66,7 +67,7 @@ def after_commands(item, system=None):
     """Servicios que activar tras instalar (p. ej. el demonio de Input Remapper)."""
     system = system or distro.current()
     rename = DEBIAN_SERVICES if system.key == 'debian' else {}
-    return [['sudo', '-n', 'systemctl', 'enable', '--now', rename.get(name, name)] for name in item.get('after', ())]
+    return [['sudo', '-A', 'systemctl', 'enable', '--now', rename.get(name, name)] for name in item.get('after', ())]
 
 
 def installed_names():
@@ -227,6 +228,11 @@ class Installer(QWidget):
         self.job = QProcess(self); self.job.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self.job.readyReadStandardOutput.connect(lambda: self.log.appendPlainText(bytes(self.job.readAllStandardOutput()).decode(errors='replace').rstrip()))
         self.job.finished.connect(self.install_done)
+        # sudo -A pide la contraseña con una ventana (en la Live no la pide: NOPASSWD).
+        env = QProcessEnvironment.systemEnvironment()
+        if not env.contains('SUDO_ASKPASS'):
+            env.insert('SUDO_ASKPASS', ASKPASS)
+        self.job.setProcessEnvironment(env)
         self.install_button.setEnabled(False)
         self.job.start(argv[0], argv[1:])
 

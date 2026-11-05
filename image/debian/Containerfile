@@ -61,7 +61,7 @@ COPY image/rootfs/ /
 # foot 1.21 de Debian aún llama [colors] a lo que 1.22 llama [colors-dark].
 RUN echo 'LANG=es_ES.UTF-8' > /etc/default/locale \
     && sed -i 's/^\[colors-dark\]/[colors]/' /etc/xdg/foot/foot.ini \
-    && chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-ramas /usr/bin/prosperus-instalar /usr/bin/prosperus-claude /usr/bin/prosperus-terminal /usr/bin/prosperus-bloquear /usr/bin/prosperus-captura /usr/bin/prosperus-portapapeles /usr/bin/prosperus-osd /usr/bin/prosperus-handle /usr/libexec/prosperus-session /usr/libexec/prosperus-persistence /usr/libexec/prosperus-client \
+    && chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-ramas /usr/bin/prosperus-instalar /usr/bin/prosperus-askpass /usr/bin/prosperus-claude /usr/bin/prosperus-terminal /usr/bin/prosperus-bloquear /usr/bin/prosperus-captura /usr/bin/prosperus-portapapeles /usr/bin/prosperus-osd /usr/bin/prosperus-handle /usr/libexec/prosperus-session /usr/libexec/prosperus-persistence /usr/libexec/prosperus-client \
     && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
     && passwd --lock root \
     && passwd --delete prosperus \
