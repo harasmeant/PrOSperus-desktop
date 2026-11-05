@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 import unittest
 
 from prosperus.window_gaps import Splitter, commands_for, drag, find_splitter

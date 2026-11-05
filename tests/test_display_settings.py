@@ -2,6 +2,7 @@
 import json
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 import tempfile
 import unittest
 from pathlib import Path

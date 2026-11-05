@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 """Marco de las ventanas: color de resalte del fondo, filigrana y paleta compartida."""
 import json
 import tempfile

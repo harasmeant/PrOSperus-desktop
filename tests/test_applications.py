@@ -1,6 +1,7 @@
 """Verify the GIO boundary without opening any installed application."""
 # SPDX-License-Identifier: GPL-3.0-only
 import os
+os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 import tempfile
 import unittest
 from unittest.mock import Mock, patch

@@ -3,6 +3,7 @@ import os
 import unittest
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 
 from prosperus.appearance import Palette

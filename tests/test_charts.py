@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 """Gráficas ```grafica de las notas: lectura de datos y sustitución por imagen."""
 import unittest
 

@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 """Bloques de código de las notas: grupos por lenguaje y colores."""
 import unittest
 

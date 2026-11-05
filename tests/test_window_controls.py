@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 import unittest
 from PySide6.QtCore import QPointF
 from PySide6.QtWidgets import QApplication, QWidget
