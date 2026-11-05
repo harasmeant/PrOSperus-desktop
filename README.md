@@ -11,6 +11,13 @@ pantalla (Fibonacci) sobre ese mapa.
 Probado en máquinas virtuales y en el portátil del autor; falta probarlo en
 más equipos. No lo uses aún como sistema principal ni con datos sin copia de seguridad.
 
+> [!WARNING]
+> **No es seguro para uso diario.** El núcleo Linux está fijado y no recibe
+> actualizaciones de seguridad, y PrOSperus no tiene todavía forma de actualizarse
+> sin reinstalar. Tampoco admite Secure Boot. No lo uses en equipos con datos
+> sensibles ni en redes que no controles, y no lo instales en un equipo de trabajo
+> sin el permiso de quien lo administra.
+
 ## Qué hace
 
 - **Proyectos:** tarjetero (o cuadrícula) para elegir proyecto; crear proyectos
@@ -78,7 +85,7 @@ y decisiones en el [diario de trabajo](docs/WORKLOG.md). Para contribuir, [CONTR
 ## Límites conocidos
 
 - Probado en un solo equipo real; sin Secure Boot (ni la ISO ni el instalado están firmados).
-- El núcleo está fijado: las actualizaciones del sistema no lo actualizan todavía.
+- El núcleo está fijado: no recibe parches de seguridad (ver el aviso de arriba).
 - Mover una nota a otra carpeta no actualiza sus enlaces relativos (renombrar sí).
 - Las ventanas no recuperan su disposición tras reiniciar.
 - No hay aislamiento entre proyectos: los favoritos y permisos son globales.
