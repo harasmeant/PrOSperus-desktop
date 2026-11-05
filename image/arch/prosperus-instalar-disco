@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# Instala PrOSperus (Arch) desde el USB Live en el espacio LIBRE de un disco,
+# Instala PrOSperus (Arch o Debian) desde el USB Live en el espacio LIBRE de un disco,
 # junto al sistema que ya tenga (dual boot con Bazzite, Fedora, Windows...).
 #
 # Garantías:
@@ -156,7 +156,9 @@ truncate -s 0 "$target/etc/machine-id"
 # Lo propio del USB Live no va al disco: ni la persistencia ni sudo sin contraseña.
 systemctl --root="$target" disable prosperus-persistence.service >/dev/null 2>&1 || true
 rm -f "$target/etc/sudoers.d/prosperus-vm"
-printf '%%wheel ALL=(ALL:ALL) ALL\n' > "$target/etc/sudoers.d/prosperus"
+# Grupo de administración: wheel en Arch, sudo en Debian.
+admin=wheel; grep -q '^sudo:' "$target/etc/group" && admin=sudo
+printf '%%%s ALL=(ALL:ALL) ALL\n' "$admin" > "$target/etc/sudoers.d/prosperus"
 chmod 0440 "$target/etc/sudoers.d/prosperus"
 printf 'prosperus:%s\n' "$password" | chpasswd -R "$target"
 date -u +%Y-%m-%dT%H:%M:%SZ > "$target/usr/share/prosperus/instalado"

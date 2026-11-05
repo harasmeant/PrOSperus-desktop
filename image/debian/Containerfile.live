@@ -2,7 +2,7 @@
 FROM localhost/prosperus-debian:dev
 # Firmware: Wi-Fi y gráficas habituales para arrancar el USB en equipos reales.
 # dracut-live (SquashFS + overlay) ya está en la base.
-RUN apt-get install -y e2fsprogs util-linux dmsetup \
+RUN apt-get install -y e2fsprogs util-linux dmsetup fdisk efibootmgr systemd-ukify systemd-boot-efi \
        firmware-iwlwifi firmware-realtek firmware-atheros firmware-brcm80211 firmware-mediatek \
        firmware-amd-graphics firmware-intel-graphics firmware-misc-nonfree \
     && apt-get clean
@@ -10,6 +10,9 @@ RUN apt-get install -y e2fsprogs util-linux dmsetup \
 # que la partición PROSPERUS_DATA conserva junto con el inicio de sesión.
 RUN runuser -l prosperus -c 'curl -fsSL https://claude.ai/install.sh | bash' \
     && test -x /home/prosperus/.local/bin/claude
+# Instalador a disco para dual boot: solo usa espacio libre (docs/DUAL-BOOT.md).
+COPY image/arch/prosperus-instalar-disco /usr/bin/prosperus-instalar-disco
+RUN chmod 0755 /usr/bin/prosperus-instalar-disco
 # Versión de la imagen: la capa persistente solo se reutiliza con la misma ISO.
 # apt no instala núcleos nuevos (hold): el arranque usa siempre el de la ISO.
 # Las listas de apt se quedan en la imagen: Instalar programas busca sin red.

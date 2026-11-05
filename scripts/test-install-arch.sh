@@ -2,21 +2,24 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Prueba del instalador a disco (dual boot) en una VM, con un disco virtual que
 # imita el del portátil: partición EFI con un «Bazzite» falso, /boot, sistema y
-# espacio libre. Nunca usa discos reales: todo son archivos en out/iso-arch/prueba-disco.
+# espacio libre. Nunca usa discos reales: todo son archivos en out/iso-<distro>/prueba-disco.
+# Uso: bash scripts/test-install-arch.sh [arch|debian]   (por defecto arch)
 #   1. Arranca la ISO, ejecuta prosperus-instalar-disco sin intervención y apaga.
 #   2. Arranca desde el disco virtual (sin ISO) por la entrada «PrOSperus».
 #   3. Comprueba que las particiones existentes siguen intactas.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-iso=out/iso-arch/prosperus-live-x86_64.iso
-dir=out/iso-arch/prueba-disco
+distro=${1:-arch}
+iso=out/iso-$distro/prosperus-live-x86_64.iso
+dir=out/iso-$distro/prueba-disco
+# La VM de prueba usa siempre las herramientas de Arch (tienen sfdisk y mtools).
 tools=localhost/prosperus-arch-tools:dev
 test -f "$iso" && test -w /dev/kvm
 rm -rf "$dir" && mkdir -p "$dir"
 # Núcleo e initramfs de la misma imagen que la ISO: la fase 1 los arranca
 # directamente para poder añadir la orden de instalación a la línea del núcleo.
 podman run --rm --network=none --security-opt label=disable -v "$PWD/$dir:/o" \
-    localhost/prosperus-arch-live:dev cp /boot/vmlinuz-prosperus /boot/initramfs-prosperus.img /o/
+    localhost/prosperus-$distro-live:dev cp /boot/vmlinuz-prosperus /boot/initramfs-prosperus.img /o/
 podman run -i --rm --network=none --device /dev/kvm --cpus=2 --memory=2560m --memory-swap=2560m \
     --security-opt label=disable -v "$PWD/$dir:/o" -v "$PWD/$iso:/iso/live.iso:ro" \
     "$tools" bash -s <<'EOF'

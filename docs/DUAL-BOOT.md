@@ -1,10 +1,11 @@
-# Dual boot: PrOSperus (Arch) junto a Bazzite
+# Dual boot: PrOSperus (Arch o Debian) junto a Bazzite
 
 **Estado al 04-11-2026:** instalador probado en QEMU con un disco virtual que
-imita el del portátil (`scripts/test-install-arch.sh`). No probado todavía en
+imita el del portátil (`scripts/test-install-arch.sh`, Arch; el 05-11-2026 también
+Debian con `scripts/test-install-arch.sh debian`). No probado todavía en
 hardware real. Sin Secure Boot (ver «Límites»).
 
-La ISO de Arch trae `prosperus-instalar-disco`, que instala PrOSperus en el
+Las ISO de Arch y de Debian traen `prosperus-instalar-disco`, que instala PrOSperus en el
 **espacio libre** de un disco, al lado del sistema que ya hay.
 
 ## Qué hace y qué no
@@ -61,7 +62,7 @@ dudas, pide ayuda antes de pulsar. El instalador no lo hace por ti a propósito.
 
 ```bash
 bash scripts/build-iso-arch.sh
-bash scripts/test-install-arch.sh
+bash scripts/test-install-arch.sh          # o, con la ISO de Debian: ... debian
 ```
 
 Crea `out/iso-arch/prueba-disco/disco.raw` (EFI con un «Bazzite» falso,

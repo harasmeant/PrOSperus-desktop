@@ -628,3 +628,12 @@ Ideas para más adelante:
   `~/tabla-particiones-antes.sfdisk`. Siguiente: `prosperus-instalar-disco` desde el USB.
 - Reiniciado: Bazzite arranca normal tras el cambio (`nvme0n1p3` 801,3 GiB montada, 426 GiB libres
   dentro del btrfs). El hueco de 150 GiB sigue ahí.
+
+## 2026-11-05 — Instalador a disco también en la ISO de Debian
+
+- El USB tiene la ISO de Debian, que no traía `prosperus-instalar-disco`. Ahora sí (mismo script; en
+  Debian el grupo de administración es `sudo`), con `fdisk`, `efibootmgr`, `systemd-ukify` y
+  `systemd-boot-efi`. `scripts/test-install-arch.sh debian` prueba la ISO de Debian.
+- ISO de Debian de las 10:20 (SHA-256 `94462c28…9afd`) en QEMU con el disco falso del portátil: instala
+  en el hueco libre, arranca el escritorio desde el disco y xboot, «bazzite» y el cargador de Fedora
+  quedan idénticos. Falta grabarla en el USB y probarla en el portátil.
