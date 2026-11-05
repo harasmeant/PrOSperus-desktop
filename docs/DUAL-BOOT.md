@@ -8,6 +8,8 @@ hardware real. Sin Secure Boot (ver «Límites»).
 Las ISO de Arch y de Debian traen `prosperus-instalar-disco`, que instala PrOSperus en el
 **espacio libre** de un disco, al lado del sistema que ya hay.
 
+Junto a Windows (BitLocker, ESP pequeña, Secure Boot): [DUAL-BOOT-WINDOWS.md](DUAL-BOOT-WINDOWS.md).
+
 ## Qué hace y qué no
 
 - Crea **una partición nueva** en espacio sin asignar (ext4, `PROSPERUS_ROOT`).

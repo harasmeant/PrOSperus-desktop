@@ -49,6 +49,7 @@ bash scripts/write-usb.sh out/iso-debian/prosperus-live-x86_64.iso /dev/sdX
 
 - [Guía de la versión Debian](docs/DEBIAN.md)
 - [Instalar en disco junto a otro sistema](docs/DUAL-BOOT.md)
+- [Dual boot con Windows (guía para IT)](docs/DUAL-BOOT-WINDOWS.md)
 - [Persistencia en el USB](docs/PERSISTENCIA.md)
 
 La última ISO publicada es antigua ([v0.3.2-live.1](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.3.2-live.1),
