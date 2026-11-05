@@ -33,7 +33,9 @@ class DesktopExperienceTests(unittest.TestCase):
         (self.root / 'Laboratorio/Apuntes/Hipótesis.md').write_text('# Hipótesis\nIdea.')
         pixmap = QPixmap(40, 30); pixmap.fill(Qt.GlobalColor.darkGreen)
         pixmap.save(str(self.root / 'wallpaper.png'))
-        self.window = Desktop(self.root)
+        # Ajustes propios: los del usuario (p. ej. tarjetero en cuadrícula) no deben cambiar el resultado.
+        self.settings = QSettings(str(Path(self.temp.name) / 'ajustes-base.ini'), QSettings.Format.IniFormat)
+        self.window = Desktop(self.root, settings=self.settings)
         self.window.show(); self.app.processEvents()
 
     def tearDown(self):

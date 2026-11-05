@@ -31,7 +31,7 @@ class ThemeStateTest(unittest.TestCase):
 
     def test_wob_uses_palette(self):
         colors = Palette(207)
-        text = wob_config(colors)
+        text = wob_config(colors, (0, 15))  # versión fija: no depender del wob instalado
         self.assertIn('border_color = ' + colors.accent[1:] + 'ff', text)
         self.assertIn('[style.muted]', text)
         self.assertIn('output_mode', wob_config(colors, (0, 15)))

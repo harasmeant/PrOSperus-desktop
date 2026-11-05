@@ -1,96 +1,103 @@
 # PrOSperus desktop
 
-**PrOSperus desktop · Prototipo de escritorio orientado a proyectos**
+**Un escritorio Linux organizado por proyectos.** Cada carpeta es un escritorio:
+un mapa con sus notas y subcarpetas, su propio fondo y paleta, notas flotantes
+y una barra con lo que tienes abierto. Las aplicaciones se reparten solas en
+pantalla (Fibonacci) sobre ese mapa.
 
-## Escritorio independiente en desarrollo · 0.5.0
+![PrOSperus: tarjetero de proyectos y mapa sobre el fondo del proyecto](docs/images/desktop-preview.png)
 
-La rama de desarrollo incorpora [distribución Fibonacci y perfiles ultrawide](docs/WINDOW-LAYOUTS.md), con integración experimental Sway. Estos cambios aún no están en la ISO publicada.
+**Versión actual: 0.5.0** (en desarrollo hacia la [1.0](docs/CHECKLIST-1.0.md)).
+Probado en máquinas virtuales y en el portátil del autor; falta probarlo en
+más equipos. No lo uses aún como sistema principal ni con datos sin copia de seguridad.
 
-La carpeta `desktop/` contiene una aplicación Python/Qt independiente de Obsidian.
-Esta iteración recupera el aspecto del prototipo aceptado: wallpapers heredados,
-paletas por proyecto, tarjetero vertical, mapa radial, notas flotantes y barra
-contextual. Incluye edición Markdown y guardado, creación de notas/carpetas,
-explorador y buscador de aplicaciones Linux con favoritos globales.
-Ahora también permite crear e importar proyectos, seleccionar y copiar notas o
-carpetas, pegar desde el gestor de archivos, duplicar y usar atajos de escritorio.
-F1 muestra la ayuda; Ctrl+Espacio abre Aplicaciones en la demo de Fedora.
-Los buscadores del mapa, el explorador y el tarjetero consultan tanto los
-nombres como el contenido guardado de los Markdown, incluidas las subcarpetas.
+## Qué hace
 
-![PrOSperus independiente: tarjetero de proyectos y mapa sobre el fondo de la demo](docs/images/desktop-preview.png)
+- **Proyectos:** tarjetero (o cuadrícula) para elegir proyecto; crear proyectos
+  nuevos o importar carpetas existentes sin modificar los originales.
+- **Mapa:** las notas y subcarpetas de la carpeta actual alrededor del centro.
+  Se navega con ratón, flechas, Tab e Intro; Esc vuelve atrás.
+- **Notas:** ventanas flotantes con edición Markdown, bloques de código y gráficas;
+  guardado explícito y aviso si el archivo cambió fuera.
+- **Archivos:** crear, copiar, pegar, duplicar, arrastrar desde otro gestor,
+  renombrar (actualizando enlaces), papelera recuperable, ocultar carpetas,
+  abrir con otra aplicación.
+- **Búsqueda:** por nombre y por el contenido de las notas, sin distinguir tildes.
+- **Ventanas (Sway):** distribución Fibonacci, columnas o principal centrada,
+  perfiles para 21:9 y 32:9, Alt+Tab con apps y notas, varios monitores.
+- **Sistema:** Aplicaciones (Ctrl+Espacio), Instalar programas (apt y Flathub),
+  controladores NVIDIA, red, sonido, brillo, bloqueo de pantalla (Super+L),
+  reloj con agenda. F1 abre la ayuda.
 
-[Descargar la demo v0.3.2-dev](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.3.2-dev).
-Descarga `prosperus-demo-v3.2.tar.gz`; la publicación conserva también los paquetes
-v3 y v3.1 como histórico.
+## Probarlo
 
-La [ISO Live de prueba](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.3.2-live.1)
-incluye las dependencias y arranca directamente en PrOSperus. Comprobada con
-UEFI, dos CPU y 2 GiB en QEMU; sin instalador ni persistencia. Consulta la
-[guía de la ISO](docs/ISO-LIVE.md).
+La forma recomendada es la **ISO Live sobre Debian 13**, que también trae un
+instalador a disco junto a otro sistema (dual boot).
 
-Hay también versiones sobre [Arch Linux](docs/ARCH.md) (`scripts/build-iso-arch.sh`)
-y [Debian 13 estable](docs/DEBIAN.md) (`scripts/build-iso-debian.sh`), con el mismo escritorio.
-La de Arch se puede instalar en disco junto a otro sistema: [dual boot](docs/DUAL-BOOT.md).
+```bash
+bash scripts/build-iso-debian.sh                 # construye out/iso-debian/
+bash scripts/write-usb.sh out/iso-debian/prosperus-live-x86_64.iso /dev/sdX
+                                                 # graba en USB con persistencia (¡borra el USB!)
+```
 
-Para probarla dentro de Fedora, consulta [la guía de la demo](docs/FEDORA-DEMO.md).
-El [diario de trabajo](docs/WORKLOG.md) registra la referencia acordada, los cambios
-y sus límites. No se ha alcanzado la paridad completa con el complemento de
-Obsidian; tampoco se ha validado una distribución para uso diario.
+- [Guía de la versión Debian](docs/DEBIAN.md)
+- [Instalar en disco junto a otro sistema](docs/DUAL-BOOT.md)
+- [Persistencia en el USB](docs/PERSISTENCIA.md)
 
-## Referencia original · versión 0.0
+La última ISO publicada es antigua ([v0.3.2-live.1](https://github.com/harasmeant/PrOSperus-desktop/releases/tag/v0.3.2-live.1),
+Fedora con Cage): no incluye nada de lo de 0.4 y 0.5. Hay también recetas
+experimentales para [Arch](docs/ARCH.md) y Fedora (`scripts/build-iso.sh`), que
+comparten el mismo escritorio.
 
-Un proyecto para organizar el trabajo en Linux alrededor de carpetas, notas y aplicaciones. Cada carpeta se convierte en un escritorio visual con un mapa navegable, notas flotantes y una barra de tareas contextual.
+### Solo el escritorio, sin ISO
 
-La versión **0.0** conserva el prototipo funcional desarrollado como complemento de Obsidian y establece el punto de partida para una futura distribución Linux. Esa versión publicada no incluye una ISO, una imagen de sistema ni un escritorio independiente; el desarrollo local posterior se describe arriba.
+Necesita Python 3 con PySide6 y PyGObject:
 
-## Lo que ya funciona
+```bash
+bash desktop/iniciar.sh --root demo-system      # proyectos de ejemplo
+```
 
-- Escritorio por carpeta con mapa de archivos y subcarpetas.
-- Selector lateral de proyectos, búsqueda y navegación por teclado.
-- Notas flotantes mediante Hover Editor, minimización y recuperación durante la sesión.
-- Explorador de la bóveda: crear, buscar, mover, renombrar y eliminar con las API de Obsidian.
-- Fondos heredados por subcarpetas y paletas por proyecto.
-- Buscador de aplicaciones Linux y favoritos globales; lanzamiento mediante GIO.
-- Apertura de archivos Python en VSCodium mediante su protocolo de escritorio.
+Sin Sway funciona el mapa, las notas y los proyectos; la gestión de ventanas
+reales necesita una sesión Sway/SwayFX.
 
-## Qué demuestra este proyecto
+## Desarrollo
 
-Diseño de una interfaz de trabajo, desarrollo en JavaScript y CSS, integración con aplicaciones Linux mediante Python/GIO, gestión de archivos y validación automatizada. La evolución hacia un escritorio independiente exige separar la interfaz, el motor de archivos y enlaces, la integración con Linux y la construcción de la imagen.
+```bash
+QT_QPA_PLATFORM=offscreen PYTHONPATH=desktop python3 -m unittest discover -s tests
+```
 
-**Autor:** [Nicolás · harasmeant](https://github.com/harasmeant). Desarrollo iterativo con asistencia de IA. Las funciones implementadas y las propuestas futuras están documentadas por separado.
+- `desktop/prosperus/`: el escritorio (Python/Qt).
+- `image/`: recetas de las imágenes (`debian/`, `arch/`, Fedora en la raíz) y `rootfs/` compartido.
+- `scripts/`: construir ISO, grabar USB, probar en QEMU.
+- `tests/`: pruebas automáticas; [PRUEBAS-MINIMAS.md](docs/PRUEBAS-MINIMAS.md) recoge las manuales.
+- `prototype/obsidian/`: el prototipo original como complemento de Obsidian (versión 0.0).
 
-## Probar la versión 0.0
+Historial en [CHANGELOG.md](CHANGELOG.md), hoja de ruta en [ROADMAP.md](docs/ROADMAP.md)
+y decisiones en el [diario de trabajo](docs/WORKLOG.md). Para contribuir, [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Consulta la [guía de instalación](docs/INSTALL.md). El complemento no necesita compilación. Se incluyen notas ficticias en `demo/` para explorarlo sin usar documentos personales.
+## Límites conocidos
 
-## Estructura
+- Probado en un solo equipo real; sin Secure Boot (ni la ISO ni el instalado están firmados).
+- El núcleo está fijado: las actualizaciones del sistema no lo actualizan todavía.
+- Mover una nota a otra carpeta no actualiza sus enlaces relativos (renombrar sí).
+- Las ventanas no recuperan su disposición tras reiniciar.
+- No hay aislamiento entre proyectos: los favoritos y permisos son globales.
 
-- [`prototype/obsidian/`](prototype/obsidian/): código del prototipo y pruebas del lanzador.
-- [`demo/`](demo/): pequeñas carpetas y notas de ejemplo.
-- [`docs/ROADMAP.md`](docs/ROADMAP.md): alcance de la futura distro y siguientes hitos.
-- [`docs/VALIDATION.md`](docs/VALIDATION.md): comprobaciones y límites de la evidencia.
-- [`docs/PRUEBAS-MINIMAS.md`](docs/PRUEBAS-MINIMAS.md): lista de pruebas pendientes por sistema.
-- [`docs/BASELINE.md`](docs/BASELINE.md): procedencia del estado 0.0 y ajustes para publicarlo.
-- [`CHANGELOG.md`](CHANGELOG.md): historial de versiones.
+## Autor y licencia
 
-## Límites actuales
+**Autor:** [Nicolás · harasmeant](https://github.com/harasmeant). Desarrollo iterativo con asistencia de IA.
 
-El prototipo depende de Obsidian y Hover Editor. El mapa representa la estructura de archivos, no un grafo semántico. La disposición de las ventanas no se recupera automáticamente tras reiniciar. Los favoritos de aplicaciones son globales y no existe aislamiento por proyecto. El escritorio independiente usa Python/Qt sobre Fedora; la integración experimental Sway aún no sustituye Cage en la ISO.
-
-## Licencia
-
-Copyright (C) 2026 Nicolás (harasmeant).
-
-PrOSperus desktop se distribuye bajo la **GNU General Public License, versión 3 exclusivamente** (`GPL-3.0-only`). Consulta el texto completo en [LICENSE](LICENSE). Esta licencia cubre el código y el material original de este repositorio, incluido el prototipo propio publicado en `v0.0`, salvo indicación expresa en un archivo.
-
-Puedes usar, estudiar, modificar y redistribuir el proyecto. Si distribuyes una versión derivada cubierta por esta licencia, debes mantener GPLv3 y facilitar el código fuente correspondiente conforme a sus condiciones. El software se ofrece sin garantía, según la licencia.
-
-Las modificaciones privadas no obligan a publicar un fork ni a enviar cambios a este repositorio. Nicolás decide qué contribuciones incorpora al proyecto oficial; consulta [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Los componentes de terceros conservan sus propias licencias. Obsidian, Hover Editor y las aplicaciones del sistema son dependencias externas y no se redistribuyen aquí. Esta elección no cambia la licencia de los componentes de una futura imagen Linux.
-
-Referencia: [GPLv3, condiciones de distribución](https://www.gnu.org/licenses/gpl-3.0.en.html).
+Copyright (C) 2026 Nicolás (harasmeant). Distribuido bajo la **GNU General Public
+License, versión 3 exclusivamente** (`GPL-3.0-only`); texto completo en [LICENSE](LICENSE).
+Puedes usar, estudiar, modificar y redistribuir el proyecto; si distribuyes una
+versión derivada, debe seguir bajo GPLv3 con su código fuente. Sin garantía.
+Los componentes de terceros (Debian, Sway/SwayFX, Qt, aplicaciones del sistema)
+conservan sus propias licencias.
 
 ---
 
-**English:** PrOSperus desktop is a project-oriented Linux desktop experiment. Version 0.0 contains a working Obsidian prototype with folder maps, floating notes, a vault explorer and a Linux application launcher. A standalone Python/Qt desktop and a Fedora Live ISO are available. Development includes experimental Fibonacci layouts and ultrawide profiles; the published ISO still uses Cage and has no installer or persistence.
+**English:** PrOSperus is a project-oriented Linux desktop. Each folder becomes a
+workspace with a map of its notes, its own wallpaper and palette, floating Markdown
+notes and automatic Fibonacci tiling of real applications on Sway. The main build is
+a Debian 13 Live ISO with USB persistence and a dual-boot installer. Version 0.5.0,
+tested in virtual machines only; not yet ready for daily use.
