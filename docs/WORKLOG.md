@@ -676,3 +676,17 @@ Ideas para más adelante:
 - En el portátil ya instalado: copiar los dos archivos de `image/rootfs` a `/etc/dkms/` y
   `/usr/libexec/`. Las ISO nuevas los llevan.
 
+## 2026-11-06 — Salvapantallas con los fondos en bucle
+
+- `desktop/prosperus/screensaver.py` y `/usr/bin/prosperus-salvapantallas`: a los 5 min sin uso,
+  en vez de bloquear, cada pantalla muestra los fondos de los proyectos en bucle (40 s por fondo,
+  fundidos de 6 s, zoom y desplazamiento lentos, ondulación, barrido de luz, motas en el color de
+  acento, viñeta y reloj que se mueve despacio). El brillo baja al 40 % con `brightnessctl`; si no
+  se puede, oscurece el shader.
+- Al volver: si han pasado otros 5 min, swaylock; si no, directo al escritorio. Mientras se ve, el
+  modo de Sway `salvapantallas` desactiva los atajos y las notificaciones pasan a «No molestar».
+  Si falla, el lanzador bloquea la pantalla. La pantalla se apaga a la hora.
+- `SHELL_IDS` en `window_session.py`: el organizador deja fuera al escritorio, al asa y al
+  salvapantallas (antes le quitaba la pantalla completa). Cada ventana va a su monitor.
+- Probado en el portátil con las dos pantallas; el brillo real queda por probar fuera de la sesión
+  de Claude. `tests/test_screensaver.py`.

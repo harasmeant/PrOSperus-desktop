@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractSlid
                                QComboBox, QLineEdit, QPlainTextEdit, QTextEdit, QWidget)
 
 from .window_layouts import Rect
-from .window_session import DESKTOP_ID, HANDLE_ID, request, walk
+from .window_session import DESKTOP_ID, SHELL_IDS, request, walk
 
 # Lo más pequeño que se deja una ventana al deformarla (algo menos que al organizar).
 MINIMUM = (200, 140)
@@ -145,7 +145,7 @@ class GapControl(QObject):
                 continue
             rects = {n['id']: Rect(**{k: n['rect'][k] for k in ('x', 'y', 'width', 'height')}) for n in nodes
                      if n.get('type') == 'floating_con' and (n.get('app_id') or n.get('window'))
-                     and n.get('app_id') not in (DESKTOP_ID, HANDLE_ID) and not n.get('fullscreen_mode')
+                     and n.get('app_id') not in SHELL_IDS and not n.get('fullscreen_mode')
                      and (n.get('window_properties') or {}).get('class') != DESKTOP_ID}
             return QPoint(desk['rect']['x'], desk['rect']['y']), rects, Rect(**ws['rect'])
         return None

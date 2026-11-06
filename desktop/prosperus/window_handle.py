@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import sys
 
-from .window_session import DESKTOP_ID, HANDLE_ID, request, walk
+from .window_session import HANDLE_ID, SHELL_IDS, request, walk
 
 HIDDEN_SUFFIX = ' · ocultas'
 
@@ -32,7 +32,7 @@ def find_target(tree, previous=None):
             ident = n.get('app_id') or (n.get('window_properties') or {}).get('class')
             if ident == HANDLE_ID and n.get('focused'):
                 focused = 'handle'
-            if ident in (DESKTOP_ID, HANDLE_ID) or ws['name'].endswith(HIDDEN_SUFFIX) or n.get('fullscreen_mode'):
+            if ident in SHELL_IDS or ws['name'].endswith(HIDDEN_SUFFIX) or n.get('fullscreen_mode'):
                 continue
             candidates[n['id']] = (n, ws)
             if n.get('focused'):

@@ -13,7 +13,7 @@ import threading
 import time
 from PySide6.QtCore import QObject, Signal
 
-from .window_session import request, walk, DESKTOP_ID, HANDLE_ID, apply
+from .window_session import request, walk, DESKTOP_ID, SHELL_IDS, apply
 from .window_layouts import LayoutOptions
 from .display_settings import primary_output
 
@@ -122,7 +122,7 @@ class WindowManager(QObject):
             try:
                 rects = {n['id']: (n['rect']['x'], n['rect']['y'], n['rect']['width'], n['rect']['height'])
                          for n in walk(request(4)) if n.get('type') == 'floating_con'
-                         and n.get('app_id') not in (DESKTOP_ID, HANDLE_ID)}
+                         and n.get('app_id') not in SHELL_IDS}
                 if last is not None and any(last.get(i, r) != r for i, r in rects.items()):
                     self._moved_at = time.monotonic()
                 last = rects
@@ -211,7 +211,7 @@ class WindowManager(QObject):
                 return
         change = e.get('change')
         c = e.get('container', {})
-        if c.get('app_id') in (DESKTOP_ID, HANDLE_ID):
+        if c.get('app_id') in SHELL_IDS:
             return
         if (c.get('window_properties') or {}).get('class') == DESKTOP_ID:
             return
@@ -309,7 +309,7 @@ class WindowManager(QObject):
                 continue
             for n in walk(ws):
                 if (n.get('type') in ('con', 'floating_con') and (n.get('app_id') or n.get('window'))
-                        and n.get('app_id') not in (DESKTOP_ID, HANDLE_ID)
+                        and n.get('app_id') not in SHELL_IDS
                         and (n.get('window_properties') or {}).get('class') != DESKTOP_ID):
                     found.append((n, ws.get('name') == self._hidden()))
         return found

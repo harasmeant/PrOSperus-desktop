@@ -1,0 +1,19 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# Salvapantallas con los fondos de los proyectos (swayidle). Usage: prosperus-salvapantallas [--bloquear-tras S]
+# Solo uno a la vez. Si falla o lo matan, se deja la sesión como estaba y se bloquea:
+# un salvapantallas roto nunca deja el escritorio abierto.
+dir=${XDG_RUNTIME_DIR:-/tmp}/prosperus
+mkdir -p "$dir"
+exec 9>"$dir/salvapantallas.lock"
+flock -n 9 || exit 0
+pgrep -x swaylock >/dev/null && exit 0
+PYTHONPATH=/usr/lib/prosperus /usr/bin/python3 -m prosperus.screensaver "$@"
+status=$?
+swaymsg mode default >/dev/null 2>&1
+[ -e "$dir/salvapantallas.dnd" ] && makoctl mode -r do-not-disturb >/dev/null 2>&1 && rm -f "$dir/salvapantallas.dnd"
+if [ "$status" -ne 0 ]; then
+    brightnessctl -q -c backlight -r 2>/dev/null
+    /usr/bin/prosperus-bloquear
+fi
+exit "$status"
