@@ -68,6 +68,20 @@ while [ $i -lt 30 ]; do
     sleep 0.5
     i=$((i + 1))
 done
+# ~/.config/prosperus/graficas con "nvidia": la NVIDIA dibuja y va primero. Con la de
+# arranque primero, cada fotograma del HDMI (que cuelga de la NVIDIA) se copia de la AMD a
+# la NVIDIA, y con la 550 esa copia parpadea al redibujar y puede romper (Xid 13 en sway).
+prefer=${XDG_CONFIG_HOME:-$HOME/.config}/prosperus/graficas
+if [ "$(cat "$prefer" 2>/dev/null)" = nvidia ]; then
+    nv= others=
+    for d in $(echo "$WLR_DRM_DEVICES" | tr ':' ' '); do
+        case $(basename "$(readlink -f "/sys/class/drm/${d##*/}/device/driver" 2>/dev/null)") in
+            nvidia) nv=${nv:+$nv:}$d ;;
+            *) others=${others:+$others:}$d ;;
+        esac
+    done
+    [ -n "$nv" ] && export WLR_DRM_DEVICES=$nv${others:+:$others}
+fi
 # Con el controlador propietario de NVIDIA cargado, Sway se niega a arrancar sin
 # --unsupported-gpu (pantalla negra tras instalarlo).
 flags=

@@ -24,7 +24,7 @@ export PROSPERUS_PYTHON=/tmp/prosperus-runtime/bin/python
 exec sh ./iniciar.sh "$@"
 '''
 
-README = '''PrOSperus desktop 0.5.0 — demo para Fedora
+README = '''PrOSperus desktop 0.5.1 — demo para Fedora
 
 1. Extrae prosperus-demo-v4.tar.gz dentro de Fedora.
 2. Entra en la carpeta prosperus-demo-v4 donde está iniciar.sh.

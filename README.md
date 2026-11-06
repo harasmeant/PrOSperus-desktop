@@ -7,7 +7,7 @@ pantalla (Fibonacci) sobre ese mapa.
 
 ![PrOSperus: tarjetero de proyectos y mapa sobre el fondo del proyecto](docs/images/desktop-preview.png)
 
-**Versión actual: 0.5.0** (en desarrollo hacia la [1.0](docs/CHECKLIST-1.0.md)).
+**Versión actual: 0.5.1** (en desarrollo hacia la [1.0](docs/CHECKLIST-1.0.md)).
 Probado en máquinas virtuales y en el portátil del autor; falta probarlo en
 más equipos. No lo uses aún como sistema principal ni con datos sin copia de seguridad.
 
@@ -107,5 +107,5 @@ conservan sus propias licencias.
 **English:** PrOSperus is a project-oriented Linux desktop. Each folder becomes a
 workspace with a map of its notes, its own wallpaper and palette, floating Markdown
 notes and automatic Fibonacci tiling of real applications on Sway. The main build is
-a Debian 13 Live ISO with USB persistence and a dual-boot installer. Version 0.5.0,
+a Debian 13 Live ISO with USB persistence and a dual-boot installer. Version 0.5.1,
 tested in virtual machines only; not yet ready for daily use.

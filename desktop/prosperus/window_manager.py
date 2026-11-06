@@ -13,7 +13,9 @@ import threading
 import time
 from PySide6.QtCore import QObject, Signal
 
-from .window_session import request, walk, DESKTOP_ID, SHELL_IDS, apply
+from .window_session import (request, walk, DESKTOP_ID, SHELL_IDS, apply, targets,
+                             load_arrangement, save_arrangement)
+from .window_drag import DragTracker, joins_pattern, central_zone, inside, projected_centre
 from .window_layouts import LayoutOptions
 from .display_settings import primary_output
 
@@ -74,6 +76,25 @@ def output_of(tree, con_id):
     return None
 
 
+def floating_windows(tree):
+    """{con_id: ((x, y, ancho, alto), área del espacio, pantalla)} de las aplicaciones flotantes visibles."""
+    found = {}
+    for output in tree.get('nodes', []):
+        if output.get('type') != 'output' or output.get('name', '').startswith('__'):
+            continue
+        for workspace in output.get('nodes', []):
+            if workspace.get('type') != 'workspace':
+                continue
+            area = tuple(workspace['rect'][k] for k in ('x', 'y', 'width', 'height'))
+            for n in walk(workspace):
+                if (n.get('type') == 'floating_con' and n.get('app_id') not in SHELL_IDS
+                        and not n.get('fullscreen_mode') and (n.get('app_id') or n.get('window'))
+                        and (n.get('window_properties') or {}).get('class') != DESKTOP_ID):
+                    r = n['rect']
+                    found[n['id']] = ((r['x'], r['y'], r['width'], r['height']), area, output['name'])
+    return found
+
+
 def other_outputs(outputs, main):
     """Pantallas activas distintas de la del escritorio, en el orden de Sway."""
     return [output['name'] for output in outputs if output['name'] != main and output.get('active')]
@@ -104,6 +125,9 @@ class WindowManager(QObject):
         self._stopping = False
         # Última vez que se movió o cambió de tamaño una aplicación (ver _watch_geometry).
         self._moved_at = 0.0
+        # Hasta cuándo los cambios de geometría son nuestros (organizar), no arrastres.
+        self._arranging_until = 0.0
+        self._hinted = set()
 
     # Inicia hilo que gestiona ventanas flotantes en Sway
     def start(self):
@@ -114,21 +138,77 @@ class WindowManager(QObject):
         threading.Thread(target=self._watch_geometry, daemon=True).start()
 
     def _watch_geometry(self):
-        """Super+arrastrar mueve una ventana (y Super+clic derecho la redimensiona), pero al soltar
-        Super Sway también lanza «Buscar»: no distingue el clic de ratón de «Super sola».
-        Se apunta cuándo cambió la geometría de alguna aplicación para descartar esa búsqueda."""
+        """Lee la geometría de las aplicaciones flotantes para dos cosas:
+        - Super+arrastrar mueve una ventana, pero al soltar Super Sway también lanza «Buscar»
+          (no distingue el clic de «Super sola»): se apunta cuándo se movió algo para descartarla.
+        - Arrastrar una ventana al centro de la pantalla la mete en el patrón (window_drag.py).
+        En reposo lee 4 veces por segundo; mientras se arrastra, 25 para medir la velocidad."""
+        tracker = DragTracker()
         last = None
         while not self._stopping:
             try:
-                rects = {n['id']: (n['rect']['x'], n['rect']['y'], n['rect']['width'], n['rect']['height'])
-                         for n in walk(request(4)) if n.get('type') == 'floating_con'
-                         and n.get('app_id') not in SHELL_IDS}
+                windows = floating_windows(request(4))
+                rects = {i: w[0] for i, w in windows.items()}
                 if last is not None and any(last.get(i, r) != r for i, r in rects.items()):
                     self._moved_at = time.monotonic()
                 last = rects
+                if time.monotonic() < self._arranging_until:
+                    tracker.reset(windows)     # los movimientos de organizar no son del usuario
+                else:
+                    drops = tracker.feed(time.monotonic(), windows)
+                    self._hint(tracker.dragging())
+                    for drop in drops:
+                        self._dropped(drop)
             except (OSError, ValueError, KeyError):
                 pass
-            time.sleep(.25)
+            time.sleep(.04 if tracker.active else .25)
+
+    def _hint(self, dragging):
+        """La ventana se vuelve translúcida mientras soltarla la metería en el patrón."""
+        hinted = set()
+        if self.mode == 'fibonacci':
+            for con_id, (rect, area, _, speed) in dragging.items():
+                zone = central_zone(area)
+                if inside(projected_centre(rect, (0, 0)), zone) or inside(projected_centre(rect, speed), zone):
+                    hinted.add(con_id)
+        changes = [f'[con_id={i}] opacity 0.75' for i in hinted - self._hinted]
+        changes += [f'[con_id={i}] opacity 1' for i in self._hinted - hinted]
+        self._hinted = hinted
+        if changes:
+            try:
+                request(0, '; '.join(changes))
+            except (OSError, ValueError):
+                pass
+
+    def _dropped(self, drop):
+        """Ventana soltada tras arrastrarla: al centro entra en el patrón; fuera, queda libre."""
+        if self.mode != 'fibonacci':
+            return
+        try:
+            tree, workspaces = request(4), request(1)
+            arrangement = load_arrangement()
+            try:
+                current = [i for i, _ in targets(tree, workspaces, drop.output, self.options_provider(), arrangement)]
+            except ValueError:
+                current = []
+            alive = {n.get('id') for n in walk(tree)}
+            if joins_pattern(drop):
+                arrangement = arrangement.insert_last(drop.con_id, current)
+            elif drop.con_id in arrangement.loose:
+                return                      # ya era libre: solo se ha movido
+            else:
+                arrangement = arrangement.release(drop.con_id, current)
+            save_arrangement(arrangement, alive)
+        except (OSError, ValueError, KeyError) as e:
+            self.message.emit(f'No se pudo colocar la ventana: {e}')
+            return
+        self.arrange(attempts=3, output=drop.output)
+        if drop.con_id in arrangement.loose:
+            # Las demás se han recolocado: la que acaba de soltar queda delante, no tapada.
+            try:
+                request(0, f'[con_id={drop.con_id}] focus')
+            except (OSError, ValueError):
+                pass
 
     def just_moved(self, within=1.5):
         return time.monotonic() - self._moved_at < within
@@ -260,7 +340,11 @@ class WindowManager(QObject):
         for attempt in range(attempts):
             try:
                 target = output or next(w['output'] for w in request(1) if w.get('focused'))
-                apply(target, self.options_provider())
+                self._arranging_until = time.monotonic() + 5
+                try:
+                    apply(target, self.options_provider())
+                finally:
+                    self._arranging_until = time.monotonic() + .6
                 return
             except ValueError as e:
                 # Sin aplicaciones visibles no hay nada que organizar: no es un error.

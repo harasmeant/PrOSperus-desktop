@@ -690,3 +690,21 @@ Ideas para más adelante:
   salvapantallas (antes le quitaba la pantalla completa). Cada ventana va a su monitor.
 - Probado en el portátil con las dos pantallas; el brillo real queda por probar fuera de la sesión
   de Claude. `tests/test_screensaver.py`.
+
+## 2026-11-06 — Arrastrar ventanas al patrón de Fibonacci (0.5.1)
+
+- `desktop/prosperus/window_drag.py`: Sway no avisa por IPC de un arrastre flotante ni de cuándo se
+  suelta el botón. El hilo que ya leía la geometría (`_watch_geometry`) lo deduce: posición que cambia
+  sin cambiar de tamaño en dos lecturas o más = arrastre (entonces lee cada 40 ms); quieta 0,35 s =
+  soltada. La velocidad de los últimos 0,15 s proyecta 0,25 s de inercia.
+- Centro (o proyección) en la zona central (40 % del ancho y del alto): pasa a la última posición del
+  patrón y la que estaba al final se parte. Fuera: queda libre y las demás se reorganizan; se le da
+  el foco para que no quede tapada. Mientras soltarla la metería en el patrón, opacidad 0,75.
+- `Arrangement` en `window_session.py`: orden del patrón y ventanas libres en
+  `$XDG_RUNTIME_DIR/prosperus/ventanas.json` (con el SWAYSOCK: los con_id solo valen en esa sesión),
+  para que «Distribución», que corre en otro proceso, haga lo mismo. Sin orden, por antigüedad, como antes.
+- Los movimientos de organizar no cuentan como arrastre (`_arranging_until`).
+- Probado en Sway con tres terminales: al centro, a una esquina y lanzada hacia el centro.
+  Límite: si se deja la ventana quieta en el centro sin soltar el botón, también se coloca.
+  `tests/test_window_drag.py`.
+

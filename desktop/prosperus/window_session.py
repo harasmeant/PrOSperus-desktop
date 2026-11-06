@@ -57,7 +57,66 @@ def walk(node):
         yield from walk(child)
 
 
-def targets(tree, workspaces, output, options):
+@dataclass(frozen=True)
+class Arrangement:
+    """Orden de las ventanas en el patrón y las que el usuario dejó libres (arrastradas fuera).
+    Lo comparten el escritorio y «Distribución», que corre en otro proceso."""
+    order: tuple = ()
+    loose: frozenset = frozenset()
+
+    def sequence(self, ids):
+        """`ids` en el orden del patrón: primero las ordenadas, luego las nuevas por antigüedad."""
+        rank = {identity: index for index, identity in enumerate(self.order)}
+        return sorted((i for i in ids if i not in self.loose), key=lambda i: (rank.get(i, len(rank)), i))
+
+    def insert_last(self, identity, current):
+        """La ventana pasa a la siguiente posición del patrón (la última): parte la que había al final."""
+        rest = [i for i in current if i != identity]
+        return Arrangement(tuple(rest + [identity]), self.loose - {identity})
+
+    def release(self, identity, current):
+        """La ventana sale del patrón y se queda donde la dejaron."""
+        return Arrangement(tuple(i for i in current if i != identity), self.loose | {identity})
+
+
+def _arrangement_file():
+    runtime = os.environ.get('XDG_RUNTIME_DIR')
+    # Los con_id solo valen dentro de esta sesión de Sway.
+    if not runtime or not os.environ.get('SWAYSOCK'):
+        return None
+    return os.path.join(runtime, 'prosperus', 'ventanas.json')
+
+
+def load_arrangement():
+    path = _arrangement_file()
+    try:
+        with open(path, encoding='utf-8') as handle:
+            data = json.load(handle)
+        if data.get('sway') != os.environ.get('SWAYSOCK'):
+            return Arrangement()
+        return Arrangement(tuple(int(i) for i in data.get('order', [])), frozenset(int(i) for i in data.get('loose', [])))
+    except (TypeError, OSError, ValueError, AttributeError):
+        return Arrangement()
+
+
+def save_arrangement(arrangement, alive=None):
+    """Guarda el orden; `alive` (ids que existen) poda las ventanas ya cerradas."""
+    path = _arrangement_file()
+    if path is None:
+        return
+    keep = (lambda i: i in alive) if alive is not None else (lambda i: True)
+    data = {'sway': os.environ.get('SWAYSOCK'), 'order': [i for i in arrangement.order if keep(i)],
+            'loose': sorted(i for i in arrangement.loose if keep(i))}
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path + '.tmp', 'w', encoding='utf-8') as handle:
+            json.dump(data, handle)
+        os.replace(path + '.tmp', path)
+    except OSError:
+        pass
+
+
+def targets(tree, workspaces, output, options, arrangement=Arrangement()):
     # El monitor elegido debe tener un espacio visible. Nunca caer al monitor
     # enfocado si se desconectó el solicitado: podría mover ventanas ajenas.
     workspace = next((w for w in workspaces if w.get('visible') and w.get('output') == output), None)
@@ -69,7 +128,8 @@ def targets(tree, workspaces, output, options):
     windows = [n for n in walk(node) if (n.get('app_id') or n.get('window'))
                and n.get('app_id') not in SHELL_IDS
                and (n.get('window_properties') or {}).get('class') != DESKTOP_ID]
-    windows.sort(key=lambda n: n['id'])
+    by_id = {n['id']: n for n in windows}
+    windows = [by_id[i] for i in arrangement.sequence(by_id)]
     if not windows:
         raise ValueError('No hay aplicaciones que organizar en esta pantalla.')
     area = Rect(**workspace['rect'])
@@ -92,8 +152,10 @@ def plan(tree, workspaces, output, options):
     return commands_for(targets(tree, workspaces, output, options))
 
 
-def apply(output, options):
-    placements = targets(request(4), request(1), output, options)
+def apply(output, options, arrangement=None):
+    if arrangement is None:
+        arrangement = load_arrangement()
+    placements = targets(request(4), request(1), output, options, arrangement)
     commands = commands_for(placements)
     # Validar todas las geometrías antes de enviar la primera orden. Sway no
     # ofrece transacciones: un cierre de ventana durante la operación se informa.

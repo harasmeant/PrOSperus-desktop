@@ -50,5 +50,5 @@ RUN chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-
     && truncate -s 0 /etc/machine-id
 LABEL org.opencontainers.image.title="PrOSperus desktop development VM"
 LABEL org.opencontainers.image.licenses="GPL-3.0-only"
-LABEL org.opencontainers.image.version="0.5.0"
+LABEL org.opencontainers.image.version="0.5.1"
 CMD ["/sbin/init"]

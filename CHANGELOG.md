@@ -1,5 +1,16 @@
 # Historial
 
+## 0.5.1 — 2026-11-06 · Salvapantallas y arrastrar al patrón
+
+- Salvapantallas: a los 5 min sin uso, los fondos de los proyectos en bucle en cada pantalla (zoom
+  lento, fundidos, luz y reloj) con el brillo bajado; al volver, pide la contraseña si han pasado
+  otros 5 min. La pantalla se apaga a la hora.
+- Arrastrar una ventana al centro de la pantalla la mete en la siguiente posición de Fibonacci y la
+  de al lado se reduce para hacerle sitio; también si se lanza hacia el centro. Soltada fuera, queda
+  libre donde está y las demás cierran el hueco. Mientras se puede soltar, se ve translúcida.
+- Con «nvidia» en `~/.config/prosperus/graficas`, la NVIDIA dibuja y va primero (el HDMI parpadeaba).
+- Mismos cambios en las ISO de Fedora, Arch y Debian.
+
 ## 0.5.0 — 2026-11-04 · Ventanas deformables y segunda pantalla
 
 - Buscar (Super) con botón de cerrar (✕, también Esc).
