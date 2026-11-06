@@ -1,0 +1,30 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# PRE_BUILD de DKMS para los módulos abiertos de NVIDIA en Debian (ver
+# /etc/dkms/nvidia-current-open.conf). Se ejecuta en la copia de compilación.
+#
+# Desde 6.12.115 (backport de 6.18), pci_resize_resource() tiene un cuarto
+# argumento, exclude_bars, y la 550 de Debian no compila. Solo se cambia la
+# llamada si las cabeceras del núcleo tienen la firma nueva y el código la
+# antigua: con un núcleo anterior o un controlador ya corregido no hace nada.
+set -eu
+kernel=${1:?Uso: prosperus-nvidia-dkms VERSIÓN_DEL_NÚCLEO}
+source_c=nvidia/nv-pci.c
+
+header=
+for candidate in "/lib/modules/$kernel/source/include/linux/pci.h" \
+                 "/lib/modules/$kernel/build/include/linux/pci.h"; do
+    [ -r "$candidate" ] && { header=$candidate; break; }
+done
+if [ -z "$header" ] || [ ! -f "$source_c" ]; then
+    echo "prosperus-nvidia-dkms: sin $source_c o sin cabeceras de $kernel; nada que hacer."
+    exit 0
+fi
+
+if grep -A1 'pci_resize_resource(struct pci_dev' "$header" | grep -q 'exclude_bars' \
+   && grep -q 'pci_resize_resource(pci_dev, NV_GPU_BAR1, requested_size);' "$source_c"; then
+    sed -i 's/pci_resize_resource(pci_dev, NV_GPU_BAR1, requested_size);/pci_resize_resource(pci_dev, NV_GPU_BAR1, requested_size, 0);/' "$source_c"
+    echo "prosperus-nvidia-dkms: $source_c adaptado a pci_resize_resource() con exclude_bars ($kernel)."
+else
+    echo "prosperus-nvidia-dkms: $source_c ya es compatible con $kernel."
+fi

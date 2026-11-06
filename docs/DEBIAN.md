@@ -68,5 +68,10 @@ e instala con `apt-get update && apt-get install`.
   puede no estar ya en los repositorios; la solución es grabar una ISO nueva.
 - Debian 13 ya no trae las series heredadas del controlador NVIDIA (anteriores
   a Turing): en esas tarjetas, solo el controlador libre.
+- La NVIDIA 550 de trixie no compila con el núcleo 6.12.115 (`pci_resize_resource()`
+  ganó el argumento `exclude_bars`). `/etc/dkms/nvidia-current-open.conf` hace que DKMS
+  ejecute `/usr/libexec/prosperus-nvidia-dkms` antes de compilar: adapta la llamada en
+  la copia de compilación solo si el núcleo lo pide. No modifica `/usr/src` y sobrevive
+  a reinstalar o actualizar el paquete.
 - Paquetes de Debian sin fijar por versión: cada construcción toma la última
   revisión de trixie (solo correcciones de seguridad y fallos).

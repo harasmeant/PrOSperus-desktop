@@ -662,3 +662,17 @@ Ideas para más adelante:
   `prosperus-session` prueba con la NVIDIA de principal y, si tampoco, solo con la de arranque
   (portátil sin monitor externo). Comprobado con Sway sin pantalla (salida apagada → aviso y salida;
   encendida → sigue). Falta probar en el portátil.
+
+## 2026-11-05 — Instalar NVIDIA en Debian sin parchear a mano
+
+- La 550.163.01 de `nvidia-open-kernel-dkms` no compila con 6.12.115+deb13.1: el núcleo trae
+  `pci_resize_resource(dev, i, size, exclude_bars)`. En el portátil se había corregido a mano
+  `/usr/src/nvidia-current-open-550.163.01/nvidia/nv-pci.c`, que se pierde al reinstalar el paquete.
+- `/etc/dkms/nvidia-current-open.conf` añade un `PRE_BUILD` (`/usr/libexec/prosperus-nvidia-dkms`)
+  que hace el mismo cambio en la copia de compilación, solo si las cabeceras tienen la firma nueva
+  y el código la antigua. Comprobado en el portátil: `dkms build` en un árbol aparte con el código
+  original del paquete compila los cinco módulos (la firma MOK solo falla por no ser root).
+  `tests/test_nvidia_dkms.py`: núcleo nuevo, núcleo antiguo y controlador ya corregido.
+- En el portátil ya instalado: copiar los dos archivos de `image/rootfs` a `/etc/dkms/` y
+  `/usr/libexec/`. Las ISO nuevas los llevan.
+
