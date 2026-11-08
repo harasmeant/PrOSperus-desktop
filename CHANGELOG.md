@@ -1,5 +1,13 @@
 # Historial
 
+## Sin publicar
+
+- Sway en lugar de SwayFX: con AMD + NVIDIA, al mover el ratón quedaban huecos que dejaban ver el
+  fondo. Se pierden las esquinas redondeadas, las sombras y el apagado de las ventanas sin foco.
+  En Debian ya no se compila nada: es el `sway` del sistema. La consola pasa al 90 % de opacidad.
+- Ventanas propias sin línea de borde (queda la filigrana de las esquinas) y franja para
+  cambiar el tamaño de 10 a 18 px.
+
 ## 0.5.1 — 2026-11-06 · Salvapantallas y arrastrar al patrón
 
 - Salvapantallas: a los 5 min sin uso, los fondos de los proyectos en bucle en cada pantalla (zoom

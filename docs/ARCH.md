@@ -1,12 +1,12 @@
 # PrOSperus sobre Arch Linux
 
-**Estado al 04-11-2026:** arranque UEFI, sesión SwayFX, Aplicaciones y búsqueda
+**Estado al 04-11-2026:** arranque UEFI, sesión Sway, Aplicaciones y búsqueda
 en Instalar programas (pacman y Flathub) comprobados en QEMU/KVM con 2 GiB, sin red.
 No probado todavía en hardware real ni la instalación de paquetes con red.
 
-La misma ISO Live (escritorio, Sway/SwayFX, persistencia en USB), construida
+La misma ISO Live (escritorio, Sway, persistencia en USB), construida
 sobre Arch Linux en vez de Fedora. Sin repositorios de Red Hat: paquetes de los
-repositorios oficiales de Arch y, para SwayFX e Input Remapper, del AUR.
+repositorios oficiales de Arch y, para Input Remapper, del AUR.
 
 ![ISO de Arch arrancada en QEMU: escritorio y Aplicaciones](images/arch-live.png)
 
@@ -29,8 +29,7 @@ la VM de Fedora (puerto VNC 5903) y la de Arch (5904).
 |---|---|---|
 | Recetas | `image/Containerfile*` | `image/arch/Containerfile*` |
 | Paquetes | `dnf5`, `.rpm` | `pacman -Syu`, `.pkg.tar.zst` |
-| SwayFX | COPR | AUR, compilado en una etapa aparte (sin dejar `base-devel` en el sistema) |
-| Input Remapper | repositorio Fedora | AUR, igual que SwayFX |
+| Input Remapper | repositorio Fedora | AUR, compilado en una etapa aparte (sin dejar `base-devel` en el sistema) |
 | Arranque Live | `dracut-live` | `dracut` de Arch (ya incluye `dmsquash-live`) |
 | NVIDIA | RPM Fusion + akmods | `nvidia-open-dkms` del repositorio oficial |
 | Núcleo fijo | `excludepkgs` en dnf.conf | `IgnorePkg = linux linux-headers` |

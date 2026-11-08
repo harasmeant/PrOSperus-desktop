@@ -2,14 +2,10 @@
 FROM localhost/prosperus-base:dev
 # Duplicar pantallas: Sway no tiene modo espejo propio. Input Remapper: botones del ratón
 # y teclas reasignados (preajustes en /usr/share/prosperus/input-remapper-2).
-# SwayFX (Sway con desenfoque, esquinas y sombras) desde su COPR oficial; el resto, de Fedora:
-# capturas, portapapeles, bloqueo, consola (eza, bat, fastfetch, btop) y selector (fuzzel).
-RUN curl -fsSL -o /etc/yum.repos.d/swayfx.repo \
-        https://copr.fedorainfracloud.org/coprs/swayfx/swayfx/repo/fedora-44/swayfx-swayfx-fedora-44.repo \
-    && dnf -y --setopt=install_weak_deps=False install --allowerasing swayfx \
-    && dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper \
+# Sway viene de la base. De Fedora: capturas, portapapeles, bloqueo, consola (eza, bat, fastfetch, btop) y selector (fuzzel).
+RUN dnf -y --setopt=install_weak_deps=False install wl-mirror input-remapper \
        grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy playerctl \
-       eza bat fastfetch btop papirus-icon-theme breeze-cursor-theme \
+       eza bat fastfetch btop fish papirus-icon-theme breeze-cursor-theme \
        adw-gtk3-theme dconf gsettings-desktop-schemas xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr \
     && dnf clean all
 # Símbolos de Nerd Fonts (iconos de eza), que no están en Fedora:

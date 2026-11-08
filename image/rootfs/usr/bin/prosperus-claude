@@ -15,9 +15,9 @@ notice=
 [ -e /run/prosperus-persistent ] || \
     notice='Sesión sin persistencia: el inicio de sesión de Claude se perderá al apagar.'
 # Con el tono del proyecto actual si el escritorio lo ha publicado.
-config=${XDG_RUNTIME_DIR:-/nonexistent}/prosperus/foot.ini
+config=${XDG_RUNTIME_DIR:-/nonexistent}/prosperus/kitty.conf
 set -- 
 [ -r "$config" ] && set -- --config "$config"
-exec foot "$@" --app-id org.prosperus.Claude --title 'Asistente Claude' \
-    --working-directory "$dir" \
+exec kitty "$@" --class org.prosperus.Claude --title 'Asistente Claude' \
+    --directory "$dir" \
     sh -c '[ -n "$1" ] && printf "%s\n\n" "$1"; exec "$0"' "$claude_bin" "$notice"

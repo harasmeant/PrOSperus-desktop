@@ -11,7 +11,7 @@ export XCURSOR_THEME=breeze_cursors XCURSOR_SIZE=24
 # El plano de cursor de la NVIDIA no acepta el formato que pide wlroots ("Failed to pick
 # cursor plane format"): el puntero parpadea o se queda congelado en el HDMI. Cursor por software.
 export WLR_NO_HARDWARE_CURSORS=1
-# greetd arranca en /: sin esto, todo lo que abre Sway (Foot incluido) empieza en la raíz.
+# greetd arranca en /: sin esto, todo lo que abre Sway (la consola incluida) empieza en la raíz.
 cd "$HOME" || true
 # Las descargas llegan a una carpeta de entrada y el escritorio las reparte en el proyecto
 # que se ve (incoming.py). Los navegadores (Firefox, Zen…) usan XDG_DOWNLOAD_DIR sin preguntar.
@@ -99,17 +99,30 @@ case $WLR_DRM_DEVICES in *:*) ;; *) run_sway; exit ;; esac
 flag=${XDG_RUNTIME_DIR:-/tmp}/prosperus-sin-pantallas
 export PROSPERUS_GPU_FLAG=$flag
 first=${WLR_DRM_DEVICES%%:*} others=${WLR_DRM_DEVICES#*:}
+# Al copiar a la otra gráfica, wlroots calcula mal la zona a repintar: al mover ventanas o el
+# ratón se quedan trozos viejos y se ve el escritorio detrás. Se repinta la pantalla entera.
+export WLR_SCENE_DEBUG_DAMAGE=rerender
 # Con varias gráficas se usa GLES2 (sí copia entre gráficas); el último intento,
-# solo la de arranque, vuelve a pixman como red de seguridad.
-for devices in "$WLR_DRM_DEVICES" "$others:$first" "$first"; do
-    export WLR_DRM_DEVICES=$devices
-    case $devices in *:*) export WLR_RENDERER=gles2 ;; *) export WLR_RENDERER=pixman ;; esac
+# solo la de arranque, vuelve a pixman como red de seguridad. El wlroots 0.18 de Debian sí
+# trae Vulkan (el que no lo traía era el de SwayFX): para probarlo, "vulkan" en
+# ~/.config/prosperus/renderizador. Si deja sin pantallas, siguen los intentos con GLES2.
+# Si Vulkan falla, antes de cambiar de principal se reintenta GLES2 con el mismo orden: con la
+# NVIDIA de principal la eDP queda apagada. Con la 550, Vulkan no importa los búferes de la AMD
+# en la NVIDIA (getMemoryFdPropertiesKHR: ERROR_UNKNOWN) y el HDMI no se enciende.
+renderer=$(cat "${XDG_CONFIG_HOME:-$HOME/.config}/prosperus/renderizador" 2>/dev/null)
+retry=
+[ "${renderer:-gles2}" != gles2 ] && retry="gles2 $WLR_DRM_DEVICES"
+for attempt in "${renderer:-gles2} $WLR_DRM_DEVICES" ${retry:+"$retry"} "gles2 $others:$first" "pixman $first"; do
+    export WLR_RENDERER=${attempt%% *} WLR_DRM_DEVICES=${attempt#* }
+    devices=$WLR_DRM_DEVICES
+    # No usar WLR_DRM_NO_MODIFIERS: con amdgpu + NVIDIA 550 no crea el búfer del HDMI
+    # ("multi-GPU destination buffer"), fallan ambas combinaciones y el HDMI queda negro.
     rm -f "$flag"
     started=$(date +%s)
     run_sway
     status=$?
     # Sin aviso y tras más de 20 s, es una salida normal (cerrar sesión).
     [ ! -e "$flag" ] && [ $(( $(date +%s) - started )) -ge 20 ] && exit $status
-    echo "Sin pantallas con $devices; se prueba otra combinación" | systemd-cat -t prosperus-diag
+    echo "Sin pantallas con $devices [$WLR_RENDERER]; se prueba otra combinación" | systemd-cat -t prosperus-diag
 done
 exit 1

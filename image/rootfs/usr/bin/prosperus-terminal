@@ -1,11 +1,13 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# Consola Foot en la carpeta del proyecto que se ve en el escritorio y con su tono
+# Consola kitty en la carpeta del proyecto que se ve en el escritorio y con su tono
 # (los publica el escritorio en $XDG_RUNTIME_DIR/prosperus). Sin ellos, carpeta personal
-# y colores del sistema. Los argumentos van a foot (p. ej. una orden que ejecutar).
+# y colores del sistema. Los argumentos van a kitty (p. ej. --title y una orden que ejecutar).
 state=${XDG_RUNTIME_DIR:-/nonexistent}/prosperus
 dir=$HOME
 [ -r "$state/folder" ] && read -r folder < "$state/folder" && [ -d "$folder" ] && dir=$folder
-set -- --working-directory "$dir" "$@"
-[ -r "$state/foot.ini" ] && set -- --config "$state/foot.ini" "$@"
-exec foot "$@"
+# Sin orden que ejecutar, fish: colorea lo que se escribe y sugiere lo ya escrito.
+[ $# -eq 0 ] && command -v fish >/dev/null && set -- fish
+set -- --directory "$dir" "$@"
+[ -r "$state/kitty.conf" ] && set -- --config "$state/kitty.conf" "$@"
+exec kitty "$@"

@@ -15,7 +15,7 @@ try:
 except ImportError:  # pragma: no cover - Pygments es opcional
     get_lexer_by_name, KINDS = None, ()
 
-# Paleta suave, la misma que la consola (foot.ini).
+# Paleta suave, la misma que la consola (kitty.conf).
 COLOURS = {'keyword': '#96ba8c', 'string': '#d6be82', 'comment': '#7a8478', 'number': '#ba8cba',
            'function': '#7ea0c4', 'class': '#82b8b4', 'builtin': '#82b8b4', 'decorator': '#ba8cba',
            'operator': '#c8c6bc'}

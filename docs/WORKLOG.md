@@ -708,3 +708,48 @@ Ideas para más adelante:
   Límite: si se deja la ventana quieta en el centro sin soltar el botón, también se coloca.
   `tests/test_window_drag.py`.
 
+
+## 2026-11-07 — Sway en lugar de SwayFX
+
+- En el portátil (AMD dibuja, copia al HDMI de la NVIDIA 550, cursor por software), al mover el
+  ratón quedaban zonas sin repintar que dejaban ver el fondo. Con `swaymsg 'blur disable'` en
+  directo dejó de pasar: el desenfoque de SwayFX calculaba mal la zona a redibujar.
+- Se quita SwayFX de las tres recetas (Debian ya no compila wlroots/SceneFX/SwayFX ni aparta el
+  binario con `dpkg-divert`) y sus órdenes de `prosperus.conf` (esquinas, sombras, desenfoque,
+  `dim_inactive`). `sway.debian --validate` acepta la configuración. foot pasa a `alpha=0.9`.
+- Pendiente: probar Sway 1.10 / wlroots 0.18 de Debian con AMD + NVIDIA; las pruebas de varias
+  gráficas de `prosperus-session` se hicieron con wlroots 0.19.2.
+
+
+## 2026-11-08 — Dos pantallas: qué hace la gente con AMD + NVIDIA
+
+Diagnóstico propio: con `nvidia` en `graficas` el HDMI va, pero la eDP-1 queda `power: false`
+(`Requested backend configuration failed, searching for valid fallbacks` tras
+`eglQueryDmaBufModifiersEXT … Invalid format`). wlroots 0.18 de Debian **sí** enlaza `libvulkan`:
+el comentario de `prosperus-session` que dice que viene sin Vulkan hay que revisarlo.
+
+Búsqueda (foros de NVIDIA, Arch, NixOS, KDE, GitHub). No hay arreglo definitivo para Sway; lo útil:
+
+- **Mismo equipo, mismo fallo:** Lenovo Legion con AMD Cezanne + RTX 3060, HDMI en la NVIDIA,
+  wlroots 0.20.2 (umbriel #666). Con la NVIDIA dibujando, la eDP de la AMD no logra crear su
+  búfer y se queda negra; con la NVIDIA sola solo va el HDMI; con la AMD primaria van las dos.
+  `WLR_EGL_NO_MODIFIERS=1` no ayudó. En el mismo equipo **niri 26.04 sí** funciona con la NVIDIA
+  primaria y las dos pantallas. Conclusión: NVIDIA → AMD no es viable con wlroots hoy; la AMD
+  tiene que dibujar.
+- **Parpadeo en la parte superior:** fallo conocido del controlador de NVIDIA (hilo «Flickering at
+  the top of the screen», 535 a 550, X11 y Wayland, reproducido por NVIDIA, sin arreglo).
+  Lo reduce, sin quitarlo, forzar máximo rendimiento (PowerMizer) y bajar la frecuencia.
+- **Vulkan:** `WLR_RENDERER=vulkan` quitó el parpadeo a un usuario de Sway + NVIDIA (NixOS), pero
+  le pasó a la pantalla interna; en Ubuntu (#2073799) no cambió nada. Probar, sin esperar mucho.
+- **Cursor:** `WLR_NO_HARDWARE_CURSORS=1` cuando el ratón parpadea o desaparece (Arch).
+- **Commits atómicos:** `WLR_DRM_NO_ATOMIC=1` como prueba cuando sale el «searching for valid
+  fallbacks» (FreeBSD #286311). `WLR_DRM_NO_MODIFIERS=1` dejó sin imagen a un usuario.
+- **KDE/GNOME:** KWin desactivó el triple búfer en NVIDIA por el parpadeo en pantallas externas
+  de equipos AMD + NVIDIA (KDE #494547); otros siguen con retraso en el HDMI (KDE Discuss 2026).
+- **Debian:** opciones `nvidia-drm modeset=1 fbdev=1` (ya puestas en `/etc/modprobe.d`). Varios
+  dicen que con 550 va mejor que con 545/555.
+
+Orden de prueba propuesto (cada uno, cerrar sesión): 1) quitar `graficas` (AMD dibuja) +
+`WLR_NO_HARDWARE_CURSORS=1`; 2) + `WLR_RENDERER=vulkan`; 3) HDMI a 60 Hz fijo y NVIDIA en
+máximo rendimiento; 4) como referencia, una sesión GNOME para saber si es Sway o el controlador;
+5) si nada sirve, probar niri (cambio grande: solo como plan B documentado).

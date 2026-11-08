@@ -103,6 +103,7 @@ class TestDriverAssistant(unittest.TestCase):
         text = ' '.join(cmds)
         self.assertIn('nvidia-open-kernel-dkms', text)
         self.assertIn('libnvidia-allocator1', text)
+        self.assertIn('nvidia-vulkan-icd', text)
         self.assertIn('linux-headers-$(uname -r)', text)
         self.assertNotIn('dnf', text)
         self.assertNotIn('pacman', text)

@@ -8,6 +8,9 @@ mkdir -p "$dir"
 exec 9>"$dir/salvapantallas.lock"
 flock -n 9 || exit 0
 pgrep -x swaylock >/dev/null && exit 0
+# Con un vídeo o música sonando no se tapa la pantalla (Zen y Firefox lo anuncian por MPRIS).
+# shortcut: swayidle no vuelve a avisar hasta otra pausa de uso; si el vídeo acaba antes, no sale el salvapantallas hasta entonces.
+playerctl -a status 2>/dev/null | grep -qx Playing && exit 0
 PYTHONPATH=/usr/lib/prosperus /usr/bin/python3 -m prosperus.screensaver "$@"
 status=$?
 swaymsg mode default >/dev/null 2>&1

@@ -19,7 +19,7 @@ RUN pacman -S --noconfirm --needed \
     dbus polkit kbd ttf-dejavu \
     python-evdev \
     networkmanager iputils curl \
-    foot sudo git nano python-pip flatpak plocate which \
+    kitty sudo git nano python-pip flatpak plocate which \
     pipewire wireplumber pipewire-pulse rtkit bluez bluez-utils brightnessctl mako libnotify \
     libreoffice-fresh libreoffice-fresh-es \
     && pacman -Scc --noconfirm \

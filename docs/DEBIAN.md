@@ -1,10 +1,10 @@
 # PrOSperus sobre Debian
 
-**Estado al 04-11-2026:** arranque UEFI, sesión SwayFX, Aplicaciones, consola y
+**Estado al 04-11-2026:** arranque UEFI, sesión Sway, Aplicaciones, consola y
 búsqueda en Instalar programas (apt y Flathub) comprobados en QEMU/KVM con 2 GiB,
 sin red. No probado todavía en hardware real ni la instalación de paquetes con red.
 
-La misma ISO Live (escritorio, SwayFX, persistencia en USB), construida sobre
+La misma ISO Live (escritorio, Sway, persistencia en USB), construida sobre
 **Debian 13 «trixie» estable**. Es la versión conservadora: paquetes probados
 y sin sorpresas, a cambio de versiones algo más antiguas que en Fedora o Arch.
 
@@ -30,19 +30,16 @@ y la de Arch (5904).
 | Recetas | `image/Containerfile*` | `image/arch/Containerfile*` | `image/debian/Containerfile*` |
 | Ritmo | semestral | continuo | estable cada ~2 años |
 | Paquetes | `dnf5`, `.rpm` | `pacman -Syu`, `.pkg.tar.zst` | `apt`, `.deb` |
-| SwayFX | COPR (0.6) | AUR (0.6) | compilado en la receta: SwayFX 0.5.3 + SceneFX 0.4.1 + wlroots 0.19.2, fijados por commit |
+| Sway | Fedora | Arch | Debian (1.10, wlroots 0.18) |
 | Input Remapper | Fedora | AUR | Debian |
 | Arranque Live | `dracut-live` | `dracut` | `dracut` + `dracut-live` (sustituyen a initramfs-tools) |
 | NVIDIA | RPM Fusion + akmods | `nvidia-open-dkms` | `nvidia-open-kernel-dkms` (non-free) |
 | Núcleo fijo | `excludepkgs` | `IgnorePkg` | `apt-mark hold` |
 | Tema GTK adw-gtk3 | Fedora | Arch | descargado y fijado por SHA-256 |
 
-SwayFX no está en Debian. Se compila en una etapa aparte, con su propia
-wlroots 0.19 (trixie trae la 0.18), y no deja compiladores en el sistema.
-SwayFX 0.5.1, la última para wlroots 0.18, dejaba recuadros sin repintar al abrir
-ventanas. La 0.6 de Fedora y Arch necesita wlroots 0.20, que pide libdrm y
-xkbcommon más nuevos que los de trixie. El binario del paquete `sway` se aparta
-con `dpkg-divert` para que una actualización no lo sustituya.
+Hasta 2026-11-07 se usaba SwayFX (esquinas, sombras, desenfoque), compilado en la
+receta con su propia wlroots 0.19. Con AMD + NVIDIA dejaba huecos sin repintar al mover
+el ratón; ahora es el `sway` de Debian, sin efectos, y se actualiza con apt.
 
 Otras diferencias de versión que el escritorio ya tiene en cuenta
 (`theme_state.py`, `prosperus-osd`):

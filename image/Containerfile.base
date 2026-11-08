@@ -13,7 +13,7 @@ RUN dnf -y --setopt=install_weak_deps=False install \
     dbus-daemon polkit kbd dejavu-sans-fonts dejavu-sans-mono-fonts glibc-langpack-es \
     python3-evdev \
     NetworkManager NetworkManager-wifi iputils curl \
-    foot sudo git nano python3-pip flatpak plocate \
+    kitty sudo git nano python3-pip flatpak plocate \
     pipewire wireplumber pipewire-pulseaudio pipewire-utils bluez brightnessctl mako libnotify NetworkManager-tui \
     libreoffice-writer \
     && dnf clean all && dnf makecache \

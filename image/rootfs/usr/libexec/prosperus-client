@@ -8,8 +8,9 @@ fi
 # Reiniciar la interfaz no debe volver a copiar ni sustituir las notas editadas.
 # Solo mientras viva el Sway que la lanzó: si la sesión prueba otra combinación de
 # gráficas, este bucle quedaría huérfano y abriría otro escritorio en el Sway nuevo
-# (mismo wayland-1), y se verían varios escritorios a la vez. Sway borra su socket al salir.
-while [ -z "$SWAYSOCK" ] || [ -S "$SWAYSOCK" ]; do
+# (mismo wayland-1), y se verían varios escritorios a la vez. Sway no borra su socket al
+# salir: hay que preguntarle si sigue vivo.
+while [ -z "$SWAYSOCK" ] || swaymsg -t get_version >/dev/null 2>&1; do
     /usr/bin/prosperus --root "$HOME/Proyectos" --kiosk --system-session
     echo 'PrOSperus stopped; restarting in three seconds.' >&2
     sleep 3

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from prosperus.appearance import Palette
-from prosperus.theme_state import current_palette, foot_config, mako_config, publish, wob_config
+from prosperus.theme_state import current_palette, kitty_config, mako_config, publish, wob_config
 
 
 class ThemeStateTest(unittest.TestCase):
@@ -17,17 +17,16 @@ class ThemeStateTest(unittest.TestCase):
             self.assertEqual((directory / 'folder').read_text().strip(), '/home/prosperus/Proyectos/Laboratorio')
             again = current_palette(directory)
             self.assertEqual((again.base, again.accent), (colors.base, colors.accent))
-            self.assertIn('background=' + colors.base[1:], (directory / 'foot.ini').read_text())
+            self.assertIn('background ' + colors.base, (directory / 'kitty.conf').read_text())
 
     def test_missing_state_gives_default(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(current_palette(Path(tmp)).base, Palette().base)
 
-    def test_foot_includes_system_config(self):
-        text = foot_config(Palette(30), base='/etc/xdg/foot/foot.ini')
-        self.assertTrue(text.startswith('[main]\ninclude=/etc/xdg/foot/foot.ini'))
-        self.assertIn('[colors-dark]', foot_config(Palette(30), version=(1, 22)))
-        self.assertIn('[colors]', foot_config(Palette(30), version=(1, 21)))
+    def test_kitty_includes_system_config(self):
+        text = kitty_config(Palette(30), base='/etc/xdg/kitty/kitty.conf')
+        self.assertTrue(text.startswith('include /etc/xdg/kitty/kitty.conf\n'))
+        self.assertIn('background ' + Palette(30).base, text)
 
     def test_wob_uses_palette(self):
         colors = Palette(207)
@@ -44,7 +43,7 @@ class ThemeStateTest(unittest.TestCase):
         colors = Palette(207)
         text = mako_config(colors, base)
         self.assertIn('font=DejaVu Sans 11', text)
-        self.assertIn('background-color=' + colors.base + 'ee', text)
+        self.assertIn('background-color=' + colors.base + 'ff', text)
         self.assertNotIn('#9fc28a', text)
 
 

@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
 Exec=/usr/bin/prosperus-terminal
-Icon=foot
+Icon=kitty
 Terminal=false
 Categories=System;TerminalEmulator;
-Keywords=shell;prompt;command;commandline;terminal;consola;foot;
-Name=Consola (Foot)
+Keywords=shell;prompt;command;commandline;terminal;consola;kitty;
+Name=Consola
 GenericName=Terminal
 Comment=Terminal del sistema; también con Super+Intro

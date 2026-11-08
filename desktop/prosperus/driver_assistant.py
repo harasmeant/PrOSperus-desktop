@@ -37,8 +37,10 @@ DEBIAN_OPEN_STACK = ('sudo apt-get update && sudo apt-get install -y firmware-mi
 # libnvidia-egl-gbm1 y libnvidia-allocator1 (el backend GBM, gbm/nvidia-drm_gbm.so) son solo
 # «recomendados» y la imagen no instala recomendados: sin ellos Sway no puede crear búferes en la
 # NVIDIA («gbm_bo_create failed», «EGLImage not supported») y el HDMI de los híbridos queda negro.
+# nvidia-vulkan-icd: con dos gráficas Sway dibuja con Vulkan, que sincroniza la copia AMD→NVIDIA
+# (la 550 no respeta la sincronización implícita de GLES2 y el HDMI hace tearing).
 DEBIAN_NVIDIA = ('sudo apt-get update && sudo apt-get install -y "linux-headers-$(uname -r)" '
-                 'nvidia-open-kernel-dkms nvidia-driver libnvidia-egl-gbm1 libnvidia-allocator1 libcuda1 nvidia-smi '
+                 'nvidia-open-kernel-dkms nvidia-driver libnvidia-egl-gbm1 libnvidia-allocator1 nvidia-vulkan-icd libcuda1 nvidia-smi '
                  'firmware-misc-nonfree')
 
 
@@ -171,7 +173,7 @@ def needs_attention(plans):
 
 
 def terminal_command(commands):
-    """Orden para foot: muestra cada paso, se detiene en el primer fallo y espera."""
+    """Orden para la consola: muestra cada paso, se detiene en el primer fallo y espera."""
     script = ' && '.join(f'echo {shlex.quote("$ " + c)} && {c}' for c in commands)
     script = (f'({script}) && echo && echo "Listo. Reinicia para cargar el controlador." '
               f'|| echo "La instalación se detuvo por un error."; read -r -p "Pulsa Intro para cerrar" _')

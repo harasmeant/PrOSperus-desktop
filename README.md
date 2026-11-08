@@ -66,7 +66,7 @@ bash desktop/iniciar.sh --root demo-system      # proyectos de ejemplo
 ```
 
 Sin Sway funciona el mapa, las notas y los proyectos; la gestión de ventanas
-reales necesita una sesión Sway/SwayFX.
+reales necesita una sesión Sway.
 
 ## Desarrollo
 
@@ -99,7 +99,7 @@ Copyright (C) 2026 Nicolás (harasmeant). Distribuido bajo la **GNU General Publ
 License, versión 3 exclusivamente** (`GPL-3.0-only`); texto completo en [LICENSE](LICENSE).
 Puedes usar, estudiar, modificar y redistribuir el proyecto; si distribuyes una
 versión derivada, debe seguir bajo GPLv3 con su código fuente. Sin garantía.
-Los componentes de terceros (Debian, Sway/SwayFX, Qt, aplicaciones del sistema)
+Los componentes de terceros (Debian, Sway, Qt, aplicaciones del sistema)
 conservan sus propias licencias.
 
 ---

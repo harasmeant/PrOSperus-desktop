@@ -1,42 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# SwayFX (Sway con desenfoque, esquinas y sombras) no está en Debian: se compila aparte, con
-# su wlroots 0.19 (trixie trae la 0.18), en versiones fijas por commit y sin dejar compiladores
-# en el sistema. SwayFX 0.5.1 (la última para wlroots 0.18) dejaba recuadros sin repintar.
-FROM localhost/prosperus-debian-base:dev AS swayfx
-RUN apt-get update && apt-get install -y build-essential meson ninja-build pkg-config cmake scdoc \
-        wayland-protocols libwayland-dev libjson-c-dev libpcre2-dev libpango1.0-dev \
-        libcairo2-dev libgdk-pixbuf-2.0-dev libinput-dev libxkbcommon-dev libdrm-dev libgles-dev \
-        libegl-dev libgbm-dev libevdev-dev libsystemd-dev libpixman-1-dev libseat-dev hwdata \
-        libdisplay-info-dev libliftoff-dev libudev-dev xwayland libxcb1-dev libxcb-icccm4-dev \
-        libxcb-composite0-dev libxcb-render0-dev libxcb-res0-dev libxcb-xfixes0-dev libxcb-ewmh-dev
-WORKDIR /src
-# fetch <repo> <etiqueta> <commit>: clona la etiqueta y comprueba que no se ha movido.
-RUN printf '#!/bin/sh\nset -e\ngit clone --depth 1 --branch "$2" "$1" "$4"\ntest "$(git -C "$4" rev-parse HEAD)" = "$3"\n' \
-        > /usr/local/bin/fetch && chmod +x /usr/local/bin/fetch
-RUN fetch https://gitlab.freedesktop.org/wlroots/wlroots.git 0.19.2 8c9e6b7c9f3c5344f456e97dc29dcd8d8a5f015b wlroots \
-    && meson setup wlroots/build wlroots --prefix=/usr --buildtype=release -Dexamples=false \
-       -Drenderers=gles2 -Dbackends=drm,libinput -Dxwayland=enabled -Dallocators=gbm \
-    && ninja -C wlroots/build && DESTDIR=/out ninja -C wlroots/build install && ninja -C wlroots/build install
-RUN fetch https://github.com/wlrfx/scenefx.git 0.4.1 0f069970b410195aa5908d98c6fb41f3f0cd6e76 scenefx \
-    && meson setup scenefx/build scenefx --prefix=/usr --buildtype=release -Dexamples=false \
-    && ninja -C scenefx/build && DESTDIR=/out ninja -C scenefx/build install && ninja -C scenefx/build install
-RUN fetch https://github.com/WillPower3309/swayfx.git 0.5.3 660c1197b6626326ce35a0241a6a00e80dddcbd6 swayfx \
-    && meson setup swayfx/build swayfx --prefix=/usr --buildtype=release -Dman-pages=disabled \
-    && ninja -C swayfx/build && DESTDIR=/out ninja -C swayfx/build install \
-    && rm -rf /out/usr/include /out/usr/lib/*/pkgconfig /out/etc
-
 FROM localhost/prosperus-debian-base:dev
-# El paquete sway trae las dependencias; su binario se aparta (dpkg-divert) para que
-# una actualización de Debian no pise el de SwayFX.
-COPY --from=swayfx /out/usr /tmp/swayfx/usr
-RUN for bin in sway swaymsg swaynag; do \
-        dpkg-divert --local --rename --divert "/usr/bin/$bin.debian" --add "/usr/bin/$bin"; \
-    done \
-    && cp -a /tmp/swayfx/usr/. /usr/ && rm -rf /tmp/swayfx && ldconfig && sway --version \
-    && ! ldd /usr/bin/sway | grep "not found" \
-    && apt-get install -y qt6-svg-plugins qt6-image-formats-plugins wl-mirror input-remapper \
+# Sway de Debian (en la base). SwayFX (compilado aquí hasta la 0.5.3) dejaba huecos sin
+# repintar con AMD + NVIDIA; sin sus efectos, el Sway del sistema basta y se actualiza con apt.
+RUN apt-get install -y qt6-svg-plugins qt6-image-formats-plugins wl-mirror input-remapper \
        grim slurp wl-clipboard cliphist swaylock swayidle fuzzel xdg-user-dirs wob swappy playerctl \
-       eza bat fastfetch btop papirus-icon-theme breeze-cursor-theme \
+       eza bat fastfetch btop fish papirus-icon-theme breeze-cursor-theme \
        dconf-cli gsettings-desktop-schemas xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-wlr \
     && apt-get clean \
     && ln -s /usr/bin/batcat /usr/local/bin/bat
@@ -58,9 +26,7 @@ COPY LICENSE /usr/share/licenses/prosperus/LICENSE
 COPY image/rootfs/ /
 # Debian regenera el initramfs de cada /boot/vmlinuz-* al instalar firmware o núcleos;
 # vmlinuz-prosperus no es un núcleo instalado y rompería apt: ese paso se desactiva.
-# foot 1.21 de Debian aún llama [colors] a lo que 1.22 llama [colors-dark].
 RUN echo 'LANG=es_ES.UTF-8' > /etc/default/locale \
-    && sed -i 's/^\[colors-dark\]/[colors]/' /etc/xdg/foot/foot.ini \
     && chmod 0755 /usr/bin/prosperus /usr/bin/prosperus-windows /usr/bin/prosperus-fondos /usr/bin/prosperus-ramas /usr/bin/prosperus-instalar /usr/bin/prosperus-askpass /usr/bin/prosperus-claude /usr/bin/prosperus-terminal /usr/bin/prosperus-bloquear /usr/bin/prosperus-captura /usr/bin/prosperus-portapapeles /usr/bin/prosperus-osd /usr/bin/prosperus-handle /usr/libexec/prosperus-session /usr/libexec/prosperus-persistence /usr/libexec/prosperus-client \
     && useradd --create-home --uid 1000 --shell /bin/bash prosperus \
     && passwd --lock root \

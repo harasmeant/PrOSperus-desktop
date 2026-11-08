@@ -24,7 +24,7 @@ RUN apt-get install -y dracut dracut-live systemd systemd-sysv udev libpam-syste
        libgl1-mesa-dri libegl1 libgl1 mesa-vulkan-drivers \
        dbus polkitd kbd fonts-dejavu \
        network-manager iputils-ping curl ca-certificates \
-       foot sudo git nano python3-pip flatpak plocate \
+       kitty sudo git nano python3-pip flatpak plocate \
        pipewire wireplumber pipewire-pulse rtkit bluez brightnessctl mako-notifier libnotify-bin \
        libreoffice-writer libreoffice-l10n-es libreoffice-gtk3 \
     && apt-get clean \

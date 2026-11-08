@@ -1,41 +1,32 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Marco de las ventanas a juego con el fondo del proyecto.
 
-El borde lleva el color de resalte (accent) de la paleta que sale del fondo y dos esquinas
+Sin línea de borde: dos esquinas
 opuestas llevan filigrana con el mismo estilo procedural que las ramas del mapa (árbol de la
 vida, art déco o art nouveau, según los rasgos del fondo). Lo usan las notas, las ventanas
 propias (Ramas, Fondos, Instalador) y los diálogos del escritorio."""
 from PySide6.QtCore import QEvent, QObject, QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPen
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QRegion
 from PySide6.QtWidgets import QMainWindow, QWidget
 
 from .branches import branch
 
 MARGIN = 22  # margen mínimo del contenido dentro del marco
-
-
-def _alpha(colour, value):
-    result = QColor(colour); result.setAlphaF(max(0.0, min(1.0, value)))
-    return result
+GRIP = 18    # franja junto al borde que agranda o achica la ventana (Wayland: solo por dentro)
 
 
 def paint_frame(painter, rect, colors, traits=None, radius=12, seed=0, ornate=True):
-    """Borde en el color de resalte y filigrana en las esquinas superior izquierda e inferior derecha."""
+    """Filigrana en el color de resalte en las esquinas superior izquierda e inferior derecha (sin línea de borde)."""
     painter.save()
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     rect = QRectF(rect)
     accent = QColor(colors.accent)
-    # Borde con un degradado suave: más intenso en las esquinas con filigrana.
-    sheen = QLinearGradient(rect.topLeft(), rect.bottomRight())
-    sheen.setColorAt(0, _alpha(accent, .9)); sheen.setColorAt(.5, _alpha(accent, .38)); sheen.setColorAt(1, _alpha(accent, .9))
-    painter.setPen(QPen(sheen, 1.5)); painter.setBrush(Qt.BrushStyle.NoBrush)
-    painter.drawRoundedRect(rect, radius, radius)
     if ornate and rect.width() > 160 and rect.height() > 120:
         clip = QPainterPath(); clip.addRoundedRect(rect.adjusted(1, 1, -1, -1), radius, radius)
         painter.setClipPath(clip)
         length = min(150.0, rect.width() * .24, rect.height() * .34)
         inset = radius * .55 + 3
-        vine = _alpha(accent, .78)
+        vine = accent
         for k, (corner, dx, dy) in enumerate(((rect.topLeft(), 1, 1), (rect.bottomRight(), -1, -1))):
             origin = QPointF(corner.x() + dx * inset, corner.y() + dy * inset)
             # Dos ramas que abrazan la esquina: una por cada borde.
@@ -43,7 +34,7 @@ def paint_frame(painter, rect, colors, traits=None, radius=12, seed=0, ornate=Tr
                    seed * 4 + k * 2 + 1, 2, .06, traits)
             branch(painter, origin, QPointF(origin.x(), origin.y() + dy * length * .8), 2.0, .5, vine,
                    seed * 4 + k * 2 + 2, 2, .06, traits)
-            painter.setPen(Qt.PenStyle.NoPen); painter.setBrush(_alpha(accent, .8))
+            painter.setPen(Qt.PenStyle.NoPen); painter.setBrush(accent)
             painter.drawEllipse(origin, 2.8, 2.8)
     painter.restore()
 
@@ -60,9 +51,10 @@ class FrameOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.grip = _ResizeGrip(window)
         self.follower = _Follower(self)
         window.installEventFilter(self.follower)
-        self.setGeometry(window.rect()); self.raise_(); self.show()
+        self.setGeometry(window.rect()); self.raise_(); self.grip.fit(); self.show()
 
     # Dibuja marco con colores y patrones procedurales
     def paintEvent(self, event):
@@ -71,6 +63,50 @@ class FrameOverlay(QWidget):
             return
         painter = QPainter(self)
         paint_frame(painter, QRectF(self.rect()).adjusted(1, 1, -1, -1), colors, self.traits(), self.radius, self.seed)
+
+
+def grip_edges(pos, size, grip=GRIP):
+    """Bordes (Qt.Edge) bajo `pos` en una ventana de tamaño `size`; vacío si no está en la franja."""
+    edges = Qt.Edge(0)
+    if pos.x() < grip: edges |= Qt.Edge.LeftEdge
+    if pos.x() >= size.width() - grip: edges |= Qt.Edge.RightEdge
+    if pos.y() < grip: edges |= Qt.Edge.TopEdge
+    if pos.y() >= size.height() - grip: edges |= Qt.Edge.BottomEdge
+    return edges
+
+
+_CURSORS = {Qt.Edge.LeftEdge: Qt.CursorShape.SizeHorCursor, Qt.Edge.RightEdge: Qt.CursorShape.SizeHorCursor,
+            Qt.Edge.TopEdge: Qt.CursorShape.SizeVerCursor, Qt.Edge.BottomEdge: Qt.CursorShape.SizeVerCursor,
+            Qt.Edge.TopEdge | Qt.Edge.LeftEdge: Qt.CursorShape.SizeFDiagCursor,
+            Qt.Edge.BottomEdge | Qt.Edge.RightEdge: Qt.CursorShape.SizeFDiagCursor,
+            Qt.Edge.TopEdge | Qt.Edge.RightEdge: Qt.CursorShape.SizeBDiagCursor,
+            Qt.Edge.BottomEdge | Qt.Edge.LeftEdge: Qt.CursorShape.SizeBDiagCursor}
+
+
+class _ResizeGrip(QWidget):
+    """Franja invisible por dentro del borde (máscara en anillo): arrastrarla agranda o achica la ventana."""
+
+    def __init__(self, window):
+        super().__init__(window)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
+    def fit(self):
+        rect = self.parentWidget().rect()
+        self.setGeometry(rect)
+        self.setMask(QRegion(rect).subtracted(QRegion(rect.adjusted(GRIP, GRIP, -GRIP, -GRIP))))
+        self.raise_(); self.show()
+
+    def mouseMoveEvent(self, event):
+        edges = grip_edges(event.position().toPoint(), self.size())
+        self.setCursor(_CURSORS.get(edges, Qt.CursorShape.ArrowCursor))
+
+    def mousePressEvent(self, event):
+        edges = grip_edges(event.position().toPoint(), self.size())
+        handle = self.window().windowHandle()
+        if event.button() == Qt.MouseButton.LeftButton and edges and handle is not None:
+            handle.startSystemResize(edges)
 
 
 class _Follower(QObject):
@@ -83,9 +119,9 @@ class _Follower(QObject):
     # Sincronizar overlay con eventos de ventana
     def eventFilter(self, watched, event):
         if event.type() in (QEvent.Type.Resize, QEvent.Type.Show):
-            self.overlay.setGeometry(watched.rect()); self.overlay.raise_()
+            self.overlay.setGeometry(watched.rect()); self.overlay.raise_(); self.overlay.grip.fit()
         elif event.type() == QEvent.Type.ChildAdded:
-            self.overlay.raise_()
+            self.overlay.raise_(); self.overlay.grip.raise_()
         return False
 
 

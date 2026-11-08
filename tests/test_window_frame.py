@@ -12,7 +12,8 @@ from PySide6.QtWidgets import QApplication, QDialog, QWidget
 
 from prosperus import theme_state
 from prosperus.appearance import Palette
-from prosperus.window_frame import attach_frame, paint_frame
+from PySide6.QtCore import QPoint, QSize, Qt
+from prosperus.window_frame import GRIP, attach_frame, grip_edges, paint_frame
 
 
 class WindowFrameTests(unittest.TestCase):
@@ -27,13 +28,21 @@ class WindowFrameTests(unittest.TestCase):
         painter.end()
         return image
 
-    def test_border_uses_accent_and_corners_get_filigree(self):
+    def test_grip_band_picks_edges_and_leaves_inside_alone(self):
+        size = QSize(300, 200)
+        self.assertEqual(grip_edges(QPoint(150, 100), size), Qt.Edge(0))
+        self.assertEqual(grip_edges(QPoint(GRIP - 1, 100), size), Qt.Edge.LeftEdge)
+        self.assertEqual(grip_edges(QPoint(299, 199), size), Qt.Edge.RightEdge | Qt.Edge.BottomEdge)
+        self.assertEqual(grip_edges(QPoint(150, GRIP), size), Qt.Edge(0))
+
+    def test_no_border_line_and_corners_get_accent_filigree(self):
         colors = Palette(210)
         image = self.frame_image(colors)
         accent = QColor(colors.accent)
-        edge = image.pixelColor(200, 1)
-        self.assertGreater(edge.alpha(), 0)
-        self.assertLess(abs(edge.hue() - accent.hue()) % 360, 20)
+        self.assertEqual(image.pixelColor(200, 1).alpha(), 0)  # sin línea de borde
+        knot = image.pixelColor(11, 11)  # punto donde nacen las ramas de la esquina
+        self.assertGreater(knot.alpha(), 0)
+        self.assertLess(abs(knot.hue() - accent.hue()) % 360, 20)
         # Filigrana dentro de las esquinas con adorno y nada en las otras dos.
         ink = lambda x0, y0: sum(image.pixelColor(x, y).alpha() > 0 for x in range(x0, x0 + 60) for y in range(y0, y0 + 40))
         self.assertGreater(ink(14, 8), 30)
@@ -42,7 +51,7 @@ class WindowFrameTests(unittest.TestCase):
 
     def test_other_wallpaper_other_colour(self):
         warm, cold = self.frame_image(Palette(40)), self.frame_image(Palette(210))
-        self.assertNotEqual(warm.pixelColor(200, 1).name(), cold.pixelColor(200, 1).name())
+        self.assertNotEqual(warm.pixelColor(11, 11).name(), cold.pixelColor(11, 11).name())
 
     def test_attach_once_and_follow_resize(self):
         window = QDialog(); window.resize(300, 200)
@@ -63,7 +72,7 @@ class WindowFrameTests(unittest.TestCase):
             self.assertNotIn('ornaments', data['traits'])
             self.assertNotIn('auto', data['traits'])
             self.assertEqual(theme_state.current_traits(Path(tmp))['branch_gradient']['light_end'], .2)
-            self.assertIn('border-color=ff' + Palette(30).accent[1:], (Path(tmp) / 'foot.ini').read_text(encoding='utf-8'))
+            self.assertNotIn('border-width', (Path(tmp) / 'kitty.conf').read_text(encoding='utf-8'))
         self.assertIsNone(theme_state.current_traits(Path('/nonexistent')))
 
 
