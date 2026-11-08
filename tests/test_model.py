@@ -172,6 +172,15 @@ class VaultMoveTests(unittest.TestCase):
         self.assertTrue((folder / 'Árbol.md').is_file())
         self.assertFalse((self.root / 'Proyecto/Apuntes').exists())
 
+    def test_move_keeps_relative_links_working(self):
+        (self.root / 'Otro/Índice.md').write_text('[a](../Proyecto/Inicio.md) [web](https://x.org/a.md)')
+        (self.root / 'Proyecto/Enlaza.md').write_text('[árbol](Apuntes/%C3%81rbol.md#raíz) [i](Inicio.md)')
+        self.vault.move(self.root / 'Proyecto/Inicio.md', self.root / 'Otro')
+        self.assertEqual((self.root / 'Otro/Índice.md').read_text(), '[a](Inicio.md) [web](https://x.org/a.md)')
+        self.vault.move(self.root / 'Proyecto/Enlaza.md', self.root / 'Otro')
+        self.assertEqual((self.root / 'Otro/Enlaza.md').read_text(),
+                         '[árbol](../Proyecto/Apuntes/%C3%81rbol.md#raíz) [i](Inicio.md)')
+
     def test_rejected_moves_change_nothing(self):
         (self.root / 'Otro/Inicio.md').write_text('otra')
         with self.assertRaises(FileExistsError):

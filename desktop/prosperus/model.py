@@ -56,9 +56,10 @@ def rename_wikilinks(text, old, new):
 MDLINK = re.compile(r'(\[[^\]\n]*\]\()(<[^>\n]+>|[^)\s]+)((?:\s+"[^"\n]*")?\))')
 # group(1) = '[label](' ; group(2) = destination, maybe wrapped in <...>, maybe URL-encoded (%20) ; group(3) = optional title and ')'
 
-def rename_markdown_links(text, note_dir, old_path, new_path):
+def rename_markdown_links(text, note_dir, old_path, new_path, new_note_dir=None):
     """Rewrite relative Markdown links (also links into a renamed folder) in a note located in folder `note_dir` that point to `old_path`
-    so they point to `new_path`. All three are absolute path strings. Returns (new_text, count)."""
+    so they point to `new_path`. All three are absolute path strings. If the note itself moved to `new_note_dir`, every
+    other relative link is rewritten from there too. Returns (new_text, count)."""
     count = 0
 
     def replace(match):
@@ -66,7 +67,7 @@ def rename_markdown_links(text, note_dir, old_path, new_path):
         head, dest, tail = match.group(1), match.group(2), match.group(3)
         wrapped = dest.startswith('<') and dest.endswith('>')
         raw = dest[1:-1] if wrapped else dest
-        if '://' in raw or raw.startswith('mailto:') or raw.startswith('#'):
+        if '://' in raw or raw.startswith(('mailto:', '#', '/')):
             return match.group(0)
         path_part, sep, fragment = raw.partition('#')
         target = os.path.normpath(os.path.join(note_dir, unquote(path_part)))
@@ -75,13 +76,17 @@ def rename_markdown_links(text, note_dir, old_path, new_path):
             moved = new_path
         elif target.startswith(old + os.sep):  # carpeta renombrada: enlaces a lo que hay dentro
             moved = os.path.normpath(new_path) + target[len(old):]
+        elif new_note_dir is not None:  # la propia nota se ha movido: el enlace sale desde otra carpeta
+            moved = target
         else:
             return match.group(0)
-        rel = os.path.relpath(moved, note_dir).replace(os.sep, '/')
+        rel = os.path.relpath(moved, new_note_dir or note_dir).replace(os.sep, '/')
         if wrapped:
             new_dest = '<' + rel + sep + fragment + '>'
         else:
             new_dest = quote(rel, safe='/') + sep + fragment
+        if new_dest == dest:
+            return match.group(0)
         count += 1
         return head + new_dest + tail
 
@@ -269,6 +274,18 @@ class Vault:
             raise FileExistsError('Ya existe un elemento con ese nombre en el destino.')
         # Mismo sistema de archivos: rename es atómico y no deja copias a medias.
         os.rename(path, target)
+        # Enlaces relativos: los que apuntan a lo movido y los que salen de las notas movidas.
+        for other in list(self.notes()):
+            inside = other == target or other.is_relative_to(target)
+            old_dir = (path / other.relative_to(target)).parent if inside else other.parent
+            try:
+                text = self.read(other)
+                changed, count = rename_markdown_links(text, str(old_dir), str(path), str(target),
+                                                       str(other.parent) if inside else None)
+                if count:
+                    self.save_note(other, changed, text)
+            except (OSError, ValueError):
+                continue  # una nota ilegible no impide mover
         return target
 
     TRASH = '.papelera'
