@@ -83,7 +83,8 @@ class HardwareDialog(QDialog):
     def open_assistant(self):
         # Importación diferida para evitar ciclos; abre el asistente
         from .driver_assistant import DriverAssistant
-        dialog = DriverAssistant(self.shell); dialog.exec(); dialog.deleteLater()
+        from .shell import show_dialog
+        show_dialog(DriverAssistant(self.shell))
 
     def copy(self):
         # Copia el diagnóstico al portapapeles (no valida funcionamiento)

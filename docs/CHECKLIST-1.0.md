@@ -18,8 +18,8 @@ Marca: `[x]` hecho · `[ ]` pendiente. Anotar fecha y equipo al marcar.
       el núcleo, y quitar el `hold`. Sin esto no hay parches de seguridad del núcleo.
 - [ ] **Actualizar PrOSperus sin reinstalar.** Decidir el mecanismo (paquete `.deb`
       propio en un repositorio apt, o similar) y probar 0.9 → 1.0 conservando `home/`.
-- [ ] **SwayFX compilado en la receta** (0.5.3 + wlroots 0.19.2): decidir quién lo
-      actualiza y cómo; o pasar a `sway` de Debian si SwayFX no es imprescindible.
+- [x] **SwayFX compilado en la receta**: sustituido por `sway` de Debian (2026-11-07);
+      SwayFX dejaba huecos sin repintar con AMD + NVIDIA.
 - [ ] **Secure Boot:** firmar `prosperus.efi` (claves propias con `sbctl` o shim), o
       que el instalador avise claramente y explique cómo arrancar sin él.
 
@@ -29,8 +29,7 @@ Marca: `[x]` hecho · `[ ]` pendiente. Anotar fecha y equipo al marcar.
       Falta la prueba manual de cortar la luz durante el guardado.
 - [x] Borrar envía a `.papelera` con su origen y se recupera desde Crear › Papelera.
 - [x] Renombrar actualiza wikilinks y enlaces Markdown relativos.
-- [ ] **Mover** (`Vault.move`) no actualiza los enlaces relativos que apuntan a lo
-      movido ni los que salen de ello: igualar con renombrar.
+- [x] **Mover** actualiza los enlaces relativos como renombrar (2026-11-08, falta probar a mano).
 - [ ] Una actualización y una reinstalación conservan `~/proyectos` y la configuración.
 - [ ] El instalador a disco, probado en hardware real, no toca las demás particiones
       (ya lo comprueba en QEMU).
@@ -39,7 +38,7 @@ Marca: `[x]` hecho · `[ ]` pendiente. Anotar fecha y equipo al marcar.
 
 Nada nuevo hasta la 1.0. Solo cerrar lo que hay en el [ROADMAP](ROADMAP.md):
 
-- [ ] Todos los diálogos propios tienen botón de cerrar (y Esc); Buscar ya lo tiene.
+- [x] Todos los diálogos propios tienen botón de cerrar (y Esc) (2026-11-08, falta probar a mano).
 - [ ] Multipantalla: conectar y desconectar un monitor sin perder ventanas.
 - [ ] Recuperar la disposición de ventanas tras reiniciar (o decidir dejarlo para 1.1).
 
@@ -66,7 +65,7 @@ con gráfica solo integrada.
 - [ ] CI obligatoria en `main` (no fusionar en rojo).
 - [ ] CI que construya o al menos valide la receta de Debian, no solo Fedora.
 - [ ] Partir `desktop/prosperus/shell.py` (más de 2100 líneas) en módulos más pequeños.
-- [ ] Revisar los `except Exception` que ocultan errores; registrar en el journal.
+- [x] Revisar los `except Exception` que ocultan errores (2026-11-08, ver BUGS.md).
 
 ## 5. Publicación
 

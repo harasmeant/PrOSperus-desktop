@@ -26,6 +26,15 @@ class ShellTests(unittest.TestCase):
         self.window.deleteLater()
         self.app.processEvents()
 
+    def test_quick_settings_window(self):
+        self.window.open_quick_window()
+        first = self.window.quick_window
+        self.assertTrue(first.isVisible())
+        self.assertFalse(first.panel.btn_window.isVisibleTo(first))
+        first.close(); self.window.open_quick_window()  # se reutiliza, no se duplica
+        self.assertIs(self.window.quick_window, first)
+        first.close()
+
     def test_project_note_minimize_restore_close(self):
         self.window.navigate(self.root / 'Bienvenida')
         self.window.open_note(self.root / 'Bienvenida/Empieza aquí.md')
@@ -119,6 +128,19 @@ class LauncherCloseTests(unittest.TestCase):
         browser.close_button.click(); app.processEvents()
         self.assertIsNone(window.app_browser)
         window.close(); window.deleteLater(); app.processEvents()
+
+
+class TrashDialogTests(unittest.TestCase):
+    def test_trash_does_not_block_the_desktop_and_has_a_close_header(self):
+        from PySide6.QtWidgets import QDialog
+        from prosperus.window_header import WindowHeader
+        app = QApplication.instance() or QApplication([])
+        window = Desktop(Path(__file__).resolve().parents[1] / 'demo-system')
+        window.show(); window.open_trash(); app.processEvents()
+        trash = next(d for d in window.findChildren(QDialog) if d.windowTitle() == 'Papelera')
+        self.assertFalse(trash.isModal())     # Inicio (Super) sigue respondiendo
+        self.assertIsNotNone(trash.findChild(WindowHeader))
+        trash.close(); window.close(); window.deleteLater(); app.processEvents()
 
 
 class NewNotePlaceTests(unittest.TestCase):

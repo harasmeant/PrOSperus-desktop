@@ -5,9 +5,9 @@ import os
 import subprocess
 import sys
 import threading
-from .appearance import arrow
-from PySide6.QtWidgets import (QComboBox, QFrame, QVBoxLayout, QHBoxLayout, QLabel,
-                             QSlider, QPushButton, QWidget)
+from .appearance import arrow, symbol_icon
+from PySide6.QtWidgets import (QComboBox, QFrame, QVBoxLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
+                             QListWidget, QListWidgetItem, QScrollArea, QSlider, QPushButton, QWidget)
 from PySide6.QtCore import QProcess, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter
 from .branches import flourish
@@ -18,11 +18,11 @@ def run(argv):
     return attempt(argv)[1]
 
 
-def attempt(argv):
+def attempt(argv, timeout=3, stdin=None):
     """(correcto, salida o motivo del fallo). Los fallos quedan en el registro del sistema
     (la salida del escritorio va al journal) para poder diagnosticar en el equipo real."""
     try:
-        res = subprocess.run(argv, timeout=3, capture_output=True, text=True, check=True)
+        res = subprocess.run(argv, timeout=timeout, input=stdin, capture_output=True, text=True, check=True)
         return True, res.stdout.strip()
     except subprocess.CalledProcessError as error:
         reason = (error.stderr or error.stdout or '').strip() or f'código {error.returncode}'
@@ -92,6 +92,33 @@ def parse_powered(text):
             return line.split(":", 1)[1].strip() == "yes"
     return None
 
+def parse_networks(text):
+    """`nmcli -t -f IN-USE,SSID,SIGNAL,SECURITY device wifi list` -> [(ssid, señal, protegida, en_uso)].
+    Una fila por SSID (la de más señal), la conectada primero. nmcli escapa los «:» del nombre como «\\:»."""
+    import re
+    best = {}
+    for line in (text or '').splitlines():
+        parts = [p.replace('\\:', ':') for p in re.split(r'(?<!\\):', line)]
+        if len(parts) < 4 or not parts[1]:
+            continue
+        use, ssid, signal, security = parts[:4]
+        row = (ssid, int(signal) if signal.isdigit() else 0, security.strip() not in ('', '--'), use.strip() == '*')
+        old = best.get(ssid)
+        if old is None or (row[3], row[1]) > (old[3], old[1]):
+            best[ssid] = row
+    return sorted(best.values(), key=lambda r: (not r[3], -r[1], r[0].lower()))
+
+
+def parse_devices(text):
+    """`bluetoothctl devices [Connected|Paired]` -> {mac: nombre}; sin los que solo tienen la dirección."""
+    found = {}
+    for line in (text or '').splitlines():
+        parts = line.strip().split(' ', 2)
+        if len(parts) == 3 and parts[0] == 'Device' and parts[2].replace('-', ':') != parts[1]:
+            found[parts[1]] = parts[2]
+    return found
+
+
 def builtin_inputs(text):
     """Teclado y touchpad integrados según `swaymsg -t get_inputs --raw`: [(identificador, activo)].
     El teclado del portátil va por el controlador PS/2 (i8042), que Linux llama «AT Translated
@@ -111,9 +138,38 @@ def builtin_inputs(text):
     return found
 
 
-def terminal(argv):
-    """Abre una herramienta de texto (nmtui, bluetoothctl) en la consola."""
-    QProcess.startDetached('prosperus-terminal', argv)
+def set_builtin(devices, on):
+    for ident, _ in devices:
+        run(['swaymsg', f'input "{ident}" events {"enabled" if on else "disabled"}'])
+
+
+def toggle_builtin():
+    """Acceso directo: apaga el teclado y touchpad integrados si alguno funciona, si no los enciende.
+    Devuelve el estado nuevo, o None si el equipo no tiene (no es portátil)."""
+    devices = builtin_inputs(quiet(['swaymsg', '-t', 'get_inputs', '--raw']))
+    if not devices:
+        return None
+    on = not any(active for _, active in devices)
+    set_builtin(devices, on)
+    return on
+
+
+def scrollable(panel, room):
+    """El panel en un área con desplazamiento de `room()` píxeles de alto como mucho: con las redes
+    y los dispositivos listados era más alto que la pantalla y se cortaba por abajo."""
+    scroll = QScrollArea(widgetResizable=True, frameShape=QFrame.Shape.NoFrame)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll.setStyleSheet('QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }')
+    scroll.setWidget(panel)
+
+    def fit():
+        hint, limit = panel.sizeHint(), max(200, room())
+        bar = scroll.verticalScrollBar().sizeHint().width() if hint.height() > limit else 0
+        scroll.setFixedSize(hint.width() + bar, min(hint.height(), limit))
+    scroll.fit = fit
+    panel.state_ready.connect(lambda _: QTimer.singleShot(0, fit))  # el estado añade filas
+    fit()
+    return scroll
 
 
 class QuickSettings(QFrame):
@@ -126,6 +182,7 @@ class QuickSettings(QFrame):
         self.setMinimumWidth(420)
         self.restyle(shell.colors)
         self.shell = shell
+        self.pending, self.failed = set(), set()  # redes o dispositivos conectándose / que fallaron
         self.setObjectName("quickSettings")
         self.box = QVBoxLayout(self)
         self.box.setContentsMargins(24, 22, 24, 22)
@@ -177,14 +234,15 @@ class QuickSettings(QFrame):
         self.media = QWidget()
         media_row = QHBoxLayout(self.media); media_row.setContentsMargins(0, 0, 0, 0)
         self.track = QLabel(objectName='value'); self.track.setWordWrap(True)
-        self.play = QPushButton('⏯')
-        for text, action in (('⏮', 'previous'), (None, 'play-pause'), ('⏭', 'next')):
-            button = self.play if text is None else QPushButton(text)
+        self.media_buttons = {}
+        for action in ('previous', 'play-pause', 'next'):
+            button = self.media_buttons[action] = QPushButton()
             button.setObjectName('media')
             button.setToolTip({'previous': 'Anterior', 'play-pause': 'Reproducir / pausa', 'next': 'Siguiente'}[action])
             button.clicked.connect(lambda _=False, a=action: (run(['playerctl', a]), QTimer.singleShot(300, self.refresh)))
             media_row.addWidget(button)
         media_row.addWidget(self.track, 1)
+        self.play = self.media_buttons['play-pause']
         self.media_title = self.section('Reproduciendo')
         self.box.addWidget(self.media)
         self.media_title.hide(); self.media.hide()
@@ -195,8 +253,8 @@ class QuickSettings(QFrame):
         self.wifi.setCheckable(True)
         self.wifi.clicked.connect(self._set_wifi)
         self.wifi_conn = QLabel("Conexión: ...")
-        self.wifi_btn = QPushButton("Redes…")
-        self.wifi_btn.clicked.connect(lambda: terminal(['nmtui']))
+        self.wifi_btn = QPushButton("Buscar")
+        self.wifi_btn.clicked.connect(lambda: self.slow('wifi-scan', [['nmcli', '-t', 'device', 'wifi', 'list', '--rescan', 'yes']]))
         self.wifi_row.addWidget(self.wifi)
         self.wifi_row.addWidget(self.wifi_conn)
         self.wifi_row.addWidget(self.wifi_btn)
@@ -204,19 +262,23 @@ class QuickSettings(QFrame):
         self.wifi_row.setStretch(1, 1)
         self.section('Wifi')
         self.box.addLayout(self.wifi_row)
+        # Redes al alcance: un clic conecta (pide la contraseña si no está guardada).
+        self.networks = self.device_list(self.join_network)
 
         # 4. Bluetooth
         self.bt_row = QHBoxLayout()
         self.bluetooth = QPushButton("Bluetooth")
         self.bluetooth.setCheckable(True)
         self.bluetooth.clicked.connect(self._set_bt)
-        self.bt_btn = QPushButton("Dispositivos…")
-        self.bt_btn.clicked.connect(lambda: terminal(['bluetoothctl']))
+        self.bt_btn = QPushButton("Buscar")
+        self.bt_btn.clicked.connect(lambda: self.slow('bt-scan', [['bluetoothctl', '--timeout', '8', 'scan', 'on']]))
         self.bt_row.addWidget(self.bluetooth)
         self.bt_row.addWidget(self.bt_btn)
         self.bt_row.addStretch(1)
         self.section('Bluetooth')
         self.box.addLayout(self.bt_row)
+        # Dispositivos: un clic conecta, desconecta o empareja uno nuevo.
+        self.devices = self.device_list(self.use_device)
 
         # 5. Notificaciones
         self.notif_row = QHBoxLayout()
@@ -282,9 +344,64 @@ class QuickSettings(QFrame):
         self.btn_help = QPushButton("Ayuda · F1")
         self.btn_help.clicked.connect(lambda: self.shell.show_help())
         self.box.addSpacing(26)  # sitio para el remate floral
+        self.btn_window = QPushButton("En ventana")
+        self.btn_window.setToolTip("Abre este panel en una ventana que se queda abierta")
+        self.btn_window.clicked.connect(lambda: (self.shell.quick.menu.close(), self.shell.open_quick_window()))
         self.foot_row.addWidget(self.btn_ctrl)
+        self.foot_row.addWidget(self.btn_window)
         self.foot_row.addWidget(self.btn_help)
         self.box.addLayout(self.foot_row)
+
+    def device_list(self, on_click):
+        view = QListWidget(objectName='devices')
+        view.itemClicked.connect(on_click); view.itemActivated.connect(on_click)  # ratón y Intro
+        view.hide()
+        self.box.addWidget(view)
+        return view
+
+    def fill(self, view, rows):
+        """rows: [(clave, texto, datos)]; marca lo que se está conectando o falló."""
+        view.clear()
+        for key, text, data in rows:
+            if key in self.pending:
+                text += ' · conectando…'
+            elif key in self.failed:
+                text += ' · no se pudo'
+            item = QListWidgetItem(text); item.setData(Qt.ItemDataRole.UserRole, data)
+            view.addItem(item)
+        if rows:  # hasta cuatro filas a la vista; más, con la rueda
+            view.setFixedHeight(min(len(rows), 4) * view.sizeHintForRow(0) + 2 * view.frameWidth() + 10)
+        view.setVisible(bool(rows))
+
+    def slow(self, key, commands, stdin=None):
+        """Conectar, emparejar o buscar tarda: en otro hilo, y el panel se refresca al empezar y al acabar."""
+        if key in self.pending:
+            return
+        self.pending.add(key); self.failed.discard(key); self.refresh()
+        def work():
+            if not all(attempt(argv, timeout=30, stdin=stdin)[0] for argv in commands):
+                self.failed.add(key)
+            self.pending.discard(key); self.refresh()
+        threading.Thread(target=work, daemon=True).start()
+
+    def join_network(self, item):
+        ssid, secure, in_use, saved = item.data(Qt.ItemDataRole.UserRole)
+        if in_use:
+            return
+        if secure and not saved:
+            self.shell.quick.menu.close()  # el diálogo no puede ir dentro del menú
+            password, ok = QInputDialog.getText(self.shell, 'Wifi', f'Contraseña de «{ssid}»', QLineEdit.EchoMode.Password)
+            if not ok or not password:
+                return
+            # --ask la lee de la entrada estándar: así no aparece en la lista de procesos.
+            self.slow(ssid, [['nmcli', '--ask', 'device', 'wifi', 'connect', ssid]], stdin=password + '\n')
+        else:
+            self.slow(ssid, [['nmcli', 'device', 'wifi', 'connect', ssid]])
+
+    def use_device(self, item):
+        mac, connected, paired = item.data(Qt.ItemDataRole.UserRole)
+        steps = (['disconnect'] if connected else ['connect'] if paired else ['pair', 'trust', 'connect'])
+        self.slow(mac, [['bluetoothctl', step, mac] for step in steps])
 
     def session_action(self, argv):
         # Primero se cierra el menú: si no, saldría en la captura o tapando el bloqueo.
@@ -316,7 +433,11 @@ class QuickSettings(QFrame):
             QComboBox::down-arrow {{ image: url({arrow('down', c.muted)}); width: 10px; height: 6px; }}
             QComboBox QAbstractItemView {{ background: {c.panel}; color: {c.text}; border: 1px solid {c.border};
                          selection-background-color: {c.hover}; outline: none; padding: 6px; }}
-            QPushButton#media {{ font-size: 16px; padding: 6px 14px; }}
+            QPushButton#media {{ padding: 6px 12px; }}
+            QListWidget#devices {{ background: {c.card}; color: {c.text}; border: 1px solid {c.border}; border-radius: 12px;
+                         padding: 4px; outline: none; }}
+            QListWidget#devices::item {{ padding: 6px 8px; border-radius: 8px; }}
+            QListWidget#devices::item:hover, QListWidget#devices::item:selected {{ background: {c.hover}; color: {c.text}; }}
             QSlider {{ min-height: 26px; }}
             QSlider::groove:horizontal {{ height: 8px; background: {c.card}; border-radius: 4px; }}
             QSlider::sub-page:horizontal {{ background: {c.accent}; border-radius: 4px; }}
@@ -364,9 +485,7 @@ class QuickSettings(QFrame):
     def _set_dnd(self): run(['makoctl', 'mode', '-a' if self.dnd.isChecked() else '-r', 'do-not-disturb']); self.refresh()
 
     def _set_builtin(self):
-        state = 'enabled' if self.kbd.isChecked() else 'disabled'
-        for ident, _ in self.builtin:
-            run(['swaymsg', f'input "{ident}" events {state}'])
+        set_builtin(self.builtin, self.kbd.isChecked())
         self.refresh()
 
     def refresh(self):
@@ -403,13 +522,26 @@ class QuickSettings(QFrame):
         track = state.get('track')
         self.media.setVisible(track is not None); self.media_title.setVisible(track is not None)
         if track:
-            self.play.setText('⏸' if track[0] else '▶'); self.track.setText(track[1])
+            color = self.shell.colors.text
+            for action, kind in (('previous', 'previous'), ('play-pause', 'pause' if track[0] else 'play'), ('next', 'next')):
+                self.media_buttons[action].setIcon(symbol_icon(kind, color))
+            self.track.setText(track[1])
         is_wifi = state['wifi'] == 'enabled'
         self.wifi.setText('Activado' if is_wifi else 'Desactivado'); self.wifi.setChecked(is_wifi)
         names = [n for n in (state['connections'] or '').splitlines() if n != 'lo']
         self.wifi_conn.setText(', '.join(names) if names else 'Sin conexión')
+        saved = state.get('saved') or set()
+        self.fill(self.networks, [(ssid, f'{ssid} · {signal} %' + (' · conectada' if use else '' if secure else ' · abierta'),
+                                   (ssid, secure, use, ssid in saved))
+                                  for ssid, signal, secure, use in state.get('networks') or []])
+        self.wifi_btn.setText('Buscando…' if 'wifi-scan' in self.pending else 'Buscar')
         bt_st = state['bluetooth']
-        self.bluetooth.setEnabled(bt_st is not None); self.bt_btn.setEnabled(bt_st is not None)
+        self.bluetooth.setEnabled(bt_st is not None); self.bt_btn.setEnabled(bool(bt_st))
+        named, connected, paired = state.get('devices') or ({}, set(), set())
+        order = sorted(named, key=lambda mac: (mac not in connected, mac not in paired, named[mac].lower()))
+        self.fill(self.devices, [(mac, named[mac] + (' · conectado' if mac in connected else ' · emparejado' if mac in paired else ''),
+                                  (mac, mac in connected, mac in paired)) for mac in order])
+        self.bt_btn.setText('Buscando…' if 'bt-scan' in self.pending else 'Buscar')
         self.bluetooth.setText('No disponible' if bt_st is None else ('Activado' if bt_st else 'Desactivado'))
         self.bluetooth.setChecked(bool(bt_st))
         self.dnd.setChecked('do-not-disturb' in (state['mode'] or ''))
@@ -418,17 +550,35 @@ class QuickSettings(QFrame):
             widget.setVisible(bool(self.builtin))
         on = any(active for _, active in self.builtin)
         self.kbd.setChecked(on); self.kbd.setText('Activado' if on else 'Desactivado')
+        # El menú no crece solo si algo aparece después de abrirlo (reproducción, listas): se le avisa.
+        menu = getattr(getattr(self.shell, 'quick', None), 'menu', None)
+        if menu is not None and menu.isVisible():
+            for action in menu.actions():
+                action.setText('' if action.text() else ' ')
+            menu.adjustSize()
 
 
 def collect():
     """Estado del sistema; se ejecuta fuera del hilo de la interfaz."""
     # Sin adaptador, bluetoothctl espera a un controlador que no llega: ni se le pregunta.
     adapter = os.path.isdir('/sys/class/bluetooth') and bool(os.listdir('/sys/class/bluetooth'))
+    wifi = run(['nmcli', 'radio', 'wifi'])
+    bluetooth = parse_powered(run(['bluetoothctl', 'show'])) if adapter else None
+    devices = None
+    if bluetooth:
+        devices = (parse_devices(run(['bluetoothctl', 'devices'])),
+                   set(parse_devices(run(['bluetoothctl', 'devices', 'Connected']))),
+                   set(parse_devices(run(['bluetoothctl', 'devices', 'Paired']))))
     return {'brightness': parse_brightness(run(['brightnessctl', '-m', '-c', 'backlight'])),
             'volume': parse_volume(run(['wpctl', 'get-volume', '@DEFAULT_AUDIO_SINK@'])),
-            'wifi': run(['nmcli', 'radio', 'wifi']),
+            'wifi': wifi,
+            # Sin tarjeta wifi (o apagada) nmcli falla siempre: quiet, para no llenar el registro.
+            'networks': parse_networks(quiet(['nmcli', '-t', '-f', 'IN-USE,SSID,SIGNAL,SECURITY',
+                                              'device', 'wifi', 'list', '--rescan', 'no'])) if wifi == 'enabled' else [],
+            'saved': set((run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show']) or '').splitlines()),
+            'devices': devices,
             'connections': run(['nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active']),
-            'bluetooth': parse_powered(run(['bluetoothctl', 'show'])) if adapter else None,
+            'bluetooth': bluetooth,
             'mode': run(['makoctl', 'mode']),
             'builtin': builtin_inputs(quiet(['swaymsg', '-t', 'get_inputs', '--raw'])),
             'sinks': parse_sinks(run(['wpctl', 'status'])),

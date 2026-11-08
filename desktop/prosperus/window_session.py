@@ -74,6 +74,22 @@ class Arrangement:
         rest = [i for i in current if i != identity]
         return Arrangement(tuple(rest + [identity]), self.loose - {identity})
 
+    def insert_after(self, identity, other, current):
+        """La ventana pasa justo detrás de `other` en la secuencia: comparten su espacio."""
+        rest = [i for i in current if i != identity]
+        rest.insert(rest.index(other) + 1, identity)
+        return Arrangement(tuple(rest), self.loose - {identity})
+
+    def swap(self, identity, other, current):
+        """Intercambian sus huecos. Si `identity` estaba libre, ocupa el de `other` y esta pasa detrás."""
+        order = list(current)
+        if identity in order:
+            a, b = order.index(identity), order.index(other)
+            order[a], order[b] = other, identity
+        else:
+            order.insert(order.index(other), identity)
+        return Arrangement(tuple(order), self.loose - {identity})
+
     def release(self, identity, current):
         """La ventana sale del patrón y se queda donde la dejaron."""
         return Arrangement(tuple(i for i in current if i != identity), self.loose | {identity})
@@ -195,7 +211,10 @@ if __name__ == '__main__':
     parser.add_argument('--max-width', type=int, default=0)
     args = parser.parse_args()
     try:
-        result = apply(args.output, LayoutOptions(args.mode, args.gap, args.ratio, args.max_width))
+        # Organizar devuelve al patrón las ventanas que se dejaron libres al arrastrarlas.
+        arrangement = Arrangement(load_arrangement().order)
+        save_arrangement(arrangement)
+        result = apply(args.output, LayoutOptions(args.mode, args.gap, args.ratio, args.max_width), arrangement)
         message = f'{result.count} aplicaciones organizadas.'
         if result.adjusted:
             message += f' {result.adjusted} ajustaron su tamaño dentro de la zona asignada.'

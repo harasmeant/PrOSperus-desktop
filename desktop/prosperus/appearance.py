@@ -362,6 +362,18 @@ def draw_symbol(painter, rect, kind, color):
         # Marca de verificación
         painter.drawLine(7, 12, 11, 16)
         painter.drawLine(11, 16, 17, 8)
+    elif kind in ('play', 'pause', 'previous', 'next'):
+        # Controles de reproducción, rellenos (las letras ⏮ ⏸ ⏭ no vienen en las fuentes del sistema).
+        painter.setBrush(QColor(color))
+        shapes = {'play': [[(8, 5), (19, 12), (8, 19)]],
+                  'pause': [[(7, 6), (10, 6), (10, 18), (7, 18)], [(14, 6), (17, 6), (17, 18), (14, 18)]],
+                  'previous': [[(6, 6), (8, 6), (8, 18), (6, 18)], [(18, 6), (9, 12), (18, 18)]],
+                  'next': [[(16, 6), (18, 6), (18, 18), (16, 18)], [(6, 6), (15, 12), (6, 18)]]}[kind]
+        for points in shapes:
+            shape = QPainterPath(); shape.moveTo(*points[0])
+            for point in points[1:]:
+                shape.lineTo(*point)
+            shape.closeSubpath(); painter.drawPath(shape)
     elif kind == 'close':
         # X
         painter.drawLine(7, 7, 17, 17)

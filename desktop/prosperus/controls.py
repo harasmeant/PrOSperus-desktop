@@ -101,7 +101,7 @@ class ControlsDialog(QDialog):
         # Botones para abrir ajustes generales del sistema (accesibilidad y drivers).
         for title, action in [('Accesibilidad y botones…', shell.open_accessibility),
                               ('Hardware y drivers…', shell.open_hardware),
-                              ('Destinos de archivos…', lambda: DestinationsDialog(self).exec())]:
+                              ('Destinos de archivos…', self.open_destinations)]:
             option = QPushButton(title); option.clicked.connect(action); layout.addWidget(option)
 
         # Crea filas de controles (volumen, reproducción, brillo) con botones habilitados/deshabilitados según disponibilidad.
@@ -135,3 +135,7 @@ class ControlsDialog(QDialog):
 
         # Botón para cerrar el diálogo.
         close = QPushButton('Cerrar'); close.clicked.connect(self.accept); layout.addWidget(close)
+
+    def open_destinations(self):
+        from .shell import show_dialog  # diferida: shell importa este módulo
+        show_dialog(DestinationsDialog(self))

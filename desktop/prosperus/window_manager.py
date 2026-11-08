@@ -14,9 +14,9 @@ import time
 from PySide6.QtCore import QObject, Signal
 
 from .window_session import (request, walk, DESKTOP_ID, SHELL_IDS, apply, targets,
-                             load_arrangement, save_arrangement)
-from .window_drag import DragTracker, joins_pattern, central_zone, inside, projected_centre
-from .window_layouts import LayoutOptions
+                             Arrangement, load_arrangement, save_arrangement)
+from .window_drag import DragTracker
+from .window_layouts import LayoutOptions, nearest_order
 from .display_settings import primary_output
 
 SUBSCRIBE_TYPE = 2
@@ -127,7 +127,6 @@ class WindowManager(QObject):
         self._moved_at = 0.0
         # Hasta cuándo los cambios de geometría son nuestros (organizar), no arrastres.
         self._arranging_until = 0.0
-        self._hinted = set()
 
     # Inicia hilo que gestiona ventanas flotantes en Sway
     def start(self):
@@ -141,7 +140,7 @@ class WindowManager(QObject):
         """Lee la geometría de las aplicaciones flotantes para dos cosas:
         - Super+arrastrar mueve una ventana, pero al soltar Super Sway también lanza «Buscar»
           (no distingue el clic de «Super sola»): se apunta cuándo se movió algo para descartarla.
-        - Arrastrar una ventana al centro de la pantalla la mete en el patrón (window_drag.py).
+        - Una ventana arrastrada queda libre donde se suelta (window_drag.py).
         En reposo lee 4 veces por segundo; mientras se arrastra, 25 para medir la velocidad."""
         tracker = DragTracker()
         last = None
@@ -156,59 +155,38 @@ class WindowManager(QObject):
                     tracker.reset(windows)     # los movimientos de organizar no son del usuario
                 else:
                     drops = tracker.feed(time.monotonic(), windows)
-                    self._hint(tracker.dragging())
                     for drop in drops:
                         self._dropped(drop)
             except (OSError, ValueError, KeyError):
                 pass
             time.sleep(.04 if tracker.active else .25)
 
-    def _hint(self, dragging):
-        """La ventana se vuelve translúcida mientras soltarla la metería en el patrón."""
-        hinted = set()
-        if self.mode == 'fibonacci':
-            for con_id, (rect, area, _, speed) in dragging.items():
-                zone = central_zone(area)
-                if inside(projected_centre(rect, (0, 0)), zone) or inside(projected_centre(rect, speed), zone):
-                    hinted.add(con_id)
-        changes = [f'[con_id={i}] opacity 0.75' for i in hinted - self._hinted]
-        changes += [f'[con_id={i}] opacity 1' for i in self._hinted - hinted]
-        self._hinted = hinted
-        if changes:
-            try:
-                request(0, '; '.join(changes))
-            except (OSError, ValueError):
-                pass
-
     def _dropped(self, drop):
-        """Ventana soltada tras arrastrarla: al centro entra en el patrón; fuera, queda libre."""
+        """Ventana soltada tras arrastrarla: queda libre donde está y las demás cierran el hueco.
+        «Organizar aplicaciones» las devuelve todas al patrón."""
         if self.mode != 'fibonacci':
             return
         try:
-            tree, workspaces = request(4), request(1)
             arrangement = load_arrangement()
-            try:
-                current = [i for i, _ in targets(tree, workspaces, drop.output, self.options_provider(), arrangement)]
-            except ValueError:
-                current = []
-            alive = {n.get('id') for n in walk(tree)}
-            if joins_pattern(drop):
-                arrangement = arrangement.insert_last(drop.con_id, current)
-            elif drop.con_id in arrangement.loose:
+            if drop.con_id in arrangement.loose:
                 return                      # ya era libre: solo se ha movido
-            else:
-                arrangement = arrangement.release(drop.con_id, current)
+            tree, workspaces = request(4), request(1)
+            try:
+                placements = targets(tree, workspaces, drop.output, self.options_provider(), arrangement)
+            except ValueError:
+                placements = []
+            alive = {n.get('id') for n in walk(tree)}
+            arrangement = arrangement.release(drop.con_id, [i for i, _ in placements])
             save_arrangement(arrangement, alive)
         except (OSError, ValueError, KeyError) as e:
-            self.message.emit(f'No se pudo colocar la ventana: {e}')
+            self.message.emit(f'No se pudo soltar la ventana: {e}')
             return
         self.arrange(attempts=3, output=drop.output)
-        if drop.con_id in arrangement.loose:
-            # Las demás se han recolocado: la que acaba de soltar queda delante, no tapada.
-            try:
-                request(0, f'[con_id={drop.con_id}] focus')
-            except (OSError, ValueError):
-                pass
+        # Las demás se han recolocado: la que acaba de soltar queda delante, no tapada.
+        try:
+            request(0, f'[con_id={drop.con_id}] focus')
+        except (OSError, ValueError):
+            pass
 
     def just_moved(self, within=1.5):
         return time.monotonic() - self._moved_at < within
@@ -357,6 +335,33 @@ class WindowManager(QObject):
                 self.message.emit(f'No se pudo organizar: {e}')
             return
 
+    def arrange_nearest(self):
+        """Patrón: en cada pantalla, todas las aplicaciones (también las que se dejaron libres) al
+        hueco del patrón que tienen más cerca."""
+        if not self.available:
+            return
+        try:
+            tree, workspaces = request(4), request(1)
+            outputs = [w['output'] for w in workspaces if w.get('visible')]
+            rects = floating_windows(tree)
+            order = []
+            for output in outputs:
+                try:
+                    placements = targets(tree, workspaces, output, self.options_provider(), Arrangement())
+                except ValueError:
+                    continue                # sin aplicaciones en esa pantalla
+                points = []
+                for con_id, box in placements:
+                    x, y, w, h = rects[con_id][0] if con_id in rects else (box.x, box.y, box.width, box.height)
+                    points.append((x + w / 2, y + h / 2))
+                order += [placements[i][0] for i in nearest_order(points, [b for _, b in placements])]
+            save_arrangement(Arrangement(tuple(order)), {n.get('id') for n in walk(tree)})
+        except (OSError, ValueError, KeyError) as e:
+            self.message.emit(f'No se pudo organizar: {e}')
+            return
+        for output in outputs:
+            self.arrange(output=output)
+
     # Cambia el modo de colocación (pantalla completa o Fibonacci)
     def set_mode(self, mode):
         if mode not in ('fibonacci', 'fullscreen'):
@@ -372,7 +377,7 @@ class WindowManager(QObject):
                         break
             else:
                 request(0, '[floating] fullscreen disable')
-                self.arrange()
+                self.arrange_nearest()
         except (OSError, ValueError) as e:
             self.message.emit(f'Error al cambiar modo: {e}')
 

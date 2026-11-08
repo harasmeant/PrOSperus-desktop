@@ -3,7 +3,7 @@ import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar 
 import unittest
 from unittest.mock import patch
 
-from prosperus.window_drag import STILL, Drop, DragTracker, central_zone, joins_pattern, velocity
+from prosperus.window_drag import STILL, Drop, DragTracker, velocity
 from prosperus.window_layouts import LayoutOptions
 from prosperus.window_session import Arrangement, targets
 
@@ -70,26 +70,6 @@ class TrackerTest(unittest.TestCase):
         self.assertAlmostEqual(vy, -50 / .15, delta=1)
 
 
-class DecisionTest(unittest.TestCase):
-    def drop(self, x, y, v=(0, 0)):
-        return Drop(5, (x - 300, y - 200, 600, 400), AREA, 'DP-1', v)  # centro en (x, y)
-
-    def test_centre_joins(self):
-        self.assertTrue(joins_pattern(self.drop(960, 540)))
-
-    def test_corner_stays_loose(self):
-        self.assertFalse(joins_pattern(self.drop(200, 150)))
-
-    def test_flung_towards_centre_joins(self):
-        # Soltada fuera pero yendo deprisa hacia el centro: por inercia llega.
-        self.assertTrue(joins_pattern(self.drop(400, 540, v=(2000, 0))))
-        self.assertFalse(joins_pattern(self.drop(400, 540, v=(-2000, 0))))
-
-    def test_zone_is_centred(self):
-        x, y, w, h = central_zone((100, 0, 1000, 500))
-        self.assertEqual((x + w / 2, y + h / 2), (600, 250))
-
-
 class ArrangementTest(unittest.TestCase):
     def setUp(self):
         self.tree = {'nodes': [{'type': 'workspace', 'name': 'A', 'floating_nodes': [
@@ -123,31 +103,40 @@ class ArrangementTest(unittest.TestCase):
 
 
 class ManagerDropTest(unittest.TestCase):
-    def test_drop_in_centre_saves_order_and_arranges(self):
+    TREE = {'nodes': [{'type': 'workspace', 'name': 'A', 'floating_nodes': [
+        {'id': i, 'type': 'floating_con', 'app_id': 'foot'} for i in (11, 12, 13)]}]}
+    WORKSPACES = [{'name': 'A', 'output': 'DP-1', 'visible': True,
+                   'rect': {'x': 0, 'y': 0, 'width': 1920, 'height': 1080}}]
+
+    def drop_at(self, con_id, centre, arrangement=Arrangement()):
+        """Suelta `con_id` con su centro en `centre`; devuelve (guardado, organizó)."""
         from prosperus.window_manager import WindowManager
-        tree = {'nodes': [{'type': 'workspace', 'name': 'A', 'floating_nodes': [
-            {'id': i, 'type': 'floating_con', 'app_id': 'foot'} for i in (11, 12)]}]}
-        workspaces = [{'name': 'A', 'output': 'DP-1', 'visible': True,
-                       'rect': {'x': 0, 'y': 0, 'width': 1920, 'height': 1080}}]
-        manager = WindowManager()
-        saved = []
-        with patch('prosperus.window_manager.request', side_effect=[tree, workspaces]), \
-             patch('prosperus.window_manager.load_arrangement', return_value=Arrangement()), \
+        manager, saved = WindowManager(), []
+        with patch('prosperus.window_manager.request', side_effect=[self.TREE, self.WORKSPACES, None]), \
+             patch('prosperus.window_manager.load_arrangement', return_value=arrangement), \
              patch('prosperus.window_manager.save_arrangement', side_effect=lambda a, alive: saved.append(a)), \
              patch.object(manager, 'arrange') as arrange:
-            manager._dropped(Drop(11, (660, 340, 600, 400), AREA, 'DP-1', (0, 0)))
-        self.assertEqual(saved[0].order, (12, 11))
+            manager._dropped(Drop(con_id, (centre[0] - 300, centre[1] - 200, 600, 400), AREA, 'DP-1', (0, 0)))
+        return saved, arrange
+
+    def slot(self, con_id, arrangement=Arrangement()):
+        return dict(targets(self.TREE, self.WORKSPACES, 'DP-1', LayoutOptions(), arrangement))[con_id]
+
+    def test_dropped_window_stays_loose_and_others_close_the_gap(self):
+        saved, arrange = self.drop_at(12, (960, 540))
+        self.assertEqual(saved[0].order, (11, 13))
+        self.assertIn(12, saved[0].loose)
         arrange.assert_called_once_with(attempts=3, output='DP-1')
 
     def test_already_loose_window_moved_around_stays_put(self):
         from prosperus.window_manager import WindowManager
         manager = WindowManager()
-        with patch('prosperus.window_manager.request', side_effect=[{'nodes': []}, []]), \
+        with patch('prosperus.window_manager.request', side_effect=[{'nodes': []}, []]) as request, \
              patch('prosperus.window_manager.load_arrangement', return_value=Arrangement((), frozenset({11}))), \
              patch('prosperus.window_manager.save_arrangement') as save, \
              patch.object(manager, 'arrange') as arrange:
             manager._dropped(Drop(11, (0, 0, 600, 400), AREA, 'DP-1', (0, 0)))
-        save.assert_not_called(); arrange.assert_not_called()
+        save.assert_not_called(); arrange.assert_not_called(); request.assert_not_called()
 
     def test_fullscreen_mode_ignores_drops(self):
         from prosperus.window_manager import WindowManager

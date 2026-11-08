@@ -23,7 +23,7 @@ from .model import Vault
 from .corner_menu import HoverMenuButton
 from .clock_calendar import ClockButton
 from . import hidden_items
-from .quick_settings import QuickSettings
+from .quick_settings import QuickSettings, scrollable, toggle_builtin
 from PySide6.QtWidgets import QWidgetAction
 from . import motion
 from .charts import insert_charts
@@ -38,7 +38,7 @@ from .projects import ProjectDrawer, ProjectEdge
 from .launcher import ApplicationBrowser, ApplicationService
 from .window_manager import WindowManager
 from .window_controls import HoverControls
-from .window_layouts import LayoutOptions, Rect, arrange, screen_profile
+from .window_layouts import LayoutOptions, Rect, arrange, nearest_order, screen_profile
 from .file_actions import FileActions, local_paths
 from .desktop_keys import DesktopKeys, SHORTCUT_HELP
 from .controls import ControlsDialog, SessionControls
@@ -60,6 +60,7 @@ ICONS = {
     'Guardar': 'save',
     'Cerrar': 'close',
     'Aplicaciones': 'apps',
+    'Papelera': 'trash',
     'Controles': 'sliders',
     'Ayuda · F1': 'help',
     'Actualizar': 'refresh',
@@ -68,6 +69,13 @@ ICONS = {
 }
 
 # Crea botones estilizados con iconos y acciones
+def show_dialog(dialog):
+    """Abre un diálogo sin bloquear el resto del escritorio. exec() lo haría modal para toda la
+    aplicación y, mientras siguiera abierto, Inicio (Super) y las demás ventanas no responderían."""
+    dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+    dialog.show(); dialog.raise_(); dialog.activateWindow()
+
+
 def button(text, callback, parent=None):
     widget = QPushButton(text, parent)
     widget.clicked.connect(callback)
@@ -140,7 +148,6 @@ class DragTitle(QLabel):
 
 
 # Opacidad del fondo de las notas (a petición: 40 % de transparencia).
-NOTE_OPACITY = .6
 
 
 class NotePanel(QFrame):
@@ -309,16 +316,14 @@ class NotePanel(QFrame):
         self.shell.update_dock()
         self.shell.surface.setFocus()
 
-    # Fondo translúcido de la nota con su marco y filigrana
+    # Fondo de la nota con su marco y filigrana
     def paintEvent(self, event):
         p = QPainter(self)
         p.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
         rect = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         clip = QPainterPath(); clip.addRoundedRect(rect, 12, 12); p.setClipPath(clip)
-        # Fondo al 60 % (40 % de transparencia): se ve el escritorio de detrás. Opaco en alto contraste.
-        glass = QColor(self.colors.panel)
-        glass.setAlphaF(1.0 if self.shell.accessibility.high_contrast else NOTE_OPACITY)
-        p.fillRect(rect, glass)
+        # Opaco, en el tono del proyecto: lo translúcido parpadea al copiar entre gráficas (NVIDIA 550).
+        p.fillRect(rect, QColor(self.colors.panel))
         if not self.minimized and not self.shell.accessibility.high_contrast:
             # Remate floral bajo el título, en el estilo de las ramas del fondo de la nota.
             vine = QColor(self.colors.text); vine.setAlphaF(.28)
@@ -1192,8 +1197,10 @@ class Desktop(QMainWindow):
         # Esquina derecha: brillo, volumen, wifi, bluetooth y notificaciones.
         self.quick = HoverMenuButton('Sistema', icon('sliders'), [])
         self.quick_panel = QuickSettings(self)
-        quick_action = QWidgetAction(self.quick.menu); quick_action.setDefaultWidget(self.quick_panel)
+        quick_scroll = scrollable(self.quick_panel, lambda: self.quick.screen().availableGeometry().height() - 120)
+        quick_action = QWidgetAction(self.quick.menu); quick_action.setDefaultWidget(quick_scroll)
         self.quick.menu.addAction(quick_action)
+        self.quick.menu.aboutToShow.connect(quick_scroll.fit)
         self.quick.menu.aboutToShow.connect(self.quick_panel.refresh)
         # Con teclado, el foco entra en el panel (si no, Tab recorre el menú y no sus controles).
         self.quick.menu.aboutToShow.connect(lambda: QTimer.singleShot(0, lambda: focus_first(self.quick_panel)))
@@ -1298,6 +1305,10 @@ class Desktop(QMainWindow):
         if hasattr(self, 'quick_panel'):
             self.quick_panel.restyle(self.colors)
             self.quick.menu.setStyleSheet(f'QMenu {{ background: {self.colors.panel}; border: 1px solid {self.colors.border}; padding: 4px; }}')
+        if getattr(self, 'quick_window', None) is not None:
+            self.quick_window.colors = self.colors
+            self.quick_window.panel.restyle(self.colors)
+            self.quick_window.setStyleSheet(f'QWidget#sistemaWindow {{ background: {self.colors.panel}; }}')
         if hasattr(self, 'clock'):
             self.clock.restyle()
         self.show_scene()
@@ -1378,6 +1389,20 @@ class Desktop(QMainWindow):
         if (event.type() == QEvent.Type.Show and isinstance(watched, QDialog) and watched.isWindow()
                 and not self.accessibility.high_contrast):
             attach_frame(watched, lambda: self.colors, self.frame_traits)
+        if event.type() == QEvent.Type.Show and isinstance(watched, QDialog) and watched.isWindow():
+            self.add_close_header(watched)
+
+    @staticmethod
+    def add_close_header(dialog):
+        """Los diálogos sin cabecera propia reciben la de las ventanas del escritorio (título, ampliar y
+        cerrar): Sway no les pone barra y, sin ella, solo se cerraban con Esc. Los avisos (QMessageBox,
+        con rejilla) y los paneles sin marco (Inicio, Alt+Tab) ya tienen sus botones o se cierran solos."""
+        from .window_header import WindowHeader
+        layout = dialog.layout()
+        if (dialog.windowFlags() & Qt.WindowType.FramelessWindowHint or dialog.findChild(WindowHeader)
+                or not isinstance(layout, QVBoxLayout)):
+            return
+        layout.insertWidget(0, WindowHeader(dialog.windowTitle(), dialog))
 
     # Ajusta el entorno visual para accesibilidad
     def apply_accessibility(self):
@@ -1447,7 +1472,7 @@ class Desktop(QMainWindow):
         self.drawer.hide() if self.drawer.isVisible() else self.drawer.reveal()
 
     def open_explorer(self):
-        dialog = Explorer(self); dialog.exec(); dialog.deleteLater()
+        dialog = Explorer(self); show_dialog(dialog)
 
     def open_applications(self, mode='apps'):
         if self.app_browser is not None:
@@ -1471,17 +1496,34 @@ class Desktop(QMainWindow):
         self.app_browser.reject() if self.app_browser is not None else self.open_applications()
 
     def open_controls(self):
-        dialog = ControlsDialog(self); dialog.exec(); dialog.deleteLater()
+        dialog = ControlsDialog(self); show_dialog(dialog)
+
+    def open_quick_window(self):
+        """El panel Sistema en una ventana propia con marco, que no se cierra al hacer clic fuera."""
+        window = getattr(self, 'quick_window', None)
+        if window is None:
+            from .window_header import WindowHeader
+            window = self.quick_window = QWidget()
+            window.setWindowTitle('Sistema')
+            window.colors = self.colors
+            layout = QVBoxLayout(window); layout.setContentsMargins(10, 10, 10, 10)
+            layout.addWidget(WindowHeader('Sistema', window))
+            window.panel = QuickSettings(self)
+            layout.addWidget(scrollable(window.panel, lambda: window.screen().availableGeometry().height() - 120))
+            window.panel.btn_window.hide()  # ya está en ventana
+            window.setObjectName('sistemaWindow')
+            window.setStyleSheet(f'QWidget#sistemaWindow {{ background: {self.colors.panel}; }}')
+        window.panel.refresh(); window.show(); window.raise_(); window.activateWindow()
 
     def open_layout_settings(self):
-        dialog = LayoutDialog(self); dialog.exec(); dialog.deleteLater()
+        dialog = LayoutDialog(self); show_dialog(dialog)
 
     def open_display_settings(self):
         from .display_settings import DisplayDialog
-        dialog = DisplayDialog(self); dialog.exec(); dialog.deleteLater()
+        dialog = DisplayDialog(self); show_dialog(dialog)
 
     def open_accessibility(self):
-        dialog = AccessibilityDialog(self); dialog.exec(); dialog.deleteLater()
+        dialog = AccessibilityDialog(self); show_dialog(dialog)
 
     def offer_drivers(self):
         """Primer arranque: ofrecer controladores si la gráfica lo necesita (una vez por gráfica)."""
@@ -1494,17 +1536,17 @@ class Desktop(QMainWindow):
         if not needs_attention(plans) or self.settings.value(key, False, type=bool):
             return
         self.settings.setValue(key, True); self.settings.sync()
-        dialog = DriverAssistant(self, plans); dialog.exec(); dialog.deleteLater()
+        dialog = DriverAssistant(self, plans); show_dialog(dialog)
 
     def open_hardware(self):
-        dialog = HardwareDialog(self); dialog.exec(); dialog.deleteLater()
+        dialog = HardwareDialog(self); show_dialog(dialog)
 
     def show_help(self):
         dialog = QDialog(self); dialog.setWindowTitle('Atajos y manejo del escritorio'); dialog.resize(640, 570)
         layout = QVBoxLayout(dialog)
         text = QTextBrowser(); text.setMarkdown(SHORTCUT_HELP); layout.addWidget(text)
         layout.addWidget(button('Cerrar', dialog.accept))
-        dialog.exec(); dialog.deleteLater()
+        show_dialog(dialog)
 
     def show_about(self):
         dialog = QDialog(self); dialog.setWindowTitle('Acerca de PrOSperus'); dialog.resize(420, 360)
@@ -1535,7 +1577,7 @@ class Desktop(QMainWindow):
 ''')
         layout.addWidget(info)
         layout.addWidget(button('Cerrar', dialog.accept))
-        dialog.exec(); dialog.deleteLater()
+        show_dialog(dialog)
 
     def toggle_fullscreen(self):
         self.showNormal() if self.isFullScreen() and not self.kiosk else self.showFullScreen()
@@ -1557,7 +1599,16 @@ class Desktop(QMainWindow):
     def toggle_app_mode(self):
         self.windows.set_mode('fullscreen' if self.windows.mode == 'fibonacci' else 'fibonacci')
         if self.windows.mode == 'fibonacci':
-            self.arrange_notes()
+            self.arrange_notes(nearest=True)
+        self.update_dock()
+
+    def arrange_pattern(self):
+        """Botón «Patrón»: notas y aplicaciones al hueco del patrón que tienen más cerca."""
+        if self.windows.mode != 'fibonacci':
+            self.windows.set_mode('fibonacci')      # ya organiza las aplicaciones
+        else:
+            self.windows.arrange_nearest()
+        self.arrange_notes(nearest=True)
         self.update_dock()
 
     def touch(self, key):
@@ -1803,7 +1854,8 @@ class Desktop(QMainWindow):
         else:
             self.arrange_notes()
 
-    def arrange_notes(self):
+    def arrange_notes(self, nearest=False):
+        """Reparte las notas abiertas en el patrón; con `nearest`, cada una al hueco que tiene más cerca."""
         panels = [p for p in self.panels.values() if p.project == self.folder and p.isVisible() and not p.minimized]
         if not panels:
             return
@@ -1814,6 +1866,9 @@ class Desktop(QMainWindow):
         except ValueError as error:
             # Sin espacio para todas: se deja la posición que tenían.
             self.status.setText(str(error)); return
+        if nearest:
+            order = nearest_order([(p.x() + p.width() / 2, p.y() + p.height() / 2) for p in panels], boxes)
+            panels = [panels[i] for i in order]
         for panel, box in zip(panels, boxes):
             panel.normal_geometry = None
             panel.setGeometry(box.x, box.y, box.width, box.height)
@@ -1937,6 +1992,11 @@ class Desktop(QMainWindow):
             self.navigate(self.folder); self.refresh_projects()
             self.status.setText('Movido a ' + place[1].name + ': ' + ', '.join(moved))
 
+    def toggle_builtin_keyboard(self):
+        on = toggle_builtin()
+        self.status.setText('Este equipo no tiene teclado integrado.' if on is None else
+                            'Teclado integrado ' + ('activado.' if on else 'desactivado.'))
+
     def open_trash(self):
         """Papelera: lo borrado con Supr, con la carpeta de la que salió; Recuperar lo devuelve."""
         dialog = QDialog(self); dialog.setWindowTitle('Papelera'); dialog.resize(560, 440)
@@ -1974,7 +2034,7 @@ class Desktop(QMainWindow):
         row.addWidget(button('Recuperar', restore)); row.addWidget(button('Cerrar', dialog.accept))
         layout.addLayout(row)
         items.itemActivated.connect(lambda _: restore())
-        fill(); dialog.exec(); dialog.deleteLater()
+        fill(); show_dialog(dialog)
 
     def new_project(self):
         name, ok = QInputDialog.getText(self, 'Nuevo proyecto', 'Nombre del proyecto:')
@@ -2034,9 +2094,16 @@ class Desktop(QMainWindow):
             item.setAccessibleName(full_text)
             item.setFixedWidth(max(110, item.fontMetrics().horizontalAdvance(item.text()) + 34 + icon_width))
         add_access(button('Aplicaciones', lambda: self.open_applications()))
+        add_access(button('Papelera', self.open_trash))
+        keyboard = button('Teclado', self.toggle_builtin_keyboard)
+        keyboard.setToolTip('Activa o desactiva el teclado y el touchpad integrados del portátil.')
+        add_access(keyboard)
         mode = button('Fibonacci' if self.windows.mode == 'fibonacci' else 'Pantalla completa', self.toggle_app_mode)
         mode.setToolTip('Cómo se abren notas y aplicaciones: Fibonacci las reparte, Pantalla completa ocupa todo. Pulsa para cambiar.')
         add_access(mode)
+        pattern = button('Patrón', self.arrange_pattern)
+        pattern.setToolTip('Coloca notas y aplicaciones en el patrón, cada una en el hueco que tiene más cerca.')
+        add_access(pattern)
         if self.windows.available:
             for window in self.app_windows:
                 item = button(window['name'], lambda checked=False, w=window: self.windows.toggle(w['id'], w['hidden']))

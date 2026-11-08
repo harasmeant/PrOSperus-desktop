@@ -2,7 +2,7 @@
 import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 import unittest
 from unittest.mock import patch
-from prosperus.window_layouts import LayoutOptions, Rect, arrange, screen_profile
+from prosperus.window_layouts import LayoutOptions, Rect, arrange, nearest_order, screen_profile
 from prosperus.window_session import apply, plan, targets, DESKTOP_ID
 
 
@@ -47,6 +47,24 @@ class LayoutGeometryTests(unittest.TestCase):
         for options in [LayoutOptions('unknown'), LayoutOptions(gap=-1), LayoutOptions(ratio=99)]:
             with self.assertRaises(ValueError):
                 arrange(Rect(0, 0, 1920, 1080), 1, options)
+
+
+class NearestOrderTests(unittest.TestCase):
+    def test_each_window_takes_the_slot_it_is_closest_to(self):
+        boxes = arrange(Rect(0, 0, 1920, 1080), 3, LayoutOptions())
+        centre = lambda b, dx=0: (b.x + b.width / 2 + dx, b.y + b.height / 2)
+        # Ventanas 0, 1, 2 junto a los huecos 2, 0, 1: el hueco 0 es para la 1, etc.
+        points = [centre(boxes[2], 30), centre(boxes[0], -40), centre(boxes[1], 10)]
+        self.assertEqual(nearest_order(points, boxes), [1, 2, 0])
+
+    def test_minimises_total_travel_not_greedy(self):
+        boxes = [Rect(0, 0, 0, 0), Rect(10, 0, 0, 0)]
+        # Voraz daría la 0 al primer hueco (dist 1) y la 1 al segundo (dist 19): total 20.
+        self.assertEqual(nearest_order([(1, 0), (-9, 0)], boxes), [1, 0])
+
+    def test_many_windows_still_get_one_slot_each(self):
+        boxes = [Rect(i * 10, 0, 0, 0) for i in range(14)]
+        self.assertEqual(sorted(nearest_order([(i * 10, 0) for i in range(14)][::-1], boxes)), list(range(14)))
 
 
 class SwayPlanningTests(unittest.TestCase):

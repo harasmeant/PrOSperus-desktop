@@ -137,7 +137,10 @@ class ApplicationBrowser(QDialog):
             mode_layout.addWidget(btn)
         # Sin marco no hay botón de cerrar de la ventana: uno propio (también Esc o Super).
         mode_layout.addStretch()
-        self.close_button = QPushButton('✕')
+        # Icono dibujado: la letra ✕ cae en otra fuente y queda descentrada en el círculo.
+        from .appearance import symbol_icon
+        self.close_button = QPushButton(symbol_icon('close', self.shell.colors.text), '')
+        self.close_button.setIconSize(QSize(20, 20))
         self.close_button.setObjectName('launcherClose')
         self.close_button.setToolTip('Cerrar (Esc o Super)')
         self.close_button.setAccessibleName('Cerrar')

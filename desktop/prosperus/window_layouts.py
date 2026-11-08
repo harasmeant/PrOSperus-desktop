@@ -102,3 +102,26 @@ def arrange(area, count, options, minimum=(320, 220)):
     if any(r.width < minimum[0] or r.height < minimum[1] for r in result):
         raise ValueError('No caben con un tamaño legible. Reduce ventanas, amplía el área o cambia la distribución.')
     return result
+
+
+def nearest_order(points, boxes):
+    """Índices de `points` (centros actuales) en el orden de `boxes` (huecos del patrón): cada uno
+    va al hueco que tiene cerca, con el menor recorrido total. Exacto hasta 12; más, voraz."""
+    centres = [(b.x + b.width / 2, b.y + b.height / 2) for b in boxes]
+    if len(points) > 12:
+        # shortcut: reparto voraz (hueco a hueco, el más cercano libre); exacto si alguien usa más de 12 ventanas.
+        left, order = set(range(len(points))), []
+        for c in centres:
+            order.append(min(left, key=lambda i: math.dist(points[i], c))); left.remove(order[-1])
+        return order
+    best = {0: (0.0, [])}       # ventanas ya colocadas (máscara) -> (recorrido, orden)
+    for c in centres:
+        following = {}
+        for used, (cost, order) in best.items():
+            for i, p in enumerate(points):
+                if not used >> i & 1:
+                    key, total = used | 1 << i, cost + math.dist(p, c)
+                    if key not in following or total < following[key][0]:
+                        following[key] = (total, order + [i])
+        best = following
+    return min(best.values())[1]

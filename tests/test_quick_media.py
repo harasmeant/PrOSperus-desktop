@@ -2,7 +2,7 @@
 import os as _os; _os.environ.pop('SWAYSOCK', None)  # los tests no deben tocar la sesión Sway real
 import unittest
 
-from prosperus.quick_settings import parse_sinks, parse_track
+from prosperus.quick_settings import parse_devices, parse_networks, parse_sinks, parse_track
 
 STATUS = """PipeWire 'pipewire-0' [1.4.9, user@host, cookie:1]
  └─ Clients:
@@ -35,6 +35,18 @@ class QuickMediaTest(unittest.TestCase):
         self.assertEqual(parse_track('Playing|Queen|Bohemian Rhapsody'), (True, 'Queen · Bohemian Rhapsody'))
         self.assertEqual(parse_track('Paused||Vídeo'), (False, 'Vídeo'))
         self.assertIsNone(parse_track(None))
+
+    def test_networks(self):
+        text = (' :Vecino:40:WPA2\n*:Casa:70:WPA2\n :Casa:90:WPA2\n'
+                ' :Bar\\:Wifi:55:\n :::30:WPA2\n')
+        self.assertEqual(parse_networks(text), [('Casa', 70, True, True),
+                                                ('Bar:Wifi', 55, False, False),
+                                                ('Vecino', 40, True, False)])
+        self.assertEqual(parse_networks(None), [])
+
+    def test_devices(self):
+        text = 'Device AA:BB:CC:DD:EE:FF Auriculares WH-1000\nDevice 11:22:33:44:55:66 11-22-33-44-55-66\nbasura'
+        self.assertEqual(parse_devices(text), {'AA:BB:CC:DD:EE:FF': 'Auriculares WH-1000'})
 
 
 if __name__ == '__main__':

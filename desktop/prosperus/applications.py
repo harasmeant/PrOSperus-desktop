@@ -6,7 +6,7 @@ import sys
 import gi
 
 gi.require_version('Gio', '2.0')
-from gi.repository import Gio
+from gi.repository import Gio, GLib
 
 
 # Lista aplicaciones instaladas y visibles, ordenadas por nombre.
@@ -85,7 +85,7 @@ def open_with(desktop_id, path, remember=False):
         if content_type:
             try:
                 app.set_as_default_for_type(content_type)
-            except Exception:
+            except GLib.Error:
                 pass  # abrir es lo importante; recordar es un extra
     if not _without_output(lambda: app.launch([file], None)):
         raise RuntimeError('El sistema no ha podido iniciar ' + app.get_display_name() + '.')
