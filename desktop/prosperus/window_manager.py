@@ -6,6 +6,7 @@ Mantiene una capa de ventanas flotantes sobre el escritorio,
 organizando las aplicaciones mediante el protocolo IPC de Sway.
 """
 import json
+import math
 import os
 import socket
 import struct
@@ -95,6 +96,16 @@ def floating_windows(tree):
     return found
 
 
+def slot_under(point, placements):
+    """con_id del hueco que contiene `point`; si no lo contiene ninguno (el hueco entre ventanas),
+    el de centro más cercano."""
+    px, py = point
+    for con_id, b in placements:
+        if b.x <= px < b.x + b.width and b.y <= py < b.y + b.height:
+            return con_id
+    return min(placements, key=lambda p: math.dist(point, (p[1].x + p[1].width / 2, p[1].y + p[1].height / 2)))[0]
+
+
 def other_outputs(outputs, main):
     """Pantallas activas distintas de la del escritorio, en el orden de Sway."""
     return [output['name'] for output in outputs if output['name'] != main and output.get('active')]
@@ -162,21 +173,27 @@ class WindowManager(QObject):
             time.sleep(.04 if tracker.active else .25)
 
     def _dropped(self, drop):
-        """Ventana soltada tras arrastrarla: queda libre donde está y las demás cierran el hueco.
-        «Organizar aplicaciones» las devuelve todas al patrón."""
+        """Ventana soltada tras arrastrarla: encaja en el hueco del patrón que tiene debajo (el que
+        contiene su centro, o el más cercano) y la que lo ocupaba pasa al suyo."""
         if self.mode != 'fibonacci':
             return
         try:
             arrangement = load_arrangement()
-            if drop.con_id in arrangement.loose:
-                return                      # ya era libre: solo se ha movido
+            arrangement = Arrangement(arrangement.order, arrangement.loose - {drop.con_id})
             tree, workspaces = request(4), request(1)
             try:
                 placements = targets(tree, workspaces, drop.output, self.options_provider(), arrangement)
             except ValueError:
                 placements = []
+            ids = [i for i, _ in placements]
             alive = {n.get('id') for n in walk(tree)}
-            arrangement = arrangement.release(drop.con_id, [i for i, _ in placements])
+            if drop.con_id in ids:
+                x, y, w, h = drop.rect
+                other = slot_under((x + w / 2, y + h / 2), placements)
+                arrangement = (arrangement.swap(drop.con_id, other, ids) if other != drop.con_id
+                               else Arrangement(tuple(ids), arrangement.loose))
+            else:
+                arrangement = arrangement.release(drop.con_id, ids)   # no cabe en el patrón: queda libre
             save_arrangement(arrangement, alive)
         except (OSError, ValueError, KeyError) as e:
             self.message.emit(f'No se pudo soltar la ventana: {e}')

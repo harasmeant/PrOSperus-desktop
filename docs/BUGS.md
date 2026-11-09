@@ -31,6 +31,12 @@ Al cerrar uno, pasar el detalle a `WORKLOG.md` y quitarlo de aquí si ya no apor
     = 0 en card0; la AMD sí lo tiene). Salidas: a) parchear wlroots 0.18 para que espere al búfer
     de la AMD (`poll` sobre el dmabuf) antes de copiar; b) NVIDIA ≥ 555 (repositorio de NVIDIA:
     580/620) + Sway 1.12/wlroots 0.20 (forky). No probado aún en sesión real.
+  - Elegida la b, con Sway 1.11 + wlroots 0.19.3 (snapshot.debian.org, compilados en trixie sin
+    tocar sus bibliotecas; la 0.20 pedía libdrm, pixman y wayland nuevos). Paquetes en
+    `/var/cache/prosperus-debs`, retenidos con `apt-mark hold`. NVIDIA 620.70.06 del repositorio
+    de NVIDIA, que solo aporta los paquetes del controlador (`/etc/apt/preferences.d/prosperus-nvidia`).
+    Volver atrás: `apt-mark unhold sway sway-backgrounds libwlroots-0.19`, borrar ese pin y el
+    repositorio `cuda-*` de `sources.list.d`, y reinstalar `sway nvidia-driver nvidia-open-kernel-dkms` de trixie.
   Soluciones encontradas fuera: ver «Dos pantallas» en WORKLOG (búsqueda del 2026-11-08).
 
 - [ ] **La pestaña Sistema no se ve completa** (2026-11-08). Menú `Sistema` (`shell.py:1198`,
@@ -41,7 +47,8 @@ Al cerrar uno, pasar el detalle a `WORKLOG.md` y quitarlo de aquí si ya no apor
   2026-11-08: simplificado. La ventana arrastrada queda libre donde se suelta y las demás
   cierran el hueco. Botón **«Patrón»** (junto a «Fibonacci», y al pasar a Fibonacci): notas y
   aplicaciones, también las libres, al hueco del patrón que tienen más cerca (`nearest_order`,
-  menor recorrido total). Falta probarlo en la sesión real.
+  menor recorrido total). 2026-11-09: al soltarla encaja en el hueco que tiene debajo (o el más
+  cercano) y se intercambia con la que lo ocupaba (`slot_under`). Falta probarlo en la sesión real.
 
 - [ ] Multipantalla: conectar y desconectar un monitor puede perder ventanas (sin probar).
   Necesita la prueba a mano: con ventanas en el HDMI, desenchufarlo y volver a enchufarlo.
@@ -56,7 +63,7 @@ Al cerrar uno, pasar el detalle a `WORKLOG.md` y quitarlo de aquí si ya no apor
 
 Arreglado en código, sin comprobar a mano. Cerrar sesión antes de empezar.
 
-1. **Ventanas:** arrastrar una y soltarla (queda libre, las demás cierran el hueco); botón
+1. **Ventanas:** arrastrar una a la izquierda y soltarla (encaja en ese hueco y se intercambia); botón
    «Patrón» y paso a Fibonacci (cada una al hueco más cercano); Super+flechas.
 2. **Inicio (Super)** con la Papelera abierta detrás: debe abrirse.
 3. **Diálogos:** cada uno con cabecera y botón de cerrar; Esc los cierra.

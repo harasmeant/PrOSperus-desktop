@@ -122,21 +122,29 @@ class ManagerDropTest(unittest.TestCase):
     def slot(self, con_id, arrangement=Arrangement()):
         return dict(targets(self.TREE, self.WORKSPACES, 'DP-1', LayoutOptions(), arrangement))[con_id]
 
-    def test_dropped_window_stays_loose_and_others_close_the_gap(self):
-        saved, arrange = self.drop_at(12, (960, 540))
-        self.assertEqual(saved[0].order, (11, 13))
-        self.assertIn(12, saved[0].loose)
+    def test_dropped_on_left_slot_swaps_with_its_window(self):
+        left = self.slot(11)
+        saved, arrange = self.drop_at(13, (left.x + 50, left.y + left.height / 2))
+        self.assertEqual(saved[0].order, (13, 12, 11))
+        self.assertFalse(saved[0].loose)
         arrange.assert_called_once_with(attempts=3, output='DP-1')
 
-    def test_already_loose_window_moved_around_stays_put(self):
-        from prosperus.window_manager import WindowManager
-        manager = WindowManager()
-        with patch('prosperus.window_manager.request', side_effect=[{'nodes': []}, []]) as request, \
-             patch('prosperus.window_manager.load_arrangement', return_value=Arrangement((), frozenset({11}))), \
-             patch('prosperus.window_manager.save_arrangement') as save, \
-             patch.object(manager, 'arrange') as arrange:
-            manager._dropped(Drop(11, (0, 0, 600, 400), AREA, 'DP-1', (0, 0)))
-        save.assert_not_called(); arrange.assert_not_called(); request.assert_not_called()
+    def test_dropped_on_own_slot_goes_back(self):
+        own = self.slot(12)
+        saved, _ = self.drop_at(12, (own.x + own.width / 2, own.y + own.height / 2))
+        self.assertEqual(saved[0].order, (11, 12, 13))
+
+    def test_loose_window_dropped_joins_the_pattern(self):
+        left = self.slot(11)
+        saved, _ = self.drop_at(12, (left.x + 10, left.y + 10), Arrangement((11, 13), frozenset({12})))
+        self.assertEqual(saved[0].order, (12, 13, 11))
+        self.assertNotIn(12, saved[0].loose)
+
+    def test_gap_between_slots_picks_nearest(self):
+        from prosperus.window_manager import slot_under
+        from prosperus.window_layouts import Rect
+        placements = [(1, Rect(0, 0, 100, 100)), (2, Rect(120, 0, 100, 100))]
+        self.assertEqual(slot_under((115, 50), placements), 2)
 
     def test_fullscreen_mode_ignores_drops(self):
         from prosperus.window_manager import WindowManager
