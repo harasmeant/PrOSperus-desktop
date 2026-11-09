@@ -77,6 +77,13 @@ class Distro:
             return ['dpkg-query', '-W', '-f=${Package}\n']
         return ['rpm', '-qa', '--queryformat', '%{NAME}\n']
 
+    def upgrade_commands(self):
+        """Actualizar todo en una consola visible: el gestor enseña la lista y pregunta antes.
+        Respeta lo retenido (núcleo y Sway con `apt-mark hold` en Debian)."""
+        system = {'arch': 'sudo pacman -Syu', 'debian': 'sudo apt-get update && sudo apt upgrade'}
+        return [system.get(self.key, 'sudo dnf upgrade'),
+                'if command -v flatpak >/dev/null; then sudo flatpak update; fi']
+
     def shell_install(self, packages):
         """Orden de instalación escrita para mostrarla en una terminal o un mensaje."""
         if self.key == 'arch':

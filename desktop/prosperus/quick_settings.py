@@ -324,6 +324,10 @@ class QuickSettings(QFrame):
 
         # 7. Sesión: lo que antes solo tenía atajo de teclado, también con el ratón.
         if getattr(shell, 'system_session', False):
+            from .distro import current
+            from .driver_assistant import terminal_command
+            upgrade = terminal_command(current().upgrade_commands(), 'PrOSperus · Actualizar',
+                                       'Listo. Si se ha actualizado el núcleo o la gráfica, reinicia.')
             self.section('Sesión')
             self.session_row = QHBoxLayout()
             for text, tip, argv in (('Bloquear', 'Super+L', ['prosperus-bloquear']),
@@ -331,6 +335,7 @@ class QuickSettings(QFrame):
                                     ('Zona', 'Captura de una zona · Mayús+Impr Pant', ['prosperus-captura', 'zona']),
                                     ('Portapapeles', 'Historial del portapapeles · Super+V', ['prosperus-portapapeles']),
                                     ('Escritorio', 'Ocultar o devolver las ventanas del proyecto · Super+D', None),
+                                    ('Actualizar', 'Actualiza el sistema y las aplicaciones en una consola: pide la contraseña y enseña qué cambia antes de hacerlo', upgrade),
                                     ('Cerrar sesión', 'Sale y vuelve a entrar al escritorio · Super+Mayús+E', 'logout')):
                 item = QPushButton(text); item.setToolTip(tip)
                 item.clicked.connect(lambda checked=False, a=argv: self.session_action(a))

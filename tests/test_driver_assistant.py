@@ -150,6 +150,14 @@ class TestDriverAssistant(unittest.TestCase):
         for c in cmds:
             self.assertIn(c, script)
 
+    def test_upgrade_commands(self):
+        # Sin -y: el gestor enseña qué cambia y pregunta antes de tocar nada.
+        self.assertEqual(DEBIAN.upgrade_commands()[0], 'sudo apt-get update && sudo apt upgrade')
+        self.assertEqual(ARCH.upgrade_commands()[0], 'sudo pacman -Syu')
+        self.assertEqual(FEDORA.upgrade_commands()[0], 'sudo dnf upgrade')
+        script = da.terminal_command(DEBIAN.upgrade_commands(), 'PrOSperus · Actualizar', "Listo")[-1]
+        self.assertIn('flatpak update', script)
+
 
 if __name__ == '__main__':
     unittest.main()

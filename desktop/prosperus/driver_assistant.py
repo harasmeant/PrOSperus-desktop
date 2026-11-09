@@ -172,12 +172,13 @@ def needs_attention(plans):
     return any(plan.options for plan in plans)
 
 
-def terminal_command(commands):
+def terminal_command(commands, title='PrOSperus · Instalar controladores',
+                     done='Listo. Reinicia para cargar el controlador.'):
     """Orden para la consola: muestra cada paso, se detiene en el primer fallo y espera."""
     script = ' && '.join(f'echo {shlex.quote("$ " + c)} && {c}' for c in commands)
-    script = (f'({script}) && echo && echo "Listo. Reinicia para cargar el controlador." '
-              f'|| echo "La instalación se detuvo por un error."; read -r -p "Pulsa Intro para cerrar" _')
-    return ['prosperus-terminal', '--title', 'PrOSperus · Instalar controladores', 'sh', '-c', script]
+    script = (f'({script}) && echo && echo {shlex.quote(done)} '
+              f'|| echo "Se detuvo por un error."; read -r -p "Pulsa Intro para cerrar" _')
+    return ['prosperus-terminal', '--title', title, 'sh', '-c', script]
 
 
 class DriverAssistant(QDialog):
