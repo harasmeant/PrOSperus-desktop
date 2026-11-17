@@ -41,7 +41,11 @@ Al cerrar uno, pasar el detalle a `WORKLOG.md` y quitarlo de aquí si ya no apor
 
 - [ ] **La pestaña Sistema no se ve completa** (2026-11-08). Menú `Sistema` (`shell.py:1198`,
   ventana en `shell.py:1505`): se corta por abajo. 2026-11-08: el panel va dentro de un área con
-  desplazamiento que no pasa del alto de la pantalla (`quick_settings.scrollable`). Falta verlo.
+  desplazamiento que no pasa del alto de la pantalla (`quick_settings.scrollable`).. 2026-11-11: seguía
+  cortado. El menú toma su alto al abrirse y las redes y el Bluetooth llegan después; `fit()`
+  agrandaba el área, pero el `QMenu` no volvía a medir sus elementos. Ahora lo fuerza
+  (`ActionChanged` + `adjustSize`). Seguía cortado a 720 px: `adjustSize()` no deja pasar
+  una ventana de 2/3 de la pantalla; ahora `resize(sizeHint())`. Falta verlo en la sesión real.
 
 - [ ] **Arrastre de ventanas** no funcionaba bien (zonas, inercia, intercambio).
   2026-11-08: simplificado. La ventana arrastrada queda libre donde se suelta y las demás

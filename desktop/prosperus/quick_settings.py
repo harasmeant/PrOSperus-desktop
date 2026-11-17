@@ -7,9 +7,9 @@ import sys
 import threading
 from .appearance import arrow, symbol_icon
 from PySide6.QtWidgets import (QComboBox, QFrame, QVBoxLayout, QHBoxLayout, QInputDialog, QLabel, QLineEdit,
-                             QListWidget, QListWidgetItem, QScrollArea, QSlider, QPushButton, QWidget)
-from PySide6.QtCore import QProcess, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QPainter
+                             QApplication, QListWidget, QListWidgetItem, QMenu, QScrollArea, QSlider, QPushButton, QWidget)
+from PySide6.QtCore import QEvent, QProcess, Qt, QTimer, Signal
+from PySide6.QtGui import QActionEvent, QColor, QPainter
 from .branches import flourish
 from .focus_trap import cycle_focus
 
@@ -166,6 +166,14 @@ def scrollable(panel, room):
         hint, limit = panel.sizeHint(), max(200, room())
         bar = scroll.verticalScrollBar().sizeHint().width() if hint.height() > limit else 0
         scroll.setFixedSize(hint.width() + bar, min(hint.height(), limit))
+        top = scroll.window()
+        if top is not scroll and top.isVisible():
+            # Las redes llegan con el menú ya abierto: el QMenu guarda la medida de sus elementos
+            # y no crece solo; este evento le hace volver a medirlos.
+            if isinstance(top, QMenu):
+                for action in top.actions():
+                    QApplication.sendEvent(top, QActionEvent(QEvent.Type.ActionChanged, action))
+            top.resize(top.sizeHint())  # adjustSize() no pasa de 2/3 de la pantalla y cortaba el menú
     scroll.fit = fit
     panel.state_ready.connect(lambda _: QTimer.singleShot(0, fit))  # el estado añade filas
     fit()

@@ -49,6 +49,32 @@ class QuickMediaTest(unittest.TestCase):
         self.assertEqual(parse_devices(text), {'AA:BB:CC:DD:EE:FF': 'Auriculares WH-1000'})
 
 
+class ScrollableMenuTest(unittest.TestCase):
+    def test_open_menu_grows_when_panel_grows(self):
+        """Las redes llegan con el menú Sistema abierto: el menú debe crecer, no cortar el panel."""
+        from PySide6.QtCore import QSize, Signal
+        from PySide6.QtWidgets import QApplication, QFrame, QMenu, QWidgetAction
+        from prosperus.quick_settings import scrollable
+
+        class Panel(QFrame):
+            state_ready = Signal(dict)
+            hint = QSize(300, 200)
+
+            def sizeHint(self):
+                return self.hint
+        app = QApplication.instance() or QApplication([])
+        panel = Panel(); menu = QMenu(); scroll = scrollable(panel, lambda: 750)
+        action = QWidgetAction(menu); action.setDefaultWidget(scroll); menu.addAction(action)
+        menu.show(); app.processEvents()
+        self.assertLess(menu.height(), 300)
+        # 700 > 2/3 de la pantalla offscreen (533): adjustSize() lo recortaba ahí.
+        panel.hint = QSize(300, 700); scroll.fit(); app.processEvents()
+        self.assertGreaterEqual(menu.height(), 700)
+        panel.hint = QSize(300, 900); scroll.fit(); app.processEvents()
+        self.assertEqual(scroll.height(), 750)  # no pasa del alto disponible: se desplaza
+        menu.close()
+
+
 if __name__ == '__main__':
     unittest.main()
 
@@ -91,3 +117,4 @@ class BuiltinInputTests(unittest.TestCase):
         self.assertTrue(all(c[0] == 'swaymsg' and c[1].endswith('events disabled') for c in calls))
         panel.apply(dict(state, builtin=[]))
         self.assertTrue(panel.kbd.isHidden())
+
