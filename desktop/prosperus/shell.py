@@ -13,7 +13,7 @@ from PySide6.QtCore import QEasingCurve, QEvent, QFileSystemWatcher, QParallelAn
 from PySide6.QtGui import QColor, QFont, QIcon, QKeySequence, QPainter, QPainterPath, QPen, QPixmap, QShortcut, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame, QGraphicsOpacityEffect, QHBoxLayout, QInputDialog,
     QLabel, QLayout, QLineEdit, QListWidget, QListWidgetItem, QMainWindow, QMessageBox,
-    QPlainTextEdit, QPushButton, QScrollArea, QSizeGrip, QStackedWidget,
+    QPlainTextEdit, QPushButton, QScrollArea, QSizeGrip, QSplitter, QStackedWidget,
     QTextBrowser, QVBoxLayout, QWidget, QStyle)
 
 from . import __version__
@@ -28,6 +28,7 @@ from PySide6.QtWidgets import QWidgetAction
 from . import motion
 from .charts import insert_charts
 from .code_blocks import separate_fences, style_code
+from .math_text import math_to_html
 from .theme_state import publish as publish_theme
 from .file_routing import project_root
 from .branches import branch, flourish
@@ -181,19 +182,29 @@ class NotePanel(QFrame):
         layout.addLayout(top)
         layout.addSpacing(12)  # sitio para el remate floral bajo el título
         self.pages = QStackedWidget()
-        self.reader = SafeReader()
-        self.reader.setOpenLinks(False)
-        self.reader.setOpenExternalLinks(False)
-        self.reader.document().setBaseUrl(QUrl.fromLocalFile(str(path.parent) + '/'))
-        self.reader.document().setDefaultStyleSheet('a { color: ' + self.colors.accent + '; }')
+        self.reader, self.live = SafeReader(), SafeReader()
+        for reader in (self.reader, self.live):
+            reader.setOpenLinks(False)
+            reader.setOpenExternalLinks(False)
+            reader.document().setBaseUrl(QUrl.fromLocalFile(str(path.parent) + '/'))
+            reader.document().setDefaultStyleSheet('a { color: ' + self.colors.accent + '; }')
+            reader.anchorClicked.connect(lambda url: shell.follow_link(url, path))
         self.render_markdown(shell.vault.markdown(path))
-        self.reader.anchorClicked.connect(lambda url: shell.follow_link(url, path))
         self.editor = QPlainTextEdit()
         self.editor.setAccessibleName('Editar nota Markdown')
         self.editor.setPlainText(self.original)
         self.editor.textChanged.connect(self.changed)
+        # Vista previa en vivo junto al editor: se redibuja al dejar de escribir.
+        self.live.setAccessibleName('Vista previa en vivo')
+        self.live_timer = QTimer(self, singleShot=True, interval=300)
+        self.live_timer.timeout.connect(lambda: self.render_markdown(self.editor.toPlainText(), self.live))
+        self.editor.textChanged.connect(self.live_timer.start)
         self.pages.addWidget(self.reader); self.pages.addWidget(self.editor)
-        layout.addWidget(self.pages, 1)
+        split = QSplitter(Qt.Orientation.Horizontal)
+        split.addWidget(self.pages); split.addWidget(self.live)
+        split.setChildrenCollapsible(False)
+        self.live.hide()
+        layout.addWidget(split, 1)
         footer = QHBoxLayout()
         self.state = label('Lectura · ' + str(path.relative_to(shell.vault.root)), 'muted')
         self.state.setWordWrap(True)
@@ -208,16 +219,19 @@ class NotePanel(QFrame):
         return self.editor.toPlainText() != self.original
 
     # Dibuja las gráficas y colorea los bloques de código de la nota
-    def render_markdown(self, markdown):
+    def render_markdown(self, markdown, reader=None):
+        reader = reader or self.reader
+        scroll = reader.verticalScrollBar().value()  # al escribir, la vista previa no salta arriba
         # El nombre ya está en la cabecera del panel: no repetir un primer título igual.
         first, _, rest = markdown.lstrip().partition('\n')
         if first.startswith('# ') and first[2:].strip() == self.path.stem:
             markdown = rest
-        self.reader.setMarkdown(separate_fences(markdown))
+        reader.setMarkdown(math_to_html(separate_fences(markdown), self.colors.text))
         # ```grafica: tabla de datos → imagen; después, ```python, ```java…: colores por lenguaje.
-        insert_charts(self.reader.document(), self.colors, max(360, min(720, self.width() - 110)))
-        style_code(self.reader.document(), self.colors)
-        block = self.reader.document().begin()
+        room = self.width() - 110 if reader is self.reader else reader.viewport().width() - 30
+        insert_charts(reader.document(), self.colors, max(360, min(720, room)))
+        style_code(reader.document(), self.colors)
+        block = reader.document().begin()
         anchors = []
         while block.isValid():
             it = block.begin()
@@ -228,11 +242,12 @@ class NotePanel(QFrame):
                 it += 1
             block = block.next()
         for position, length in anchors:
-            cursor = QTextCursor(self.reader.document())
+            cursor = QTextCursor(reader.document())
             cursor.setPosition(position)
             cursor.setPosition(position + length, QTextCursor.MoveMode.KeepAnchor)
             style = QTextCharFormat(); style.setForeground(QColor(self.colors.accent))
             style.setFontUnderline(True); cursor.mergeCharFormat(style)
+        reader.verticalScrollBar().setValue(scroll)
 
     def changed(self):
         self.caption.setText(self.path.stem + (' *' if self.dirty else ''))
@@ -243,7 +258,10 @@ class NotePanel(QFrame):
         editing = self.pages.currentWidget() != self.editor
         if not editing:
             self.render_markdown(self.editor.toPlainText() if self.dirty else self.shell.vault.markdown(self.path))
+        self.live.setVisible(editing)
         self.pages.setCurrentWidget(self.editor if editing else self.reader)
+        if editing:
+            self.render_markdown(self.editor.toPlainText(), self.live)
         self.edit_button.setText('Vista previa' if editing else 'Editar')
         self.save_button.setVisible(editing or self.dirty)
         self.pages.currentWidget().setFocus()
@@ -333,7 +351,7 @@ class NotePanel(QFrame):
                     traits = wallpaper_traits(self.wallpaper, self.wallpaper.stat().st_mtime_ns)
                 except OSError:
                     pass
-            flourish(p, rect.left() + 18, rect.right() - 18, self.pages.geometry().top() - 9, vine,
+            flourish(p, rect.left() + 18, rect.right() - 18, self.pages.parentWidget().geometry().top() - 9, vine,
                      len(self.path.stem), traits)
         p.setClipping(False)
         if self.shell.accessibility.high_contrast:

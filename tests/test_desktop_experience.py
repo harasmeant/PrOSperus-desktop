@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from PySide6.QtCore import QSettings, Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QTextFormat
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton
 
@@ -161,6 +161,21 @@ class DesktopExperienceTests(unittest.TestCase):
         self.assertEqual(note.read_text(), '# Nueva nota\nTexto editado.')
         panel.close_note(); self.window.open_note(note)
         self.assertIn('Texto editado', self.window.panels[note].reader.toPlainText())
+
+    def test_live_preview_formats_code_block_while_typing(self):
+        note = self.root / 'Bienvenida/Nota.md'
+        self.window.navigate(note.parent); self.window.open_note(note)
+        panel = self.window.panels[note]
+        self.assertTrue(panel.live.isHidden())
+        panel.toggle_edit()
+        self.assertFalse(panel.live.isHidden())
+        panel.editor.setPlainText("'''python\nx = 1")  # sin cerrar, como mientras se escribe
+        panel.live_timer.timeout.emit()
+        block = panel.live.document().findBlock(panel.live.toPlainText().index('x = 1'))
+        self.assertEqual(block.blockFormat().property(QTextFormat.Property.BlockCodeLanguage), 'python')
+        panel.toggle_edit()
+        self.assertTrue(panel.live.isHidden())
+        panel.editor.setPlainText(panel.original)
 
     def test_conflict_keeps_editor_buffer_and_external_file(self):
         note = self.root / 'Bienvenida/Nota.md'
