@@ -1,0 +1,2 @@
+# El grupo video puede cambiar el brillo (panel, teclas y salvapantallas usan brightnessctl sin root).
+ACTION=="add", SUBSYSTEM=="backlight", RUN+="/bin/chgrp video /sys/class/backlight/%k/brightness", RUN+="/bin/chmod g+w /sys/class/backlight/%k/brightness"

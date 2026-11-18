@@ -7,6 +7,8 @@
   En Debian ya no se compila nada: es el `sway` del sistema. La consola pasa al 90 % de opacidad.
 - Ventanas propias sin línea de borde (queda la filigrana de las esquinas) y franja para
   cambiar el tamaño de 10 a 18 px.
+- El brillo se puede cambiar sin root: una regla de udev da permiso de escritura al grupo `video`
+  (en Debian, brightnessctl no la trae y el panel daba «Permission denied»).
 
 ## 0.5.1 — 2026-11-06 · Salvapantallas y arrastrar al patrón
 
